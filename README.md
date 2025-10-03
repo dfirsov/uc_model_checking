@@ -1,2 +1,2 @@
-# uc_model_checking
-universal composability in model checkers
+# UC and Model Checking
+We use Quint model checker to verify UC ideal functionalities
