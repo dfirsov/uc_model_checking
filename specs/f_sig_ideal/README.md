@@ -1,5 +1,7 @@
 # Ideal Functionality for digital signatures
 
+## Intuition 
+
 ![f-sig](https://github.com/dfirsov/uc_model_checking/blob/main/specs/f_sig_ideal/f_sig_ideal.png?raw=true)
 
 - **F-Sig intuition:** This functionality idealizes a public-key signature scheme. The simulators are “responsive” so that this functionality models non-interactive signature schemes. 
@@ -11,3 +13,5 @@
 - **Verify:** This interface allows verifying signature under any verification key (we do not assume that verification keys are authenticated). This interface guarantee is that no new signature under an honestly generated key verifies (unless the party has been corrupted). This therefore models string unforgeability. 
 
 - **Paper:** https://eprint.iacr.org/2024/1807 (page 18)
+
+## Formal specification in Quint
