@@ -1,4 +1,4 @@
-# Ideal Functionality for digital signatures
+# UC digital signatures
 
 ## Intuition 
 
