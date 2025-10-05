@@ -1,20 +1,22 @@
 // -*- mode: Bluespec; -*-
 module f_sig_ideal {
-  import basicSpells.* from "./spells/basicSpells"
-  import choreo(processes = NODES) as choreo from "./choreo"
+
+  import basicSpells.* from "../../spells/basicSpells"
+  import choreo(processes = NODES) as choreo from "../../choreo"
 
   pure val FSig: Node = 1
   pure val ENV = 2
   pure val SIM = 3
-  pure val NODES =Set(FSig,ENV,SIM)
+  pure val NODES = Set(FSig,ENV,SIM)
 
-  // - Disambiguate messages with counter to allow repeations (only when strictly nec.)
+  // - Disambiguate messages with salt(e.g., counter) to allow repeations (only when strictly nec.)
   // - Responsive/non-responsive simulator
-  pure val honestParticipants = Set(1,2,3)
-  pure val corruptedParticipants = Set(4,5,6)
-  pure val allParticipants = honestParticipants.union(corruptedParticipants)
-  pure val allVKs = 1.to(100)
-  pure val docs = Set("doc1", "doc2", "doc3", "doc4", "doc5")
+  pure val honestParties = Set(1)
+  pure val corruptedParties = Set(2)
+  pure val allParties = honestParties.union(corruptedParties)
+  pure val allVKs  = 1.to(5)
+  pure val allSigs = 1.to(5)
+  pure val allDocs = Set("doc1")
 
 
   var counter : int
@@ -22,7 +24,7 @@ module f_sig_ideal {
   // Auxiliary types
   type Role = SigIF | SigSim | Env 
 
-  type Participant = int
+  type Party = int
   type PublicKey = int
   type Document = str
   type Signature = int
@@ -32,28 +34,39 @@ module f_sig_ideal {
   }  
 
   // Mandatory types for the Choreo
+  type VerEntry = {
+    vk  : PublicKey, 
+    msg : Document, 
+    sig : Signature,
+    res : bool
+  }
+
+  type VKEntry = {
+    party : Party,
+    vk : PublicKey
+  }
+
   type Node = int
   type Message =
 
-    | GenRequest(Participant) 
-    | GenResponse((Participant, PublicKey))
-    | SIMGen(Participant)
-    | SIMReleaseGen((Participant, PublicKey))
+    | GenRequest(Party) 
+    | GenResponse(VKEntry)
+    | SIMGen(Party)
+    | SIMReleaseGen(VKEntry)
 
-    | SignRequest((Participant, Document))
-    | SignResponse((Participant,(PublicKey, Document, Signature, bool)))
-    | SIMSign((Participant, Document))  
-    | SIMReleaseSign((Participant,Document,Signature))
-
-    | VerifyRequest((Participant, PublicKey, Document, Signature))
-    | VerifyResponse((Participant, (PublicKey, Document, Signature,bool)))
-    | SIMVerify((Participant, PublicKey, Document, Signature))
-    | SIMReleaseVerify(((Participant, PublicKey, Document, Signature), bool))
+    | SignRequest({party:Party, msg : Document})
+    | SignResponse({party:Party, ver_entry:VerEntry})
+    | SIMSign({party:Party, msg:Document})  
+    | SIMReleaseSign({party:Party,msg:Document,sig:Signature})
+    | VerifyRequest({party:Party, vk:PublicKey, msg:Document, sig:Signature})
+    | VerifyResponse({party:Party, ver_entry:VerEntry})
+    | SIMVerify({party:Party, vk:PublicKey, msg:Document, sig:Signature})
+    | SIMReleaseVerify({party:Party, ver_entry:VerEntry})
 
 
   type StateFields = {
-    VK: Set[(Participant, PublicKey)],
-    Ver: Set[(PublicKey, str, Signature, bool)],
+    VK:   Set[VKEntry],
+    Ver:  Set[VerEntry],
     role: Role,
   }
 
@@ -75,7 +88,7 @@ module f_sig_ideal {
 
   /* End of boilerplate */
         
-  // --- Participant transitions ----------------------------------------------
+  // --- Party transitions ----------------------------------------------
 
   pure def vk_generation_ideal1(ctx: LocalContext) : Set[Transition] = {
     if(ctx.state.role != SigIF){
@@ -83,14 +96,14 @@ module f_sig_ideal {
     }else
       ctx.messages.filterMap(m => {
         match m {
-          | GenRequest(participant) => {
-            if (ctx.state.VK.exists(x => x._1 == participant)){
+          | GenRequest(party) => {
+            if (ctx.state.VK.exists(x => x.party == party)){
               // finds the first one, also possible to traverse and generate multiple transitions
-              val pk = ctx.state.VK.find(x => x._1 == participant).unwrap()._2
+              val pk = ctx.state.VK.find(x => x.party == party).unwrap().vk
 
               Some({
                 effects: Set( 
-                    choreo::Send( ({ to: ENV, message: GenResponse((participant, pk)) })),
+                    choreo::Send( ({ to: ENV, message: GenResponse({party: party, vk: pk}) })),
                     choreo::CustomEffect(ExcludeMsg((ctx.state.process_id, m)))
                             ),
                 post_state: { ...ctx.state}
@@ -99,7 +112,7 @@ module f_sig_ideal {
           }else{
             Some({
               effects: Set( 
-                choreo::Send(({ to: SIM, message: SIMGen(participant)})),
+                choreo::Send(({ to: SIM, message: SIMGen(party)})),
                 choreo::CustomEffect(ExcludeMsg( (ctx.state.process_id, m) ) )),
               post_state: { ...ctx.state }
             })}}
@@ -116,10 +129,10 @@ module f_sig_ideal {
       ctx.messages.map(m => {
         match m {
           | SIMGen(p) => {
-            1.to(5).map(vk =>
+            allVKs.map(vk =>
               Set({
                 effects: Set( 
-                    choreo::Send( ({ to: FSig, message: SIMReleaseGen((p, vk)) })),
+                    choreo::Send( ({ to: FSig, message: SIMReleaseGen({party: p, vk:vk}) })),
                     choreo::CustomEffect(ExcludeMsg( (ctx.state.process_id, m)))
                   ),
                 post_state: { ...ctx.state }
@@ -138,8 +151,8 @@ module f_sig_ideal {
   pure def vk_generation_ideal2(ctx: LocalContext): Set[Transition] = {
     def filter_fun = (p) => 
       or {
-        ctx.state.VK.exists(x => x._2 == p),
-        ctx.state.Ver.exists(x => x._1 == p)
+        ctx.state.VK.exists(x => x.vk == p),
+        ctx.state.Ver.exists(x => x.vk == p)
       }
 
     if(ctx.state.role != SigIF){
@@ -149,31 +162,26 @@ module f_sig_ideal {
         match m {
           | SIMReleaseGen(p) => {
             {
-              val participant = p._1
-              val vk = p._2
+              val party = p.party
+              val vk = p.vk
 
               val san_vk = if(not (filter_fun(vk))){
                 vk
               }else{
-                1.to(100).find(p => not(filter_fun(p))).unwrap()
+                allVKs.find(p => not(filter_fun(p))).unwrap()
               }          
 
           Set({
             effects: Set( 
               
-                choreo::Send( ({ to: ENV, message: GenResponse((participant, san_vk)) } ) ),
+                choreo::Send( ({ to: ENV, message: GenResponse({party:party, vk:san_vk}) } ) ),
                 choreo::CustomEffect(ExcludeMsg( (ctx.state.process_id, m) ) )
             ),
-            post_state: { ...ctx.state, VK: ctx.state.VK.union(Set((participant, san_vk))),}
+            post_state: { ...ctx.state, VK: ctx.state.VK.union(Set({party:party, vk:san_vk})),}
           })
           }
         }
         // TODO: report bug
-      | GenResponse(p) => Set()
-      | SIMGen(p) => Set()
-      | GenRequest(p) => Set()
-      | SignRequest(p) => Set()
-      | VerifyRequest(p) => Set()
       | _ => Set()
       }
       }).flatten()
@@ -187,14 +195,14 @@ module f_sig_ideal {
       ctx.messages.map(m => {
         match m {
           | SignRequest(p) => {
-            val participant = p._1
-            val msg = p._2
-            if(not (ctx.state.VK.exists(x => x._1 == participant))){
+            val party = p.party
+            val msg = p.msg
+            if(not (ctx.state.VK.exists(x => x.party == party))){
               Set()
             }else{
               Set({
                 effects: Set( 
-                    choreo::Send( ({ to: SIM, message: SIMSign((participant, msg))})),
+                    choreo::Send( ({ to: SIM, message: SIMSign({party:party, msg:msg})})),
                     choreo::CustomEffect(ExcludeMsg( (ctx.state.process_id, m) ) ),
                     choreo::CustomEffect(Log( m ) ),
                 ),
@@ -215,12 +223,12 @@ module f_sig_ideal {
       ctx.messages.map(m => {
         match m {
           | SIMSign(p) => {
-            val participant = p._1
-            val msg = p._2
-            1.to(5).map(sig => 
+            val party = p.party
+            val msg = p.msg
+            allSigs.map(sig => 
               Set({
                 effects: Set( 
-                    choreo::Send( ({ to: FSig, message: SIMReleaseSign((participant, msg, sig))})),
+                    choreo::Send( ({ to: FSig, message: SIMReleaseSign({party:party, msg:msg, sig:sig})})),
                     choreo::CustomEffect(ExcludeMsg( (ctx.state.process_id, m)))
                 ),
                 post_state: { ...ctx.state }
@@ -241,28 +249,28 @@ module f_sig_ideal {
       ctx.messages.map(m => {
         match m {
           | SIMReleaseSign(p) => {
-            val participant = p._1
-            val msg = p._2
-            val sig = p._3
-            val vk = ctx.state.VK.find(x => x._1 == participant).unwrap()._2
+            val party = p.party
+            val msg = p.msg
+            val sig = p.sig
+            val vk = ctx.state.VK.find(x => x.party == party).unwrap().vk
 
             def filter_fun = (x) => 
-              ctx.state.Ver.exists(y => y._1 == vk and
-                                        y._2 == msg and
-                                        y._3 == x)
+              ctx.state.Ver.exists(y => y.vk == vk and
+                                        y.msg == msg and
+                                        y.sig == x)
             
 
             val san_sig = if (filter_fun(sig)){
-              1.to(100).find(x => not(filter_fun(x))).unwrap()
+              allSigs.find(x => not(filter_fun(x))).unwrap()
             }else{
               sig
             }
             Set({
               effects: Set( 
-                  choreo::Send( ({ to: ENV, message: SignResponse((participant, (vk, msg, san_sig, true))) } ) ),
+                  choreo::Send( ({ to: ENV, message: SignResponse({party:party, ver_entry:{vk: vk, msg: msg, sig: san_sig, res: true}}) } ) ),
                   choreo::CustomEffect(ExcludeMsg( (ctx.state.process_id, m) ) )
               ),
-              post_state: { ...ctx.state, Ver: ctx.state.Ver.union(Set((vk, msg, san_sig, true))),}
+              post_state: { ...ctx.state, Ver: ctx.state.Ver.union(Set({vk:vk, msg:msg, sig:san_sig, res:true})),}
             })
             }
           | _ => Set()
@@ -279,16 +287,16 @@ module f_sig_ideal {
       ctx.messages.map(m => {
         match m {
           | VerifyRequest(p) => {
-            val participant = p._1
-            val vk = p._2
-            val msg = p._3
-            val sig = p._4
-            if(not (ctx.state.Ver.exists(x => x._1 == participant and x._2 == msg and x._3 == sig))){
+            val party = p.party
+            val vk = p.vk
+            val msg = p.msg
+            val sig = p.sig
+            if(not (ctx.state.Ver.exists(x => x.vk == vk and x.msg == msg and x.sig == sig))){
               Set() // todo: send response
             }else{
               Set({
                 effects: Set( 
-                    choreo::Send( ({ to: SIM, message: SIMVerify((participant, vk, msg, sig))})),
+                    choreo::Send( ({ to: SIM, message: SIMVerify({party:party, vk:vk, msg:msg, sig:sig})})),
                     choreo::CustomEffect(ExcludeMsg( (ctx.state.process_id, m) ) )
                 ),
                 post_state: { ...ctx.state }
@@ -311,12 +319,13 @@ module f_sig_ideal {
             Set(true, false).map(res => 
               Set({
                 effects: Set( 
-                    choreo::Send( ({ to: FSig, message: SIMReleaseVerify((p,res))})),
+                    choreo::Send( ({ to: FSig, message: SIMReleaseVerify({party:p.party, ver_entry:{vk:p.vk,msg:p.msg,sig:p.sig,res:res}})})),
                     choreo::CustomEffect(ExcludeMsg( (ctx.state.process_id, m)))
                 ),
                 post_state: { ...ctx.state }
               })
             ).flatten()
+
 
           }
           | _ => Set()
@@ -332,14 +341,13 @@ module f_sig_ideal {
       ctx.messages.map(m => {
         match m {
           | SIMReleaseVerify(q) => {
-            val p = q._1
-            val participant = p._1
-            val vk = p._2
-            val msg = p._3
-            val sig = p._4
-            val res = q._2
+            val party = q.party
+            val vk = q.ver_entry.vk
+            val msg = q.ver_entry.msg
+            val sig = q.ver_entry.sig
+            val res = q.ver_entry.res
 
-            val san_res = if(ctx.state.VK.exists(x => x._1.in(honestParticipants) and x._2 == vk)){
+            val san_res = if(ctx.state.VK.exists(x => x.party.in(honestParties) and x.vk == vk)){
               false
             }else{
               res
@@ -347,10 +355,10 @@ module f_sig_ideal {
 
             Set({ 
               effects: Set( 
-                  choreo::Send( ({ to: ENV, message: VerifyResponse((participant, (vk,msg,sig,san_res)) ) } ) ),
+                  choreo::Send( ({ to: ENV, message: VerifyResponse({party:party, ver_entry:{vk:vk,msg:msg,sig:sig,res:san_res}} ) } ) ),
                   choreo::CustomEffect(ExcludeMsg( (ctx.state.process_id, m) ) )
               ),
-              post_state: { ...ctx.state, Ver: ctx.state.Ver.union(Set((vk, msg, sig, san_res))),}
+              post_state: { ...ctx.state, Ver: ctx.state.Ver.union(Set({vk:vk, msg:msg, sig:sig, res:san_res})),}
             })
 
           }
@@ -365,15 +373,15 @@ module f_sig_ideal {
   pure def env_verify_msgs(ctx:LocalContext) : Set[Transition] = {
     if (ctx.state.role != Env ) {
       Set()
-    }else{ // VerifyRequest((Participant, PublicKey, Document, Signature))
-      corruptedParticipants.map(participant => {
-        1.to(5).map(vk => {
-          docs.map(msg => {
-            1.to(5).map(sig => {
+    }else{ // VerifyRequest((Party, PublicKey, Document, Signature))
+      allParties.map(party => {
+        allVKs.map(vk => {
+          allDocs.map(msg => {
+            allSigs.map(sig => {
             Set(
               { 
-                effects: Set(
-                  choreo::Send( ({ to: FSig, message: VerifyRequest((participant,vk,msg,sig) ) } ) )
+                effects: Set (
+                  choreo::Send( ({ to: FSig, message: VerifyRequest({party:party,vk:vk,msg:msg,sig:sig} ) } ) )
                 ), 
                 post_state: { ...ctx.state }
               }
@@ -390,10 +398,10 @@ module f_sig_ideal {
   
   def apply_custom_effect(env: GlobalContext, effect: CustomEffects): GlobalContext = {
     match effect {
-      | ExcludeMsg(p) => { ... env, messages: env.messages.setBy(p._1, (old => old.exclude(Set(p._2)))) }
+      | ExcludeMsg(p) => {... env, messages: env.messages.setBy(p._1, (old => old.exclude(Set(p._2)))) }
       | Log(msg) => {
-        {...env, extensions: {...env.extensions, msg_log: env.extensions.msg_log.setAdd(msg)}}
-      }
+          {...env, extensions: {...env.extensions, msg_log: env.extensions.msg_log.setAdd(msg)}}
+        }
     }
   }
 
@@ -450,24 +458,19 @@ module f_sig_ideal {
   action step = any {
     all { gen_step1, counter' = counter,},
     all { gen_step2, counter' = counter,},
-    all { gen_step3,counter' = counter,},
+    all { gen_step3, counter' = counter,},
 
-    all { sign_step1,counter' = counter,},
+    all { sign_step1, counter' = counter,},
     all { sign_step2, counter' = counter,},
-    all { sign_step3,counter' = counter,},
+    all { sign_step3, counter' = counter,},
 
     all { verify_step1, counter' = counter,},
-    all { verify_step2,counter' = counter,},
-    all {
-    counter' = counter,
-    verify_step3,
-    },
+    all { verify_step2, counter' = counter,},
+    all { verify_step3, counter' = counter,},
 
     all { counter < 1,
-          env_step1 ,
-          counter' = counter + 1
-
-    }
+          env_step1,
+          counter' = counter + 1 }
   }
 
   pure def initialize(n: Node): LocalState = {
@@ -484,16 +487,11 @@ module f_sig_ideal {
   }  
 
   action init = all {
-     choreo::init({
-    system: NODES.mapBy(n => initialize(n)),
-    messages: NODES.mapBy(n => if (n == 1)  
-       Set( GenRequest(4), 
-            GenRequest(4), 
-            GenRequest(3), 
-            GenRequest(7), 
-            SignRequest((4,"doc1")),
-            SignRequest((3,"doc2")),
-            SignRequest((4,"doc1")),
+    choreo::init({
+      system: NODES.mapBy(n => initialize(n)),
+      messages: NODES.mapBy(n => if (n == 1)  
+         Set( GenRequest(1), 
+              SignRequest({party:1, msg:"doc1"}),
           ) 
        else Set()),
     events: NODES.mapBy(n => Set()),
@@ -526,42 +524,42 @@ module f_sig_ideal {
     })
   )
   
-  // Property: participant has at most one verification key
-  val OneVKperUser = allParticipants.forall(p => choreo::s.system.get(FSig).VK.filter(x => x._1 == p).size() <= 1)
+  // Property: party has at most one verification key
+  val OneVKperUser = allParties.forall(p => choreo::s.system.get(FSig).VK.filter(x => x.party == p).size() <= 1)
 
   // Property: Ver is consistent (FAILS, flip-flop is possible because of verify functionality)
   val VerConsistent = choreo::s.system.get(FSig).Ver.forall(entry => {
-    val q = if (entry._4) false else true
-    val entry2 = (entry._1, entry._2, entry._3, q)
+    val entry2 = {...entry, res : not(entry.res)}
      not (entry2.in(choreo::s.system.get(FSig).Ver))
   })
 
   // Property: verification keys are unique 
-  val VKUnique = allVKs.forall(p => choreo::s.system.get(FSig).VK.filter(x => x._2 == p).size() <= 1)
+  val VKUnique = allVKs.forall(p => choreo::s.system.get(FSig).VK.filter(x => x.vk == p).size() <= 1)
 
   // Property(Fails): If Ver containts some vk entry  then VK table must  contain respective entry
-  val VKVerConsistentDishonest = choreo::s.system.get(FSig).Ver.forall(entry => {
-    choreo::s.system.get(FSig).VK.exists(p => p._2 == entry._1) 
-  })
+  val VKVerConsistentDishonest = choreo::s.system.get(FSig).Ver.forall(
+    entry => {
+      choreo::s.system.get(FSig).VK.exists(p => p.vk == entry.vk)
+    })
 
 
   // Propery: If Ver contains entry then environment received a respective response (true for honest, fails for dishonest)
   val VerifiesIfSignedHonest = choreo::s.system.get(FSig).Ver.forall(entry => {
-      if(entry._4){
-        val vkentry = choreo::s.system.get(FSig).VK.find((x) => x._2 == entry._1)
+      if(entry.res){
+        val vkentry = choreo::s.system.get(FSig).VK.find((x) => x.vk == entry.vk)
         if(vkentry == None){
           true
         }else{
-          val participant = vkentry.unwrap()._1
-
-            // FAILS for corrupted participants 
+          val party = vkentry.unwrap().party
+            
+            // FAILS for corrupted partys 
             // choreo::s.messages.get(ENV).exists((m) => {
-            //   m == SignResponse((participant, entry))
+            //   m == SignResponse((party, entry))
             // }) 
 
-          if(participant.in(honestParticipants)){
+          if(party.in(honestParties)){
             choreo::s.messages.get(ENV).exists((m) => {
-              m == SignResponse((participant, entry))
+              m == SignResponse({party:party, ver_entry: entry})
             }) 
           }else{
             true
@@ -580,12 +578,12 @@ module f_sig_ideal {
   })  
   // Property: if SignResponse is received by ENV then Ver contains entry
   val SignResponseValid = choreo::s.messages.get(ENV).forall(m => match m {
-    | SignResponse(p) => choreo::s.system.get(FSig).Ver.exists(x => x == p._2)
+    | SignResponse(p) => choreo::s.system.get(FSig).Ver.exists(x => x == p.ver_entry)
     | _ => true
   })
   // Property: if VerifyResponse is received then Ver contains the respective entry
   val VerifyResponseValid = choreo::s.messages.get(ENV).forall(m => match m {
-    | VerifyResponse(p) => choreo::s.system.get(FSig).Ver.exists(x => x == p._2)
+    | VerifyResponse(p) => choreo::s.system.get(FSig).Ver.exists(x => x == p.ver_entry)
     | _ => true
   })
 
