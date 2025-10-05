@@ -11,7 +11,7 @@ module f_sig_ideal {
 
   // - Disambiguate messages with salt(e.g., counter) to allow repeations (only when strictly nec.)
   // - Responsive/non-responsive simulator
-  pure val honestParties = Set(1)
+  pure val honestParties = Set()
   pure val corruptedParties = Set(2)
   pure val allParties = honestParties.union(corruptedParties)
   pure val allVKs  = 1.to(5)
@@ -291,7 +291,7 @@ module f_sig_ideal {
             val vk = p.vk
             val msg = p.msg
             val sig = p.sig
-            if(not (ctx.state.Ver.exists(x => x.vk == vk and x.msg == msg and x.sig == sig))){
+            if((ctx.state.Ver.exists(x => x.vk == vk and x.msg == msg and x.sig == sig))){
               Set() // todo: send response
             }else{
               Set({
@@ -468,7 +468,7 @@ module f_sig_ideal {
     all { verify_step2, counter' = counter,},
     all { verify_step3, counter' = counter,},
 
-    all { counter < 1,
+    all { counter < 2,
           env_step1,
           counter' = counter + 1 }
   }
@@ -490,8 +490,7 @@ module f_sig_ideal {
     choreo::init({
       system: NODES.mapBy(n => initialize(n)),
       messages: NODES.mapBy(n => if (n == 1)  
-         Set( GenRequest(1), 
-              SignRequest({party:1, msg:"doc1"}),
+         Set( GenRequest(2),
           ) 
        else Set()),
     events: NODES.mapBy(n => Set()),
@@ -529,8 +528,7 @@ module f_sig_ideal {
 
   // Property: Ver is consistent (FAILS, flip-flop is possible because of verify functionality)
   val VerConsistent = choreo::s.system.get(FSig).Ver.forall(entry => {
-    val entry2 = {...entry, res : not(entry.res)}
-     not (entry2.in(choreo::s.system.get(FSig).Ver))
+     not ({...entry, res : not(entry.res)}.in(choreo::s.system.get(FSig).Ver))
   })
 
   // Property: verification keys are unique 
@@ -545,31 +543,20 @@ module f_sig_ideal {
 
   // Propery: If Ver contains entry then environment received a respective response (true for honest, fails for dishonest)
   val VerifiesIfSignedHonest = choreo::s.system.get(FSig).Ver.forall(entry => {
-      if(entry.res){
+      (entry.res).implies( {
         val vkentry = choreo::s.system.get(FSig).VK.find((x) => x.vk == entry.vk)
-        if(vkentry == None){
-          true
-        }else{
+        (vkentry != None).implies({
           val party = vkentry.unwrap().party
-            
-            // FAILS for corrupted partys 
-            // choreo::s.messages.get(ENV).exists((m) => {
-            //   m == SignResponse((party, entry))
-            // }) 
-
-          if(party.in(honestParties)){
+          party.in(honestParties).implies(
             choreo::s.messages.get(ENV).exists((m) => {
               m == SignResponse({party:party, ver_entry: entry})
-            }) 
-          }else{
-            true
-          }
-        }
-      }else{
-        true
-      }
+            })
+          )
+        })
+      })
      
-  })    
+  })   
+
 
   // Property: if ENV received GenResponse then the key is in the set of verification keys
   val GenResponseValid = choreo::s.messages.get(ENV).forall(m => match m {
