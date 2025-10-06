@@ -4,13 +4,14 @@ module f_sig_ideal {
   import basicSpells.* from "../../spells/basicSpells"
   import choreo(processes = NODES) as choreo from "../../choreo"
 
-  pure val FSig: Node = 1
-  pure val ENV = 2
-  pure val SIM = 3
+  pure val FSig : Node = 1
+  pure val ENV  : Node = 2
+  pure val SIM  : Node = 3
   pure val NODES = Set(FSig,ENV,SIM)
 
   // - Disambiguate messages with salt(e.g., counter) to allow repeations (only when strictly nec.)
-  // - Responsive/non-responsive simulator
+  // - Responsive/non-responsive simulator (idea: add some combinators for SIM)
+
   pure val honestParties = Set(1)
   pure val corruptedParties = Set(2)
   pure val allParties = honestParties.union(corruptedParties)
@@ -49,20 +50,20 @@ module f_sig_ideal {
   type Node = int
   type Message =
 
-    | GenRequest(Party) 
-    | GenResponse(VKEntry)
-    | SIMGen(Party)
-    | SIMReleaseGen(VKEntry)
+    | GenRequest(Party) // input for FSig
+    | GenResponse(VKEntry) // output of FSig
+    | SIMGen(Party) // input to SIM
+    | SIMReleaseGen(VKEntry) // output of SIM
 
-    | SignRequest({party:Party, msg : Document})
-    | SignResponse({party:Party, ver_entry:VerEntry})
-    | SIMSign({party:Party, msg:Document})  
-    | SIMReleaseSign({party:Party,msg:Document,sig:Signature})
+    | SignRequest({party:Party, msg : Document}) // input for FSig
+    | SignResponse({party:Party, ver_entry:VerEntry}) // output of FSig
+    | SIMSign({party:Party, msg:Document})  // input to SIM
+    | SIMReleaseSign({party:Party,msg:Document,sig:Signature}) // output of SIM
 
-    | VerifyRequest({party:Party, vk:PublicKey, msg:Document, sig:Signature})
-    | VerifyResponse({party:Party, ver_entry:VerEntry})
-    | SIMVerify({party:Party, vk:PublicKey, msg:Document, sig:Signature})
-    | SIMReleaseVerify({party:Party, ver_entry:VerEntry})
+    | VerifyRequest({party:Party, vk:PublicKey, msg:Document, sig:Signature}) // input to FSig
+    | VerifyResponse({party:Party, ver_entry:VerEntry}) // output of FSig
+    | SIMVerify({party:Party, vk:PublicKey, msg:Document, sig:Signature}) // input to SIM
+    | SIMReleaseVerify({party:Party, ver_entry:VerEntry}) // output of SIM
 
 
   type StateFields = {
@@ -90,7 +91,6 @@ module f_sig_ideal {
   /* End of boilerplate */
         
   // --- Party transitions ----------------------------------------------
-
   pure def vk_generation_ideal1(ctx: LocalContext) : Set[Transition] = {
     if(ctx.state.role != SigIF){
       Set()
