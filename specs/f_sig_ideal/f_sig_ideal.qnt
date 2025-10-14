@@ -313,31 +313,32 @@ module f_sig_ideal {
       ).flatten()
   }
 
+  pure def get_verify_sim_messages(messages: Set[Message]): Set[{party:Party, vk:PublicKey, msg:Document, sig:Signature}] = {
+    messages.filterMap(m => {
+      match m {
+        | SIMVerify(p) => Some(p)
+        | _ => None
+      }
+    })
+  }
+
   pure def msg_verify_sim(ctx: LocalContext): Set[Transition] = {
     if(ctx.state.role != SigSim){
       Set()
     }else
-      ctx.messages.map(m => {
-        match m {
-          | SIMVerify(p) => {
-            Set(true, false).map(res => 
-              Set({
-                effects: Set( 
-                    choreo::Send( ({ to: FSig, 
-                                message: SIMReleaseVerify({party:p.party, 
-                                                            ver_entry: {vk:p.vk,msg:p.msg,sig:p.sig,res:res}})})),
-                    choreo::CustomEffect(ExcludeMsg( {node:ctx.state.process_id, msg:m}))
-                ),
-                post_state: { ...ctx.state }
-              })
-            ).flatten()
-
-
-          }
-          | _ => Set()
-        }
-      }
-      ).flatten()
+      ctx.messages.get_verify_sim_messages().map(p => {
+        Set(true, false).map(res => 
+          Set({
+            effects: Set( 
+                choreo::Send( ({ to: FSig, 
+                            message: SIMReleaseVerify({party:p.party, 
+                                                        ver_entry: {vk:p.vk,msg:p.msg,sig:p.sig,res:res}})})),
+                choreo::CustomEffect(ExcludeMsg( {node:ctx.state.process_id, msg: SIMVerify(p)}))
+            ),
+            post_state: { ...ctx.state }
+          })
+        ).flatten()
+      }).flatten()
   }
 
   pure def msg_verify_ideal2(ctx: LocalContext): Set[Transition] = {
