@@ -88,59 +88,129 @@ module f_sig_ideal {
     Extensions
   ]
 
+  pure def get_verify_sim_messages(messages: Set[Message]): Set[{party:Party, vk:PublicKey, msg:Document, sig:Signature}] = {
+    messages.filterMap(m => {
+      match m {
+        | SIMVerify(p) => Some(p)
+        | _ => None
+      }
+    })
+  }
+
+  pure def get_sim_gen_messages(messages: Set[Message]): Set[Party] = {
+    messages.filterMap(m => {
+      match m {
+        | SIMGen(p) => Some(p)
+        | _ => None
+      }
+    })
+  }
+
+  pure def get_sim_sign_messages(messages: Set[Message]): Set[{party:Party, msg:Document}] = {
+    messages.filterMap(m => {
+      match m {
+        | SIMSign(p) => Some(p)
+        | _ => None
+      }
+    })
+  }
+
+  pure def get_sim_release_sign_messages(messages: Set[Message]): Set[{party:Party, msg:Document, sig:Signature}] = {
+    messages.filterMap(m => {
+      match m {
+        | SIMReleaseSign(p) => Some(p)
+        | _ => None
+      }
+    })
+  }
+
+  pure def get_sim_release_verify_messages(messages: Set[Message]): Set[{party:Party, ver_entry:VerEntry}] = {
+    messages.filterMap(m => {
+      match m {
+        | SIMReleaseVerify(p) => Some(p)
+        | _ => None
+      }
+    })
+  }
+
+  pure def get_sim_release_gen_messages(messages: Set[Message]): Set[VKEntry] = {
+    messages.filterMap(m => {
+      match m {
+        | SIMReleaseGen(p) => Some(p)
+        | _ => None
+      }
+    })
+  }
+
+  pure def get_gen_request_messages(messages: Set[Message]): Set[Party] = {
+    messages.filterMap(m => {
+      match m {
+        | GenRequest(party) => Some(party)
+        | _ => None
+      }
+    })
+  }
+
+  pure def get_sign_request_messages(messages: Set[Message]): Set[{party:Party, msg:Document}] = {
+    messages.filterMap(m => {
+      match m {
+        | SignRequest(p) => Some(p)
+        | _ => None
+      }
+    })
+  }
+
+  pure def get_verify_request_messages(messages: Set[Message]): Set[{party:Party, vk:PublicKey, msg:Document, sig:Signature}] = {
+    messages.filterMap(m => {
+      match m {
+        | VerifyRequest(p) => Some(p)
+        | _ => None
+      }
+    })
+  }
   /* End of boilerplate */
-        
+
   // --- Party transitions ----------------------------------------------
   pure def vk_generation_ideal1(ctx: LocalContext) : Set[Transition] = {
     if(ctx.state.role != SigIF){
       Set()
     }else
-      ctx.messages.filterMap(m => {
-        match m {
-          | GenRequest(party) => {
-            if (ctx.state.VK.exists(x => x.party == party)){
-              val pk = ctx.state.VK.find(x => x.party == party).unwrap().vk
+      ctx.messages.get_gen_request_messages().map(party => {
+        if (ctx.state.VK.exists(x => x.party == party)){
+          val pk = ctx.state.VK.find(x => x.party == party).unwrap().vk
 
-              Some({
-                effects: Set( 
-                    choreo::Send( ({ to: ENV, message: GenResponse({party: party, vk: pk}) })),
-                    choreo::CustomEffect(ExcludeMsg({node:ctx.state.process_id, msg:m}))
-                            ),
-                post_state: { ...ctx.state}
-                   })
-          // VK does not exist, send msg to SIM (no state to preserve)
-          }else{
-            Some({
-              effects: Set( 
-                choreo::Send(({ to: SIM, message: SIMGen(party)})),
-                choreo::CustomEffect(ExcludeMsg( {node:ctx.state.process_id, msg:m}) )),
-              post_state: { ...ctx.state }
-            })}}
-      // receiving "spam"
-      | _ => None
-      }
-    })
+          Set({
+            effects: Set(
+                choreo::Send( ({ to: ENV, message: GenResponse({party: party, vk: pk}) })),
+                choreo::CustomEffect(ExcludeMsg({node:ctx.state.process_id, msg: GenRequest(party)}))
+                        ),
+            post_state: { ...ctx.state}
+               })
+      // VK does not exist, send msg to SIM (no state to preserve)
+      }else{
+        Set({
+          effects: Set(
+            choreo::Send(({ to: SIM, message: SIMGen(party)})),
+            choreo::CustomEffect(ExcludeMsg( {node:ctx.state.process_id, msg: GenRequest(party)}) )),
+          post_state: { ...ctx.state }
+        })}
+      }).flatten()
   }
 
 
-  pure def vk_generation_sim(ctx: LocalContext) : Set[Transition] = {  
+  pure def vk_generation_sim(ctx: LocalContext) : Set[Transition] = {
     if (ctx.state.role == SigSim) { // only SIM can process this
-      ctx.messages.map(m => {
-        match m {
-          | SIMGen(p) => {
-            allVKs.map(vk =>
-              Set({
-                effects: Set( 
-                    choreo::Send( ({ to: FSig, message: SIMReleaseGen({party: p, vk:vk}) })),
-                    choreo::CustomEffect(ExcludeMsg( {node:ctx.state.process_id, msg:m}))
-                  ),
-                post_state: { ...ctx.state }
-              })
-            ).flatten()
-          }
-      | _ => Set()
-      }
-    }).flatten()
+      ctx.messages.get_sim_gen_messages().map(p => {
+        allVKs.map(vk =>
+          Set({
+            effects: Set(
+                choreo::Send( ({ to: FSig, message: SIMReleaseGen({party: p, vk:vk}) })),
+                choreo::CustomEffect(ExcludeMsg( {node:ctx.state.process_id, msg: SIMGen(p)}))
+              ),
+            post_state: { ...ctx.state }
+          })
+        ).flatten()
+      }).flatten()
     }else{
       Set()
     }
@@ -150,43 +220,35 @@ module f_sig_ideal {
   pure def vk_generation_ideal2(ctx: LocalContext): Set[Transition] = {
     if(ctx.state.role != SigIF){
       Set()
-    }else 
-      ctx.messages.map(m => {
-        match m {
-          | SIMReleaseGen(p) => {
-            
-              def filter_fun = (p) => 
-                or {
-                  ctx.state.VK.exists (x => x.vk == p),
-                  ctx.state.Ver.exists(x => x.vk == p)
-                }
+    }else
+      ctx.messages.get_sim_release_gen_messages().map(p => {
+        def filter_fun = (p) =>
+          or {
+            ctx.state.VK.exists (x => x.vk == p),
+            ctx.state.Ver.exists(x => x.vk == p)
+          }
 
-              val san_vk_option = if(not (filter_fun(p.vk))){
-                Some(p.vk)
-              }else{
-                allVKs.find(p => not(filter_fun(p)))
-              }
-
-              if(san_vk_option != None){
-
-                val san_vk = san_vk_option.unwrap()
-
-                Set({
-                  effects: Set( 
-                      choreo::Send( ({ to: ENV, message: GenResponse({party:p.party, vk:san_vk}) } ) ),
-                      choreo::CustomEffect(ExcludeMsg( {node:ctx.state.process_id, msg:m}) )
-                  ),
-                  post_state: { ...ctx.state, VK: ctx.state.VK.union(Set({party:p.party, vk:san_vk})),}
-                })
-              }else{ // no fresh VKs are left
-                Set() 
-                // TODO: can we do an exception here?
-              }
-              
+        val san_vk_option = if(not (filter_fun(p.vk))){
+          Some(p.vk)
+        }else{
+          allVKs.find(p => not(filter_fun(p)))
         }
-        // TODO: report bug
-          | _ => Set()
-      }
+
+        if(san_vk_option != None){
+
+          val san_vk = san_vk_option.unwrap()
+
+          Set({
+            effects: Set(
+                choreo::Send( ({ to: ENV, message: GenResponse({party:p.party, vk:san_vk}) } ) ),
+                choreo::CustomEffect(ExcludeMsg( {node:ctx.state.process_id, msg: SIMReleaseGen(p)}) )
+            ),
+            post_state: { ...ctx.state, VK: ctx.state.VK.union(Set({party:p.party, vk:san_vk})),}
+          })
+        }else{ // no fresh VKs are left
+          Set()
+          // TODO: can we do an exception here?
+        }
       }).flatten()
     }
 
@@ -195,47 +257,36 @@ module f_sig_ideal {
     if(ctx.state.role != SigIF){
       Set()
     }else
-      ctx.messages.map(m => {
-        match m {
-          | SignRequest(p) => {
-            if(not (ctx.state.VK.exists(x => x.party == p.party))){ // party does not have vk 
-              Set()
-            }else{
-              Set({
-                effects: Set( 
-                    choreo::Send( ({ to: SIM, message: SIMSign({party:p.party, msg:p.msg})})),
-                    choreo::CustomEffect(ExcludeMsg( {node:ctx.state.process_id, msg:m}) ),
-                    choreo::CustomEffect(Log(m) ),
-                ),
-                post_state: { ...ctx.state }
-              })
-            }
-          }
-          | _ => Set()
+      ctx.messages.get_sign_request_messages().map(p => {
+        if(not (ctx.state.VK.exists(x => x.party == p.party))){ // party does not have vk
+          Set()
+        }else{
+          Set({
+            effects: Set(
+                choreo::Send( ({ to: SIM, message: SIMSign({party:p.party, msg:p.msg})})),
+                choreo::CustomEffect(ExcludeMsg( {node:ctx.state.process_id, msg: SignRequest(p)}) ),
+                choreo::CustomEffect(Log(SignRequest(p)) ),
+            ),
+            post_state: { ...ctx.state }
+          })
         }
-      }
-      ).flatten()
+      }).flatten()
   }
 
   pure def msg_sign_sim(ctx: LocalContext): Set[Transition] = {
     if(ctx.state.role != SigSim){
       Set()
     }else
-      ctx.messages.map(m => {
-        match m {
-          | SIMSign(p) => {
-              allSigs.map(sig => 
-                Set({
-                  effects: Set( 
-                      choreo::Send(({ to: FSig, message: SIMReleaseSign({party:p.party, msg:p.msg, sig:sig})})),
-                      choreo::CustomEffect(ExcludeMsg({node:ctx.state.process_id, msg:m}))
-                  ),
-                  post_state: { ...ctx.state }
-                })
-            ).flatten()
-          }
-          | _ => Set()
-        }
+      ctx.messages.get_sim_sign_messages().map(p => {
+        allSigs.map(sig =>
+          Set({
+            effects: Set(
+                choreo::Send(({ to: FSig, message: SIMReleaseSign({party:p.party, msg:p.msg, sig:sig})})),
+                choreo::CustomEffect(ExcludeMsg({node:ctx.state.process_id, msg: SIMSign(p)}))
+            ),
+            post_state: { ...ctx.state }
+          })
+        ).flatten()
       }).flatten()
   }
 
@@ -243,136 +294,110 @@ module f_sig_ideal {
     if(ctx.state.role != SigIF){
       Set()
     }else
-      ctx.messages.map(m => {
-        match m {
-          | SIMReleaseSign(p) => {
+      ctx.messages.get_sim_release_sign_messages().map(p => {
+        val vk_opt = ctx.state.VK.find(x => x.party == p.party)
 
-            val vk_opt = ctx.state.VK.find(x => x.party == p.party)
+        if (vk_opt == None){ // vk doesn't exist for a party
+          Set()
+        }else{
+          val vk = vk_opt.unwrap().vk
 
-            if (vk_opt == None){ // vk doesn't exist for a party
-              Set()
-            }else{
-              val vk = vk_opt.unwrap().vk
-            
-              def filter_fun = (x) => 
-                ctx.state.Ver.exists(y => y.vk == vk and
-                                          y.msg == p.msg and
-                                          y.sig == x)
-              
+          def filter_fun = (x) =>
+            ctx.state.Ver.exists(y => y.vk == vk and
+                                      y.msg == p.msg and
+                                      y.sig == x)
 
-              val san_sig_opt = if (not(filter_fun(p.sig))){
-                Some(p.sig)
-              }else{
-                allSigs.find(x => not(filter_fun(x)))
-              }
 
-              if (san_sig_opt != None){
-                val san_sig = san_sig_opt.unwrap()
-
-                Set({
-                  effects: Set( 
-                      choreo::Send( ({ to: ENV, message: SignResponse({party:p.party, ver_entry:{vk: vk, msg:p. msg, sig: san_sig, res: true}}) } ) ),
-                      choreo::CustomEffect(ExcludeMsg({node:ctx.state.process_id, msg:m}) )
-                  ),
-                  post_state: { ...ctx.state, Ver: ctx.state.Ver.union(Set({vk:vk, msg:p.msg, sig:san_sig, res:true})),}
-                })
-              }else{ // out of signatures
-                Set()
-              }
-            }
+          val san_sig_opt = if (not(filter_fun(p.sig))){
+            Some(p.sig)
+          }else{
+            allSigs.find(x => not(filter_fun(x)))
           }
-          | _ => Set()
+
+          if (san_sig_opt != None){
+            val san_sig = san_sig_opt.unwrap()
+
+            Set({
+              effects: Set(
+                  choreo::Send( ({ to: ENV, message: SignResponse({party:p.party, ver_entry:{vk: vk, msg:p. msg, sig: san_sig, res: true}}) } ) ),
+                  choreo::CustomEffect(ExcludeMsg({node:ctx.state.process_id, msg: SIMReleaseSign(p)}) )
+              ),
+              post_state: { ...ctx.state, Ver: ctx.state.Ver.union(Set({vk:vk, msg:p.msg, sig:san_sig, res:true})),}
+            })
+          }else{ // out of signatures
+            Set()
+          }
         }
       }).flatten()
-  }  
+  }
 
 
   pure def msg_verify_ideal1(ctx: LocalContext): Set[Transition] = {
     if(ctx.state.role != SigIF){
       Set()
     }else
-      ctx.messages.map(m => {
-        match m {
-          | VerifyRequest(p) => {
-          // buggy check for original version of f_sig, falsifies VerConsistent
-           // if((ctx.state.Ver.exists(x => x.vk == vk and x.msg == msg and x.sig == sig))){
-            //  Set() // todo: send response
-            //}else{
-              Set({
-                effects: Set( 
-                    choreo::Send( ({ to: SIM, message: SIMVerify({party:p.party, vk:p.vk, msg:p.msg, sig:p.sig})})),
-                    choreo::CustomEffect(ExcludeMsg( {node:ctx.state.process_id, msg:m}))
-                ),
-                post_state: { ...ctx.state }
-              })
-            //}
-          }
-          | _ => Set()
-        }
-      }
-      ).flatten()
+      ctx.messages.get_verify_request_messages().map(p => {
+        // buggy check for original version of f_sig, falsifies VerConsistent
+         // if((ctx.state.Ver.exists(x => x.vk == vk and x.msg == msg and x.sig == sig))){
+          //  Set() // todo: send response
+          //}else{
+            Set({
+              effects: Set(
+                  choreo::Send( ({ to: SIM, message: SIMVerify({party:p.party, vk:p.vk, msg:p.msg, sig:p.sig})})),
+                  choreo::CustomEffect(ExcludeMsg( {node:ctx.state.process_id, msg: VerifyRequest(p)}))
+              ),
+              post_state: { ...ctx.state }
+            })
+          //}
+      }).flatten()
   }
 
   pure def msg_verify_sim(ctx: LocalContext): Set[Transition] = {
     if(ctx.state.role != SigSim){
       Set()
     }else
-      ctx.messages.map(m => {
-        match m {
-          | SIMVerify(p) => {
-            Set(true, false).map(res => 
-              Set({
-                effects: Set( 
-                    choreo::Send( ({ to: FSig, 
-                                message: SIMReleaseVerify({party:p.party, 
-                                                            ver_entry: {vk:p.vk,msg:p.msg,sig:p.sig,res:res}})})),
-                    choreo::CustomEffect(ExcludeMsg( {node:ctx.state.process_id, msg:m}))
-                ),
-                post_state: { ...ctx.state }
-              })
-            ).flatten()
-
-
-          }
-          | _ => Set()
-        }
-      }
-      ).flatten()
+      ctx.messages.get_verify_sim_messages().map(p => {
+        Set(true, false).map(res =>
+          Set({
+            effects: Set(
+                choreo::Send( ({ to: FSig,
+                            message: SIMReleaseVerify({party:p.party,
+                                                        ver_entry: {vk:p.vk,msg:p.msg,sig:p.sig,res:res}})})),
+                choreo::CustomEffect(ExcludeMsg( {node:ctx.state.process_id, msg: SIMVerify(p)}))
+            ),
+            post_state: { ...ctx.state }
+          })
+        ).flatten()
+      }).flatten()
   }
 
   pure def msg_verify_ideal2(ctx: LocalContext): Set[Transition] = {
     if(ctx.state.role != SigIF){
       Set()
     }else
-      ctx.messages.map(m => {
-        match m {
-          | SIMReleaseVerify(p) => {
+      ctx.messages.get_sim_release_verify_messages().map(p => {
+        val ver = p.ver_entry
 
-            val ver = p.ver_entry
+        val san_res = if(ctx.state.VK.exists(x => x.party.in(honestParties) and x.vk == ver.vk)){
+          false
+        }else{
+          ver.res
+        }
 
-            val san_res = if(ctx.state.VK.exists(x => x.party.in(honestParties) and x.vk == ver.vk)){
-              false
-            }else{
-              ver.res
-            }
-
-            if(ctx.state.Ver.exists(x => all {
-                x.vk == ver.vk, 
-                x.msg == ver.msg,
-                x.sig == ver.sig
-                })){
-              Set() // TODO: send response?
-            }else{
-              Set({ 
-                effects: Set( 
-                    choreo::Send( ({ to: ENV, message: VerifyResponse({party:p.party, ver_entry:{vk:ver.vk,msg:ver.msg,sig:ver.sig,res:san_res}} ) } ) ),
-                    choreo::CustomEffect(ExcludeMsg( {node:ctx.state.process_id, msg:m}) )
-                ),
-                post_state: { ...ctx.state, Ver: ctx.state.Ver.union(Set({vk:ver.vk, msg:ver.msg, sig:ver.sig, res:san_res})),}
-              })
-            }
-          }
-          | _ => Set()
+        if(ctx.state.Ver.exists(x => all {
+            x.vk == ver.vk,
+            x.msg == ver.msg,
+            x.sig == ver.sig
+            })){
+          Set() // TODO: send response?
+        }else{
+          Set({
+            effects: Set(
+                choreo::Send( ({ to: ENV, message: VerifyResponse({party:p.party, ver_entry:{vk:ver.vk,msg:ver.msg,sig:ver.sig,res:san_res}} ) } ) ),
+                choreo::CustomEffect(ExcludeMsg( {node:ctx.state.process_id, msg: SIMReleaseVerify(p)}) )
+            ),
+            post_state: { ...ctx.state, Ver: ctx.state.Ver.union(Set({vk:ver.vk, msg:ver.msg, sig:ver.sig, res:san_res})),}
+          })
         }
       }).flatten()
   }
