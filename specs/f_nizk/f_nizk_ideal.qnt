@@ -47,7 +47,7 @@ module f_nizk_ideal {
 
     | VerifyRequest({party:Party, stm: Statement, proof: Proof}) // input for FSig
     | SIMVerify({party:Party, stm : Statement, proof: Proof}) // input to SIM
-    | SIMReleaseVerify({party:Party, stm: Statement, proof : Proof}) // output of SIM  
+    | SIMReleaseVerify({party:Party, stm: Statement, proof : Proof, witness : Witness}) // output of SIM  
     | VerifyResponse(bool) // output of FSig
 
    
@@ -84,6 +84,33 @@ module f_nizk_ideal {
     })
   }
 
+  pure def get_verify_request_messages(messages: Set[Message]): Set[{party:Party, stm: Statement, proof: Proof}] = {
+    messages.filterMap(m => {
+      match m {
+        | VerifyRequest(p) => Some(p)
+        | _ => None
+      }
+    })
+  }  
+
+  pure def get_verify_sim_request_messages(messages: Set[Message]): Set[{party:Party, stm: Statement, proof: Proof}] = {
+    messages.filterMap(m => {
+      match m {
+        | SIMVerify(p) => Some(p)
+        | _ => None
+      }
+    })
+  }    
+
+  pure def get_verify_release_request_messages(messages: Set[Message]): Set[{party:Party, stm: Statement, proof : Proof, witness : Witness}] = {
+    messages.filterMap(m => {
+      match m {
+        | SIMReleaseVerify(p) => Some(p)
+        | _ => None
+      }
+    })
+  }      
+
   pure def get_prove_sim_request_messages(messages: Set[Message]): Set[{party:Party, stm : Statement, witness: Witness}] = {
     messages.filterMap(m => {
       match m {
@@ -103,17 +130,22 @@ module f_nizk_ideal {
   }    
 
 
+
+
+
+
   /* End of boilerplate */
         
   // --- Party transitions ----------------------------------------------
   pure def prove_1(ctx: LocalContext) : Set[Transition] = {
-    if(ctx.state.role != NIZK_IF){
+    if(ctx.state.role == NIZK_IF){
       ctx.messages.get_prove_request_messages().map(p => {
         val R = ctx.state.Rel
         if(not (R.contains((p.stm, p.witness)))){
           Set({
             effects: Set(
               choreo::CustomEffect(ExcludeMsg( {node:ctx.state.process_id, msg: ProveRequest(p)}) )),
+              // TODO, add bottom message to indicate failure
             post_state: { ...ctx.state }
           })
         }else{
@@ -131,7 +163,7 @@ module f_nizk_ideal {
   }
 
   pure def prove_sim(ctx: LocalContext) : Set[Transition] = {
-    if(ctx.state.role != SigSim){
+    if(ctx.state.role == SigSim){
       ctx.messages.get_prove_sim_request_messages().map(p => {
         allProofs.map(prf => {
           Set({
@@ -148,7 +180,7 @@ module f_nizk_ideal {
   }      
 
   pure def prove_2(ctx: LocalContext) : Set[Transition] = {
-    if(ctx.state.role != NIZK_IF){
+    if(ctx.state.role == NIZK_IF){
       ctx.messages.get_prove_sim_release_request_messages().map(p => {
       val san_pk =  if(ctx.state.Ver.contains((p.stm, p.proof, false))){
           allProofs.find(prf => not (ctx.state.Ver.contains((p.stm, prf, false)))).unwrap()
@@ -158,12 +190,10 @@ module f_nizk_ideal {
 
       Set({
         effects: Set(
-          choreo::Send(({ to: p.party, message: ProveResponse({proof: san_pk}) })),
+          choreo::Send(({ to: ENV, message: ProveResponse({proof: san_pk}) })),
           choreo::CustomEffect(ExcludeMsg( {node:ctx.state.process_id, msg: SIMReleaseProve(p)}) )),
         post_state: { ...ctx.state, Ver: ctx.state.Ver.union(Set((p.stm, san_pk, true))) }
       })
-
-        
        }).flatten()
     }else{
       Set()
@@ -171,12 +201,68 @@ module f_nizk_ideal {
   }
   
       
+  pure def verify_1(ctx: LocalContext) : Set[Transition] = {
+    if(ctx.state.role == NIZK_IF){
+      ctx.messages.get_verify_request_messages().map(p => {
+        Set({
+          effects: Set(
+            choreo::Send(({ to: SIM, message: SIMVerify(p) })),
+            choreo::CustomEffect(ExcludeMsg( {node:ctx.state.process_id, msg: VerifyRequest(p)}) )),
+          post_state: ctx.state })
+      }).flatten()
+    }else{
+      Set()
+    }
+  }
+
+  pure def verify_sim(ctx: LocalContext) : Set[Transition] = {
+    if(ctx.state.role == SigSim){
+      ctx.messages.get_verify_sim_request_messages().map(p => {
+        //Set()
+        allWitnesses.map(wit => {
+          Set({
+            effects: Set(
+              choreo::Send(({ to: FNIZK, message: SIMReleaseVerify({party:p.party, stm: p.stm, proof : p.proof, witness : wit}) })),
+              choreo::CustomEffect(ExcludeMsg( {node:ctx.state.process_id, msg: SIMVerify(p)}) )),
+            post_state: ctx.state })
+        }).flatten()  
+      }).flatten()
+    }else{
+      Set()
+    }
+  }
+
+  pure def verify_2(ctx: LocalContext) : Set[Transition] = {
+    if(ctx.state.role == NIZK_IF){
+      ctx.messages.get_verify_release_request_messages().map(p => {
+        val ver_entry = ctx.state.Ver.find(e => e._1 == p.stm and e._2 == p.proof)
+
+        val result = if(ver_entry != None){
+          ver_entry.unwrap()._3
+        }else{
+          ctx.state.Rel.contains((p.stm, p.witness))
+        }
+
+        Set({
+          effects: Set(
+            choreo::Send(({ to: ENV, message: VerifyResponse(result) })),
+            choreo::CustomEffect(ExcludeMsg( {node:ctx.state.process_id, msg: SIMReleaseVerify(p)}) )),
+          post_state: { ...ctx.state, Ver: ctx.state.Ver.union(Set((p.stm, p.proof,result))) }
+        })
+      }).flatten()
+    }else{
+      Set()
+    }
+  }              
 
   pure def main_listener(ctx: LocalContext): Set[Transition] =
     Set(
+      verify_1(ctx),
+      verify_sim(ctx),
+      verify_2(ctx),
       prove_1(ctx),
       prove_sim(ctx),
-      prove_2(ctx) 
+      prove_2(ctx), 
     ).flatten()
 
  def apply_custom_effect(env: GlobalContext, effect: CustomEffects): GlobalContext = {
@@ -209,11 +295,22 @@ module f_nizk_ideal {
   action init = all {
     choreo::init({
       system: NODES.mapBy(n => initialize(n)),
-      messages: NODES.mapBy(n => if (n == 1)  
-         Set() 
+      messages: NODES.mapBy(n => if (n == FNIZK)  
+         Set(
+          //ProveRequest({party:1, stm:1, witness:1}),
+          VerifyRequest({party:2, stm:1, proof:1}),
+          VerifyRequest({party:3, stm:2, proof:2}),
+          //ProveRequest({party:4, stm:2, witness:2})
+         ) 
        else Set()),
     events: NODES.mapBy(n => Set()),
     extensions: initial_history
   })  ,
   }  
+
+  val ProveLiveness = choreo::s.system.get(FNIZK).Ver.size() <= 1
+
+  val VerConsistent = choreo::s.system.get(FNIZK).Ver.forall(entry => {
+     not ((entry._1, entry._2, not(entry._3)).in(choreo::s.system.get(FNIZK).Ver))
+  })
 }
