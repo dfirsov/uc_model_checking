@@ -162,6 +162,7 @@ module choreo {
     s' = ctx
   }
 
+
   action init_with_displayer(
     ctx: GlobalContext[p, s, m , e, ext],
     displayer: Displayer[p, s, m, e, extensions, d],

@@ -8,7 +8,7 @@ module basicSpells {
   type Option[a] = Some(a) | None
 
   /// An annotation for writing preconditions.
-  /// - @param cond condition to check
+  /// - @param cond condition  to check
   /// - @returns true if and only if cond evaluates to true
   pure def require(cond: bool): bool = cond
 

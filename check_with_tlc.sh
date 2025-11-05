@@ -5,7 +5,7 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 source "$SCRIPT_DIR/common.sh" || { echo "Error: Could not load common.sh"; exit 1; }
 
 # Default configurations
-APALACHE_JAR="$HOME/.quint/apalache-dist-0.47.2/apalache/lib/apalache.jar"
+APALACHE_JAR="$HOME/.quint/apalache-dist-0.50.3/apalache/lib/apalache.jar"
 JAVA_OPTS="-Xmx8G -Xss515m"
 
 FILE=""  # Mandatory: User must specify a file
@@ -14,7 +14,8 @@ INIT="init"  # Default initializer action
 STEP="step"  # Default step action
 INVARIANT="true"  # Default invariant
 TEMPORAL=""  # Default temporal properties
-WORKERS="auto"  # Default number of workers for TLC
+DFID=""  # Default depth-first iterative deepening value
+WORKERS="1"  # Default number of workers for TLC
 
 # Function to parse command-line arguments
 parse_args() {
@@ -33,6 +34,10 @@ parse_args() {
             --temporal)
                 shift
                 TEMPORAL="$1"
+                ;;
+            --dfid)
+                shift
+                DFID="$1"
                 ;;
             --main)
                 shift
@@ -64,6 +69,7 @@ parse_args() {
                 echo "  --step         name of the step action [default: \"step\"]"
                 echo "  --invariant    invariant to check: a definition name or an expression [default: \"true\"]"
                 echo "  --temporal     the temporal properties to check, separated by commas"
+                echo "  --dfid         depth-first iterative deepening value for TLC"
                 echo "  --workers      number of workers for TLC [default: auto]"
                 exit 0
                 ;;
@@ -96,6 +102,7 @@ generate_compile_options() {
     if [[ -n "$TEMPORAL" ]]; then
         options+=("--temporal=$TEMPORAL")
     fi
+
 
     echo "${options[*]}"
 }
@@ -138,13 +145,18 @@ create_cfg_file() {
 run_tlc() {
     local tla_file="$1"
     local output_file
+    local dfid_option=""
     output_file=$(mktemp)  # Create a temporary file to store output
 
     info "Running TLC for $tla_file..."
 
     # Run TLC, writing to both stdout and the temp file
-    echo -e "java $JAVA_OPTS -cp \"$APALACHE_JAR\" tlc2.TLC -deadlock -workers \"$WORKERS\" \"$tla_file\""
-    if ! java $JAVA_OPTS -cp "$APALACHE_JAR" tlc2.TLC -deadlock -workers "$WORKERS" "$tla_file" 2>&1 | tee "$output_file"; then
+    if [[ -n "$DFID" ]]; then
+        dfid_option=("-dfid $DFID")
+    fi
+
+    echo -e "java $JAVA_OPTS -cp \"$APALACHE_JAR\" tlc2.TLC $dfid_option -deadlock -workers \"$WORKERS\" \"$tla_file\""
+    if ! java $JAVA_OPTS -cp "$APALACHE_JAR" tlc2.TLC  $dfid_option -deadlock -workers "$WORKERS" "$tla_file" 2>&1 | tee "$output_file"; then
         err_and_exit "TLC execution failed for $tla_file"
     fi
 
