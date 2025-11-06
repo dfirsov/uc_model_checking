@@ -77,6 +77,28 @@ module g_clock_ideal {
   ]
 
 
+  def choreo_s = {
+    choreo::s
+  }
+
+  def choreo_display = {
+    choreo::display
+  }  
+
+  def choreo_CustomEffect = {
+    choreo::CustomEffect
+  }
+
+  def choreo_Send = {
+    choreo::Send
+  }  
+
+  action choreo_process_transitions = {
+    choreo::process_transitions
+  }
+
+
+
 
   pure def get_register_request_messages(messages: Set[Message]): Set[PartySID] = {
     messages.filterMap(m => {
@@ -321,7 +343,11 @@ module g_clock_ideal {
     choreo::step(
     (ctx => main_listener(ctx)),
     apply_custom_effect),
-    interact
+    //interact
+  }
+
+  action stutter = all {
+    choreo::s' = choreo::s
   }
 
 
@@ -330,7 +356,7 @@ module g_clock_ideal {
       process_id: n,
       TIME: 0,
       ok:  Set(),
-      Reg: Set(),
+      Reg: Set({party:1,sid:1}),
 
       role: if (n == GLOCK) GLOCK_ROLE else if (n == SIM) SIM_ROLE else ENV_ROLE,
 
@@ -348,50 +374,50 @@ module g_clock_ideal {
     choreo::init({
       system: NODES.mapBy(n => initialize(n)),
       messages: NODES.mapBy(n => if (n == ENV)  
-         Set(EnvGiveControl)
+         Set()
        else Set()),
     events: NODES.mapBy(n => Set()),
     extensions: initial_history
   })  
   
 
-  action interact : bool = all {
+  // action interact : bool = all {
 
-    choreo::s.messages.get(ENV).size() > 0,
+  //   choreo::s.messages.get(ENV).size() > 0,
 
-    nondet envmsg = oneOf(choreo::s.messages.get(ENV))
-    nondet node = oneOf(NODES)
-    nondet sid = oneOf(SIDs)
-    nondet req = 1.to(3).oneOf()
+  //   nondet envmsg = oneOf(choreo::s.messages.get(ENV))
+  //   nondet node = oneOf(NODES)
+  //   nondet sid = oneOf(SIDs)
+  //   nondet req = 1.to(3).oneOf()
 
-    val msg = if (req == 1) {
-      RegisterRequest({party:node, sid:sid})
-    } else if (req == 2) {
-      OkayRequest({party:node, sid:sid})
-    } else /* req == 3 */ {
-      TimeRequest({party:node, sid:sid})
-    }
+  //   val msg = if (req == 1) {
+  //     RegisterRequest({party:node, sid:sid})
+  //   } else if (req == 2) {
+  //     OkayRequest({party:node, sid:sid})
+  //   } else /* req == 3 */ {
+  //     TimeRequest({party:node, sid:sid})
+  //   }
 
-    val req_transition = {
-          effects: Set(
-            choreo::CustomEffect(Log(envmsg)),
-            choreo::CustomEffect(ExcludeMsg( {node:ENV, msg: envmsg }) ),
-            choreo::Send(({ to: GLOCK, message: msg })),
-          ),
-          post_state: choreo::s.system.get(ENV), 
-        }
+  //   val req_transition = {
+  //         effects: Set(
+  //           choreo::CustomEffect(Log(envmsg)),
+  //           choreo::CustomEffect(ExcludeMsg( {node:ENV, msg: envmsg }) ),
+  //           choreo::Send(({ to: GLOCK, message: msg })),
+  //         ),
+  //         post_state: choreo::s.system.get(ENV), 
+  //       }
 
-    val sim_transition = {
-          effects: Set(
-            choreo::CustomEffect(Log(envmsg)),
-            choreo::CustomEffect(ExcludeMsg( {node:ENV, msg: envmsg }) ),
-            choreo::Send(({ to: SIM, message: SIMGiveControl })),
-          ),
-          post_state: choreo::s.system.get(ENV), 
-        }        
+  //   val sim_transition = {
+  //         effects: Set(
+  //           choreo::CustomEffect(Log(envmsg)),
+  //           choreo::CustomEffect(ExcludeMsg( {node:ENV, msg: envmsg }) ),
+  //           choreo::Send(({ to: SIM, message: SIMGiveControl })),
+  //         ),
+  //         post_state: choreo::s.system.get(ENV), 
+  //       }        
 
-    choreo::process_transitions(ENV, Set(req_transition), apply_custom_effect)
-  }
+  //   choreo::process_transitions(ENV, Set(req_transition), apply_custom_effect)
+  // }
 
   // --- Properties -----------------------------------------------------
 
