@@ -1,168 +1,12 @@
 module g_clock_ideal{
 
-/*
-- corrupted parties can advance time as long as there are no registered honest parties
-  - intended?
-- update of OK map in okay_1 excludes C, does it make sense?
-- for all requests we have precondition(?) p ∈ P -- not part of the execution?
-                
-*/
-
     import basicSpells.* from "../../spells/basicSpells"
+    import uc.* from "./uc"
+    import g_clock_types.* from "./g_clock_types"
 
-    // define types of the system
-    type Party = int
-    type SID = int
 
-    type Time = int
-    type PartySID = {party: Party, sid: SID}
-    type Nonce = int
-
-    type Message =
-        | RegisterRequest({nonce: Nonce, party: PartySID})
-        | RegisterResponse({nonce: Nonce, party: PartySID})
-
-        | TimeRequest({nonce: Nonce, party: PartySID})
-        | TimeResponse({nonce: Nonce, party: PartySID, time: Time})
-
-        | OkayRequest({nonce: Nonce, party: PartySID})
-        | SIMOkayHold({nonce: Nonce, party: PartySID})
-        | SIMOkayRelease({nonce: Nonce, party: PartySID})
-        | OkayResponse({nonce: Nonce, party: PartySID})
-
-        | SIMControl
-
-    type LogEntry  = {idx:int, msg: Message, time: Time, Reg: Set[PartySID], ok: Set[PartySID]} 
-    type SIMHandle = Message
-
-    type SystemParams = {
-        P : Set[Party], // all parties
-        C : Set[Party] // corrupted parties
-    }
-
-    type StateVars = {
-        TIME : Time,
-        Reg : Set[PartySID],
-        ok  : Set[PartySID],
-    }
-
-    type SystemPoly[s] = {
-        params : SystemParams,
-        state : s,
-        input : Set[Message], // always not more than 1 message in the system
-        nonce : Nonce,        // to be able to match requests and responses in the trace
-        log : Set[LogEntry],  
-        SIM_handles : Set[SIMHandle],
-
-    }
-
-    type Effect = 
-      | LogMessage(Message)
-      | UpdateInput(Set[Message])
-      | AppendHandle(Message)
-      | RemoveHandle(SIMHandle)
-
-    type Transition = {
-        post_state: StateVars,
-        effects: Set[Effect]
-    } 
-  
-
-    
-    type System = SystemPoly[StateVars]
+    // mutable variable represents the system state
     var s : System
-
-    pure def get_register_request_messages(messages: Set[Message]): Set[{nonce: Nonce, party: PartySID}] = {
-        messages.filterMap(m => {
-        match m {
-            | RegisterRequest(p) => Some(p)
-            | _ => None
-        }
-        })
-    }
-
-    pure def get_time_request_messages(messages: Set[Message]): Set[{nonce: Nonce, party: PartySID}] = {
-        messages.filterMap(m => {
-        match m {
-            | TimeRequest(p) => Some(p)
-            | _ => None
-        }
-        })
-    }
-
-    pure def get_okay_request_messages(messages: Set[Message]): Set[{nonce: Nonce, party: PartySID}] = {
-        messages.filterMap(m => {
-        match m {
-            | OkayRequest(p) => Some(p)
-            | _ => None
-        }
-        })
-    }
-
-    pure def get_okay_response_messages(messages: Set[Message]): Set[{nonce: Nonce, party: PartySID}] = {
-        messages.filterMap(m => {
-        match m {
-            | OkayResponse(p) => Some(p)
-            | _ => None
-        }
-        })
-    }
-
-    pure def get_register_response_messages(messages: Set[Message]): Set[{nonce: Nonce, party: PartySID}] = {
-        messages.filterMap(m => {
-        match m {
-            | RegisterResponse(p) => Some(p)
-            | _ => None
-        }
-        })
-    }
-
-    pure def get_time_response_messages(messages: Set[Message]): Set[{nonce: Nonce, party: PartySID, time: Time}] = {
-        messages.filterMap(m => {
-        match m {
-            | TimeResponse(p) => Some(p)
-            | _ => None
-        }
-        })
-    }         
-
-    pure def get_all_response_messages(messages: Set[Message]): Set[Message] = {
-        messages.filterMap(m => {
-        match m {
-            | RegisterResponse(p) => Some(m)
-            | TimeResponse(p) => Some(m)
-            | OkayResponse(p) => Some(m)
-            | _ => None
-        }
-        })
-    }
-
-    pure def get_sim_okay_release_messages(messages: Set[Message]): Set[{nonce: Nonce, party: PartySID}] = {
-        messages.filterMap(m => {
-        match m {
-            | SIMOkayRelease(p) => Some(p)
-            | _ => None
-        }
-        })
-    }
-
-    pure def get_sim_okay_hold_messages(messages: Set[Message]): Set[{nonce: Nonce, party: PartySID}] = {
-        messages.filterMap(m => {
-        match m {
-            | SIMOkayHold(p) => Some(p)
-            | _ => None
-        }
-        })
-    }
-
-    pure def contains_sim_control(messages: Set[Message]): bool = {
-        messages.exists(m => {
-            match m {
-                | SIMControl => true
-                | _ => false
-            }
-        })
-    }
 
     pure def register(sys: System) :  Set[Transition] = { 
         sys.input.get_register_request_messages().map(msg => 
@@ -201,7 +45,7 @@ module g_clock_ideal{
                 })
                 val new_time = if (flag) sys.state.TIME + 1 else sys.state.TIME
                 // for whatever reason we are keeping corrupted parties in the ok set
-                val new_ok = if (flag) sys.state.ok.filter(p => p.party.in(sys.params.C)) else sys.state.ok.setAdd(msg.party)
+                val new_ok = if (flag) Set() else sys.state.ok.setAdd(msg.party)
                 
                 {
                     post_state : {...sys.state, 
@@ -277,28 +121,6 @@ module g_clock_ideal{
         }
     }
 
-
-    pure def apply_effect(sys: System, eff: Effect): System = {
-        match eff {
-        | LogMessage(msg) => 
-            {...sys, 
-                log: sys.log.setAdd({idx: sys.log.size(), msg: msg, time: sys.state.TIME, Reg: sys.state.Reg, ok: sys.state.ok})
-            }
-        | UpdateInput(msgs) => 
-            {...sys, 
-                input: msgs
-            }
-        | AppendHandle(msg) => 
-            {...sys,
-                SIM_handles: sys.SIM_handles.union(Set(msg)),
-            }
-        | RemoveHandle(handle_to_remove) =>
-            {...sys,
-                SIM_handles: sys.SIM_handles.exclude(Set(handle_to_remove))
-            }
-        }
-    }
-
     pure def main_listener(sys : System) : Set[Transition] = {
         Set(
             register(sys),
@@ -313,18 +135,17 @@ module g_clock_ideal{
     pure def process_transitions(sys: System, transition: Transition) : System = {
         val new_sys = {...sys, state: transition.post_state}
         transition.effects.fold(new_sys, ((a1,a2) => apply_effect(a1,a2)))
-    }
+    } 
 
     action step : bool =  { 
         nondet transition = main_listener(s).oneOf()
         s' = process_transitions(s, transition)
     }
 
-    action init(params : SystemParams, Reg: Set[PartySID], time: Time) : bool = {
+    action init(C: Set[Party], time : int, Reg: Set[PartySID]): bool = {
         s' = {
             params: {
-                P : params.P,
-                C : params.C,
+                C : C,
             },
             state : {
                 TIME : time,
@@ -337,5 +158,5 @@ module g_clock_ideal{
             SIM_handles : Set()
         }
     }
-
+    
 }
