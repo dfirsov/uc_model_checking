@@ -1,5 +1,13 @@
 module g_clock_ideal{
 
+/*
+- corrupted parties can advance time as long as there are no registered honest parties
+  - intended?
+- update of OK map in okay_1 excludes C, does it make sense?
+- for all requests we have precondition(?) p ∈ P -- not part of the execution?
+                
+*/
+
     import basicSpells.* from "../../spells/basicSpells"
 
     // define types of the system
@@ -186,9 +194,14 @@ module g_clock_ideal{
         sys.input.get_okay_request_messages().map(msg => {
             if(sys.state.Reg.contains(msg.party)) {
                 // Check if all registered parties are ready (including this one)
-                val flag = sys.state.Reg.forall(rp => sys.state.ok.contains(rp) or rp == msg.party)
+                val flag = sys.state.Reg.forall(rp => or {
+                     sys.state.ok.contains(rp), 
+                     rp == msg.party, 
+                     msg.party.party.in(sys.params.C)
+                })
                 val new_time = if (flag) sys.state.TIME + 1 else sys.state.TIME
-                val new_ok = if (flag) Set() else sys.state.ok.setAdd(msg.party)
+                // for whatever reason we are keeping corrupted parties in the ok set
+                val new_ok = if (flag) sys.state.ok.filter(p => p.party.in(sys.params.C)) else sys.state.ok.setAdd(msg.party)
                 
                 {
                     post_state : {...sys.state, 

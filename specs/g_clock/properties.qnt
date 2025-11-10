@@ -2,7 +2,8 @@ module properties {
     import basicSpells.* from "../../spells/basicSpells"
     import g_clock_ideal as g_clock from "./g_clock_ideal"    
 
-    val PARTIES = Set(1, 2, 3)
+    val P = Set(1, 2, 3)
+    val C = Set(3)
     val SIDS = Set(1, 2)
 
     action step : bool = any {
@@ -14,8 +15,8 @@ module properties {
     action init = {
         g_clock::init(
             {
-                P : PARTIES,
-                C : Set()
+                P : P,
+                C : C
             },
             Set(),
             0
@@ -30,7 +31,7 @@ module properties {
         g_clock::s.input.size() == 0,
         
         // Non-deterministically choose a party and SID
-        nondet party = PARTIES.oneOf()
+        nondet party = P.oneOf()
         nondet sid = SIDS.oneOf()
         val partySID = {party: party, sid: sid}
         
@@ -94,7 +95,7 @@ val TimeAdvances = g_clock::s.state.TIME < 2
 
 // must fail
 val HandlesLiveness = 
-    g_clock::s.sim_handles.size() < 2
+    g_clock::s.SIM_handles.size() < 2
 
 
 // system is well-defined
@@ -139,7 +140,11 @@ val TimeLiveness = g_clock::s.log.forall(r1 =>
               match r2.msg {
                 | OkayRequest(p) => {
                       // check if all registered parties were ready at r1
-                      val all_ready = r1.Reg.forall(rp => r1.ok.contains(rp) or rp == p.party)
+                    val all_ready = r1.Reg.forall(rp => or {
+                     r1.ok.contains(rp), 
+                     rp == p.party, 
+                     p.party.party.in(g_clock::s.params.C)
+                    })
                     
                       if (r2.Reg.contains(p.party) and all_ready) {
                         r2.time == r1.time + 1
@@ -161,12 +166,16 @@ val TimeSoundness = g_clock::s.log.forall(r1 =>
               match r2.msg {
                 | OkayRequest(p) =>
                       // time advanced, check that all registered parties were ready
-                    val all_ready = r1.Reg.forall(rp => r1.ok.contains(rp) or rp == p.party)
+                    val all_ready = r1.Reg.forall(rp => or {
+                        r1.ok.contains(rp), 
+                        rp == p.party, 
+                        p.party.party.in(g_clock::s.params.C)
+                    })
 
                     and {
                       all_ready,
                       r2.time == r1.time + 1,
-                      r2.ok == Set(),
+                      //r2.ok == Set(),
                     }
                 | _ => false
               }
