@@ -1,10 +1,9 @@
 module g_clock_properties {
 
     import basicSpells.* from "../../spells/basicSpells"
-    import uc.* from "./uc"
+    import uc.* from "../uc"
     import g_clock_types as g_clock_types from "./g_clock_types" 
-    import g_clock_ideal as g_clock from "./g_clock_ideal"
-
+    import g_clock as g_clock from "./g_clock"
 
 
     val P = Set(1, 2, 3)
@@ -174,7 +173,7 @@ val TimeSoundness = g_clock::s.log.forall(r1 =>
                     and {
                       all_ready,
                       r2.state.TIME == r1.state.TIME + 1,
-                      //r2.ok == Set(),
+                      r2.state.ok == Set(),
                     }
                 | _ => false
               }

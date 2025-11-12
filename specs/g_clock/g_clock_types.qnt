@@ -1,6 +1,6 @@
 module g_clock_types {
 
-    import uc.* from "./uc"
+    import uc.* from "../uc"
     import basicSpells.* from "../../spells/basicSpells"
 
     // define types of the system

@@ -1,5 +1,5 @@
 module uc {
-    import basicSpells.* from "../../spells/basicSpells"
+    import basicSpells.* from "../spells/basicSpells"
 
     type Time = int
     type Nonce = int

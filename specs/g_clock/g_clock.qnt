@@ -1,7 +1,7 @@
-module g_clock_ideal{
+module g_clock{
 
     import basicSpells.* from "../../spells/basicSpells"
-    import uc.* from "./uc"
+    import uc.* from "../uc"
     import g_clock_types.* from "./g_clock_types"
 
 
@@ -157,6 +157,10 @@ module g_clock_ideal{
             log : Set(),
             SIM_handles : Set()
         }
+    }
+
+    action stutter : bool = {
+        s' = s
     }
     
 }
