@@ -4,12 +4,12 @@ module f_ac{
     import rareSpells.* from "../../spells/rareSpells"
     import uc.* from "../uc"
     import f_ac_types.* from "./f_ac_types"
-    import g_clock as g_clock from "../g_clock/g_clock"
+    import g_clock as g_clock_func from "../g_clock/g_clock"
     import g_clock_types as gct from "../g_clock/g_clock_types"
 
 
     // mutable variable represents the system state
-    var f_ac : System
+    var f_ac_s : System
 
 
     def send_1(sys: System) :  Set[Transition] = { 
@@ -18,14 +18,14 @@ module f_ac{
             val x = msg.x
             val sid = msg.cfg.sid
             val P = msg.cfg.party
-            val t = g_clock::s.state.TIME
+            val t = g_clock_func::s.state.TIME
             val sid_state = sys.state.get(sid)
 
             if (and {
-                Q.in(f_ac.params.P),
-                P.in(f_ac.params.P),
-                sid.in(f_ac.params.SIDs)
-            }) { 
+                Q.in(f_ac_s.params.P),
+                P.in(f_ac_s.params.P),
+                sid.in(f_ac_s.params.SIDs)
+            }) {
                 val new_ctr = sid_state.ctr + 1
                 val new_done = sid_state.done.put({from: P, to: Q, time: t}, true)
                 val new_L = sid_state.L.put(new_ctr, {from: P, to: Q, time: t, data: x})
@@ -57,51 +57,51 @@ module f_ac{
     }
 
     pure def send_2(sys: System) : Set[Transition] = {
-        sys.SIM_handles.get_sim_send_hold_messages().map(msg => {
-            {
-                post_state : sys.state,
-                effects : Set(
-                    UpdateInput(Set(SIMSendRelease({cfg: msg.cfg, Q: msg.Q, t: msg.t}))),
-                    RemoveHandle(SIMSendHold(msg))
-                )
-            }
-        })
+        sys.input.get_sim_control_messages().map(c => { // SIM must have a control
+            sys.SIM_handles.get_sim_send_hold_messages().map(msg => {
+                {
+                    post_state : sys.state,
+                    effects : Set(
+                        UpdateInput(Set(SIMSendRelease({cfg: msg.cfg, Q: msg.Q, t: msg.t, x:msg.x}))),
+                        RemoveHandle(SIMSendHold(msg)),
+                    )
+                }
+            })
+        }).flatten()
+
     }    
 
     pure def send_3(sys: System) : Set[Transition] = {
         sys.input.get_sim_send_release_messages().map(msg => {
             val sid = msg.cfg.sid
             val sid_state = sys.state.get(sid)
-
-            Set(
                 {
                     post_state : sys.state.set(sid, {...sid_state, 
                         done: sid_state.done.put({from: msg.cfg.party, to: msg.Q, time: msg.t}, false)
                     }),
                     effects : Set(
-                        UpdateInput(Set(SendResponse({cfg: msg.cfg}))),
+                        UpdateInput(Set(SendResponse({cfg: msg.cfg, Q: msg.Q, t: msg.t, x: msg.x}))),
                     )
-                }                    
-            )            
-        }).flatten()
+                }                                  
+        })
     }
 
     def fetch_1(sys: System) : Set[Transition] = {
         sys.input.get_fetch_request_messages().map(msg => 
         {
-            val tp = g_clock::s.state.TIME // to make traces shorter
+            val tp = g_clock_func::s.state.TIME // to make traces shorter
             val sid = msg.cfg.sid
             val P = msg.cfg.party
             val delta = sys.params.delta
             val L = sys.state.get(sid).L
             
             if (and {
-                P.in(f_ac.params.P),
-                sid.in(f_ac.params.SIDs)
+                P.in(f_ac_s.params.P),
+                sid.in(f_ac_s.params.SIDs)
             }){
                 val i_late = L.keys().filterMap(k => {
                     val v = L.get(k)
-                    if(v.to == P and (tp - v.time) == delta){
+                    if(v.to == P and (tp - v.time) >= delta){
                         Some(k)
                     }else{
                         None
@@ -127,24 +127,28 @@ module f_ac{
     }
 
     pure def fetch_2(sys: System) : Set[Transition] = {
-        sys.SIM_handles.get_sim_fetch_hold_messages().map(msg => {
-            val sid = msg.cfg.sid
-            val L = sys.state.get(sid).L
-            L.keys().powerset().map(i_early => 
-                {   
-                    post_state : sys.state,
-                    effects : Set( 
-                        RemoveHandle(SIMFetchHold(msg)),
-                        UpdateInput(Set(SIMFetchRelease({
-                            cfg: msg.cfg,
-                            t_prim: msg.t_prim,
-                            i_late: msg.i_late,
-                            i_early: i_early
-                        }))),
-                        )  
-                }
-            )
+        sys.input.get_sim_control_messages().map(c => { // sim must have control
+            sys.SIM_handles.get_sim_fetch_hold_messages().map(msg => {
+                val sid = msg.cfg.sid
+                val L = sys.state.get(sid).L
+                L.keys().powerset().map(i_early => 
+                    {   
+                        post_state : sys.state,
+                        effects : Set( 
+                            RemoveHandle(SIMFetchHold(msg)),
+                            UpdateInput(Set(SIMFetchRelease({
+                                cfg: msg.cfg,
+                                t_prim: msg.t_prim,
+                                i_late: msg.i_late,
+                                i_early: i_early
+                            }))),
+                            )  
+                    }
+                )
+            }).flatten()
         }).flatten()
+
+
     }    
 
     def fetch_3(sys : System) : Set[Transition] = {
@@ -163,24 +167,23 @@ module f_ac{
                 }
             })
 
-        val msgs = i_early.union(i_late).map(k => L.get(k).data)
-        val new_L = L.keys().exclude(i_early.union(i_late)).mapBy(k => L.get(k))
+            val msgs = i_early.union(i_late).map(k => L.get(k).data)
+            val new_L = L.keys().exclude(i_early.union(i_late)).mapBy(k => L.get(k))
 
-        Set({
-            post_state: sys.state.set(sid, {...state, 
-                        L: new_L
-                    }),
-            effects: Set(
-                UpdateInput(Set(FetchResponse({cfg:msg.cfg, data: msgs})))
-            )
-        })
-
-        ).flatten()
+            {
+                post_state: sys.state.set(sid, {...state, 
+                                L: new_L
+                            }),
+                effects: Set(
+                    UpdateInput(Set(FetchResponse({cfg:msg.cfg, t_prim: msg.t_prim, data: msgs})))
+                )
+            }
+        )
     }
 
     def ok_1(sys: System) : Set[Transition] = {
         sys.input.get_ok_request_messages().map(msg => {
-            val t = g_clock::s.state.TIME // to make traces shorter
+            val t = g_clock_func::s.state.TIME // to make traces shorter
             val sid = msg.cfg.sid
             val P = msg.cfg.party
             val done = sys.state.get(sid).done
@@ -213,9 +216,11 @@ module f_ac{
             val fac_transition = {
                 post_state: fac.state,
                 effects: Set(
+                    UpdateInput(Set()),
                     AppendHandle(ClockRequestWait({cfg:msg.cfg, t: msg.t}))
                 )
             }
+
 
             val clock_transition = {
                 post_state: clock.state,
@@ -275,16 +280,16 @@ module f_ac{
               )
             ).mapBy(k => state.done.get(k))
             
-            Set({
+            {
                 post_state: sys.state.set(msg.cfg.sid, {...state, 
                     done: done
                 }),
                 effects: Set(
                     UpdateInput(Set(OKResponse({cfg: msg.cfg}))),
                 )
-            })
+            }
 
-        }).flatten()
+        })
     }
 
     def main_listener(sys: System, clock: gct::System) : (Set[(Transition, gct::Transition)]) = {
@@ -314,27 +319,36 @@ module f_ac{
 
     action step : bool =  any {
         all{ 
-            val q = main_listener(f_ac, g_clock::s)
+            val q = main_listener(f_ac_s, g_clock_func::s)
             all {
                 q.size() > 0,
                 nondet transition = q.oneOf()
                 all {
-                    f_ac' = process_transitions(f_ac, transition._1),
-                    g_clock::s' = g_clock::process_transitions(g_clock::s, transition._2)
+                    f_ac_s' = process_transitions(f_ac_s, transition._1),
+                    g_clock_func::s' = g_clock_func::process_transitions(g_clock_func::s, transition._2)
                 }
             }
         },
-    }    
+    }
 
-    pure def initial_f_ac() : System = {
+
+
+
+    pure def initial_f_ac(P: Set[Party], C: Set[Party], delta: Time, SIDs: Set[SID]) : System = {
     {
             params : {
-                P : Set(),
-                C : Set(),
-                delta: 1,
-                SIDs: Set(),
+                P : P,
+                C : C,
+                delta: delta,
+                SIDs: SIDs,
             },
-            state : Map(),
+            state : SIDs.mapBy(sid => {
+                {
+                    L : Map(),
+                    ctr : 0,
+                    done : Map()
+                }
+            }),
             input : Set(),
             nonce : 0,        // to be able to match requests and responses in the trace
             log : Set(),
@@ -342,11 +356,8 @@ module f_ac{
         }        
     }
 
-    action init : bool = all {
-        g_clock::init(Set(),0,Set()),
-        f_ac' = initial_f_ac
+    action init(P: Set[Party], C: Set[Party], delta: Time, SIDs: Set[SID]) : bool =  all {
+        f_ac_s' = initial_f_ac(P, C, delta, SIDs)
     }
-
-    val Prop = true
 
 }

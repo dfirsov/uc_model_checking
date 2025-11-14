@@ -1,3 +1,12 @@
+/*
+F_AC [P,SIDs] -- environment can talk to F_AC using any party and any SID 
+(however unless they are in P and SID, F_AC will ignore)
+
+enviroment can talk directly to G_CLOCK using any party and any SID except of those in P and SIDs. (includes corrupted parties)
+
+F_AC.P.Send(..) where P corrupted
+*/
+
 module g_clock_properties {
 
     import basicSpells.* from "../../spells/basicSpells"

@@ -24,13 +24,13 @@ module f_ac_types {
 
         | SendRequest({cfg: MsgConfig, Q:Party, x:Data}) 
         | SIMSendHold({cfg: MsgConfig, ctr:Counter, Q:Party, t:Time, x:Data})
-        | SIMSendRelease({cfg: MsgConfig, Q:Party, t:Time})
-        | SendResponse({cfg: MsgConfig})
+        | SIMSendRelease({cfg: MsgConfig, Q:Party, t:Time, x : Data})
+        | SendResponse({cfg: MsgConfig, Q:Party, t:Time, x : Data})
 
         | FetchRequest({cfg: MsgConfig})
         | SIMFetchHold({cfg: MsgConfig, t_prim: Time, i_late: Set[Time]})
         | SIMFetchRelease({cfg: MsgConfig, t_prim: Time, i_late: Set[Time], i_early: Set[Time]})
-        | FetchResponse({cfg: MsgConfig, data: Set[Data]})
+        | FetchResponse({cfg: MsgConfig, t_prim: Time, data: Set[Data]})
 
         | OKRequest({cfg: MsgConfig})
         | ClockRequest({cfg: MsgConfig, t: Time})
@@ -75,6 +75,17 @@ module f_ac_types {
     }            
      
 
+    pure def get_all_response_messages(messages: Set[Message]): Set[Message] = {
+        messages.filterMap(m => {
+        match m {
+            | SendResponse(p) => Some(SendResponse(p))
+            | FetchResponse(p) => Some(FetchResponse(p))
+            | OKResponse(p) => Some(OKResponse(p))  
+            | _ => None
+        }
+        })
+    }      
+
     pure def get_sim_send_hold_messages(messages: Set[Message]): Set[{cfg: MsgConfig, ctr:Counter, Q:Party, t:Time, x:Data}] = {
         messages.filterMap(m => {
         match m {
@@ -84,7 +95,7 @@ module f_ac_types {
         })
     }
 
-    pure def get_sim_send_release_messages(messages: Set[Message]): Set[{cfg: MsgConfig, Q:Party, t:Time}] = {
+    pure def get_sim_send_release_messages(messages: Set[Message]): Set[{cfg: MsgConfig, Q:Party, t:Time, x : Data}] = {
         messages.filterMap(m => {
         match m {
             | SIMSendRelease(p) => Some(p)
@@ -93,7 +104,7 @@ module f_ac_types {
         })
     }
 
-    pure def get_send_response_messages(messages: Set[Message]): Set[{cfg: MsgConfig}] = {
+    pure def get_send_response_messages(messages: Set[Message]): Set[{cfg: MsgConfig, Q:Party, t:Time, x : Data}] = {
         messages.filterMap(m => {
         match m {
             | SendResponse(p) => Some(p)
@@ -129,7 +140,7 @@ module f_ac_types {
         })
     }
 
-    pure def get_fetch_response_messages(messages: Set[Message]): Set[{cfg: MsgConfig, data: Set[Data]}] = {
+    pure def get_fetch_response_messages(messages: Set[Message]): Set[{cfg: MsgConfig, t_prim: Time, data: Set[Data]}] = {
         messages.filterMap(m => {
         match m {
             | FetchResponse(p) => Some(p)
