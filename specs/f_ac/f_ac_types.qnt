@@ -1,26 +1,12 @@
 module f_ac_types {
 
-    import uc.* from "../uc"
     import basicSpells.* from "../../spells/basicSpells"
+    import common.* from "../common"
 
-    // define types of the system
+    // define types of the system  
     type Data = int
-    type Counter = int
-/*
-1. All state variables of a F-AC functionality are indexed by SID
-2. F-AC accepts messages from parties at a particular SID (messages which are not in the "allowed set" are ignored)
-3. The messages are always being sent by environment on behalf of a party
-4. Responses are always being sent to the environment on behalf of a party
-5. A particular configuration and constraints of who can send messages to whom are defined when instantiating the environment.
-
-*/
-    type MsgConfig = {
-        party: Party,
-        sid: SID,
-        nonce: Nonce,
-    }
-
-    type Message =
+    
+    type FAC_Message =
 
         | SendRequest({cfg: MsgConfig, Q:Party, x:Data}) 
         | SIMSendHold({cfg: MsgConfig, ctr:Counter, Q:Party, t:Time, x:Data})
@@ -40,32 +26,63 @@ module f_ac_types {
 
         | SIMControl  
 
-    type SystemParams = {
+    type FAC_SystemParams = {
         P : Set[Party], // parties who can use the functionality
         C : Set[Party], // corrupted parties
         delta: Time,
         SIDs: Set[SID],
     }
 
-    type StateVars = SID -> 
+    type FAC_StateVars = SID -> 
         {
             L : Counter -> {from: Party, to: Party, time: Time, data: Data},
             ctr : Counter,
             done  : {from: Party, to: Party, time: Time} -> bool,
         }
 
-    type System = SystemPoly[SystemParams,StateVars,Message]
+    type FAC_System = {
+        params : FAC_SystemParams,
+        state : FAC_StateVars,
+        input : Set[FAC_Message], // always not more than 1 message in the system
+        nonce : Nonce,        // to be able to match requests and responses in the trace
+        log : Set[{idx: int, msg: FAC_Message, state: FAC_StateVars}],  
+        SIM_handles : Set[FAC_Message],
+    }  
 
-    pure def LogMessage(msg: Message) :Effect = LogMessagePoly(msg)
-    pure def UpdateInput(msgs: Set[Message]) :Effect = UpdateInputPoly(msgs)
-    pure def AppendHandle(msg: Message) :Effect = AppendHandlePoly(msg)
-    pure def RemoveHandle(handle: Message) :Effect = RemoveHandlePoly(handle)
+    type FAC_Effect = 
+      | FAC_LogMessage(FAC_Message)
+      | FAC_UpdateInput(Set[FAC_Message])
+      | FAC_AppendHandle(FAC_Message)
+      | FAC_RemoveHandle(FAC_Message)      
 
-    type Effect = EffectPoly[Message] 
-    type Transition = TransitionPoly[StateVars,Message]
+    type FAC_Transition = {
+        post_state: FAC_StateVars,
+        effects: Set[FAC_Effect]
+    }    
+
+    pure def apply_effect(sys: FAC_System, eff: FAC_Effect): FAC_System = {
+        match eff {
+        | FAC_LogMessage(msg) => 
+            {...sys, 
+                log: sys.log.setAdd({idx: sys.log.size(), msg: msg, state : sys.state})
+            }
+        | FAC_UpdateInput(msgs) => 
+            {...sys, 
+                input: msgs
+            }
+        | FAC_AppendHandle(msg) => 
+            {...sys,
+                SIM_handles: sys.SIM_handles.union(Set(msg)),
+            }
+        | FAC_RemoveHandle(handle_to_remove) =>
+            {...sys,
+                SIM_handles: sys.SIM_handles.exclude(Set(handle_to_remove))
+            }
+        }
+    }    
     
 
-    pure def get_send_request_messages(messages: Set[Message]): Set[{cfg: MsgConfig, Q:Party, x:Data}] = {
+    pure def get_send_request_messages(messages: Set[FAC_Message]): Set[{cfg: MsgConfig, Q:Party, x:Data}] = {
         messages.filterMap(m => {
         match m {
             | SendRequest(p) => Some(p)
@@ -75,7 +92,7 @@ module f_ac_types {
     }            
      
 
-    pure def get_all_response_messages(messages: Set[Message]): Set[Message] = {
+    pure def get_all_response_messages(messages: Set[FAC_Message]): Set[FAC_Message] = {
         messages.filterMap(m => {
         match m {
             | SendResponse(p) => Some(SendResponse(p))
@@ -86,7 +103,7 @@ module f_ac_types {
         })
     }      
 
-    pure def get_sim_send_hold_messages(messages: Set[Message]): Set[{cfg: MsgConfig, ctr:Counter, Q:Party, t:Time, x:Data}] = {
+    pure def get_sim_send_hold_messages(messages: Set[FAC_Message]): Set[{cfg: MsgConfig, ctr:Counter, Q:Party, t:Time, x:Data}] = {
         messages.filterMap(m => {
         match m {
             | SIMSendHold(p) => Some(p)
@@ -95,7 +112,7 @@ module f_ac_types {
         })
     }
 
-    pure def get_sim_send_release_messages(messages: Set[Message]): Set[{cfg: MsgConfig, Q:Party, t:Time, x : Data}] = {
+    pure def get_sim_send_release_messages(messages: Set[FAC_Message]): Set[{cfg: MsgConfig, Q:Party, t:Time, x : Data}] = {
         messages.filterMap(m => {
         match m {
             | SIMSendRelease(p) => Some(p)
@@ -104,7 +121,7 @@ module f_ac_types {
         })
     }
 
-    pure def get_send_response_messages(messages: Set[Message]): Set[{cfg: MsgConfig, Q:Party, t:Time, x : Data}] = {
+    pure def get_send_response_messages(messages: Set[FAC_Message]): Set[{cfg: MsgConfig, Q:Party, t:Time, x : Data}] = {
         messages.filterMap(m => {
         match m {
             | SendResponse(p) => Some(p)
@@ -113,7 +130,7 @@ module f_ac_types {
         })
     }
 
-    pure def get_fetch_request_messages(messages: Set[Message]): Set[{cfg: MsgConfig}] = {
+    pure def get_fetch_request_messages(messages: Set[FAC_Message]): Set[{cfg: MsgConfig}] = {
         messages.filterMap(m => {
         match m {
             | FetchRequest(p) => Some(p)
@@ -122,7 +139,7 @@ module f_ac_types {
         })
     }
 
-    pure def get_sim_fetch_hold_messages(messages: Set[Message]): Set[{cfg: MsgConfig, t_prim: Time, i_late: Set[Time]}] = {
+    pure def get_sim_fetch_hold_messages(messages: Set[FAC_Message]): Set[{cfg: MsgConfig, t_prim: Time, i_late: Set[Time]}] = {
         messages.filterMap(m => {
         match m {
             | SIMFetchHold(p) => Some(p)
@@ -131,7 +148,7 @@ module f_ac_types {
         })
     }
 
-    pure def get_sim_fetch_release_messages(messages: Set[Message]): Set[{cfg: MsgConfig, t_prim: Time, i_late: Set[Time], i_early: Set[Time]}] = {
+    pure def get_sim_fetch_release_messages(messages: Set[FAC_Message]): Set[{cfg: MsgConfig, t_prim: Time, i_late: Set[Time], i_early: Set[Time]}] = {
         messages.filterMap(m => {
         match m {
             | SIMFetchRelease(p) => Some(p)
@@ -140,7 +157,7 @@ module f_ac_types {
         })
     }
 
-    pure def get_fetch_response_messages(messages: Set[Message]): Set[{cfg: MsgConfig, t_prim: Time, data: Set[Data]}] = {
+    pure def get_fetch_response_messages(messages: Set[FAC_Message]): Set[{cfg: MsgConfig, t_prim: Time, data: Set[Data]}] = {
         messages.filterMap(m => {
         match m {
             | FetchResponse(p) => Some(p)
@@ -149,7 +166,7 @@ module f_ac_types {
         })
     }
 
-    pure def get_ok_request_messages(messages: Set[Message]): Set[{cfg: MsgConfig}] = {
+    pure def get_ok_request_messages(messages: Set[FAC_Message]): Set[{cfg: MsgConfig}] = {
         messages.filterMap(m => {
         match m {
             | OKRequest(p) => Some(p)
@@ -158,7 +175,7 @@ module f_ac_types {
         })
     }
 
-    pure def get_clock_request_messages(messages: Set[Message]): Set[{cfg: MsgConfig, t: Time}] = {
+    pure def get_clock_request_messages(messages: Set[FAC_Message]): Set[{cfg: MsgConfig, t: Time}] = {
         messages.filterMap(m => {
         match m {
             | ClockRequest(p) => Some(p)
@@ -167,7 +184,7 @@ module f_ac_types {
         })
     }
 
-    pure def get_clock_request_wait_messages(messages: Set[Message]): Set[{cfg: MsgConfig, t: Time}] = {
+    pure def get_clock_request_wait_messages(messages: Set[FAC_Message]): Set[{cfg: MsgConfig, t: Time}] = {
         messages.filterMap(m => {
         match m {
             | ClockRequestWait(p) => Some(p)
@@ -176,7 +193,7 @@ module f_ac_types {
         })
     }
 
-    pure def get_clock_response_messages(messages: Set[Message]): Set[{cfg: MsgConfig, t: Time}] = {
+    pure def get_clock_response_messages(messages: Set[FAC_Message]): Set[{cfg: MsgConfig, t: Time}] = {
         messages.filterMap(m => {
         match m {
             | ClockResponse(p) => Some(p)
@@ -185,7 +202,7 @@ module f_ac_types {
         })
     }
 
-    pure def get_ok_response_messages(messages: Set[Message]): Set[{cfg: MsgConfig}] = {
+    pure def get_ok_response_messages(messages: Set[FAC_Message]): Set[{cfg: MsgConfig}] = {
         messages.filterMap(m => {
         match m {
             | OKResponse(p) => Some(p)
@@ -194,7 +211,7 @@ module f_ac_types {
         })
     }
 
-    pure def get_sim_control_messages(messages: Set[Message]): Set[bool] = {
+    pure def get_sim_control_messages(messages: Set[FAC_Message]): Set[bool] = {
         messages.filterMap(m => {
         match m {
             | SIMControl => Some(true)

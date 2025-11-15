@@ -1,18 +1,10 @@
-/*
-F_AC [P,SIDs] -- environment can talk to F_AC using any party and any SID 
-(however unless they are in P and SID, F_AC will ignore)
-
-enviroment can talk directly to G_CLOCK using any party and any SID except of those in P and SIDs. (includes corrupted parties)
-
-F_AC.P.Send(..) where P corrupted
-*/
 
 module g_clock_properties {
 
     import basicSpells.* from "../../spells/basicSpells"
-    import uc.* from "../uc"
-    import g_clock_types as g_clock_types from "./g_clock_types" 
-    import g_clock as g_clock from "./g_clock"
+    //import uc.* from "../uc"
+    import g_clock_types.* from "./g_clock_types" 
+    import g_clock.* from "./g_clock"
 
 
     val P = Set(1, 2, 3)
@@ -20,14 +12,14 @@ module g_clock_properties {
     val SIDS = Set(1, 2)
 
     action step : bool = any {
-        g_clock::step,  // internal dynamics of the g_clock
+        gc_step,  // internal dynamics of the g_clock
         env_send_reqs, // sends interface-level requests
         env_consume_responses, // consumes interface-level responses
     }
 
 
     action init = {
-        g_clock::init(C,0,Set())
+        gc_init(C,0,Set())
     }
 
  
@@ -35,7 +27,7 @@ module g_clock_properties {
     // Environment interaction: non-deterministically add requests when input is empty
     action env_send_reqs : bool = all {
         // Precondition: input must be empty
-        g_clock::s.input.size() == 0,
+        g_clock_s.input.size() == 0,
         
         // Non-deterministically choose a party and SID
         nondet party = P.oneOf()
@@ -45,46 +37,46 @@ module g_clock_properties {
         // Non-deterministically choose one of the three request types
         any {
             // Option 1: RegisterRequest
-            g_clock::s' = {...g_clock::s, 
-                input: Set(g_clock_types::RegisterRequest({nonce: g_clock::s.nonce,party: partySID})),
-                nonce: g_clock::s.nonce + 1
+            g_clock_s' = {...g_clock_s, 
+                input: Set(RegisterRequest({nonce: g_clock_s.nonce,party: partySID})),
+                nonce: g_clock_s.nonce + 1
 
             },
             // Option 2: TimeRequest
-            g_clock::s' = {...g_clock::s, 
-                input: Set(g_clock_types::TimeRequest({nonce: g_clock::s.nonce, party: partySID})),
-                nonce: g_clock::s.nonce + 1
+            g_clock_s' = {...g_clock_s, 
+                input: Set(TimeRequest({nonce: g_clock_s.nonce, party: partySID})),
+                nonce: g_clock_s.nonce + 1
             },
 
             // Option 3: OkayRequest
-            g_clock::s' = {...g_clock::s, 
-                input: Set(g_clock_types::OkayRequest({nonce: g_clock::s.nonce, party: partySID})),
-                nonce: g_clock::s.nonce + 1
+            g_clock_s' = {...g_clock_s, 
+                input: Set(OkayRequest({nonce: g_clock_s.nonce, party: partySID})),
+                nonce: g_clock_s.nonce + 1
             },
         }
     }
 
 
-    pure def env_consume_response(sys: g_clock_types::System) : Set[g_clock_types::Transition] = {
-         sys.input.g_clock_types::get_all_response_messages().map(msg_log =>
+    pure def env_consume_response(sys: GC_System) : Set[GC_Transition] = {
+         sys.input.gc_get_all_response_messages().map(msg_log =>
          {
             post_state : sys.state,
             effects : Set(
-                g_clock_types::LogMessage(msg_log),
-                g_clock_types::UpdateInput(Set())
+                GC_LogMessage(msg_log),
+                GC_UpdateInput(Set())
             )
          })
     }
 
     action env_consume_responses : bool =  all {
         // Precondition: there is a response message in input
-        env_consume_response(g_clock::s).size() > 0,
+        env_consume_response(g_clock_s).size() > 0,
 
         // Non-deterministically choose one response message to consume
-        nondet transition = env_consume_response(g_clock::s).oneOf()
+        nondet transition = env_consume_response(g_clock_s).oneOf()
 
         // Update the system state by consuming the message    
-        g_clock::s' = g_clock::process_transitions(g_clock::s, transition)
+        g_clock_s' = gc_process_transitions(g_clock_s, transition)
         
     }
 
@@ -92,34 +84,34 @@ module g_clock_properties {
 
 // must fail
 val LogGrows = 
-    (g_clock::s.log.size() < 5)
+    (g_clock_s.log.size() < 5)
 
 // must fail
-val RegSize = g_clock::s.state.Reg.size() < 2
+val RegSize = g_clock_s.state.Reg.size() < 2
 
 // must fail
-val TimeAdvances = g_clock::s.state.TIME < 2
+val TimeAdvances = g_clock_s.state.TIME < 2
 
 // must fail
 val HandlesLiveness = 
-    g_clock::s.SIM_handles.size() < 2
+    g_clock_s.SIM_handles.size() < 2
 
 
 // system is well-defined
 val OneMsg = 
-    g_clock::s.input.size() <= 1
+    g_clock_s.input.size() <= 1
 
 
 // Property 1 (Time Agreement): If two parties query the time and no OK requests have been sent in the middle then G-clock responds with the same time.
-val TimeAgreement = g_clock::s.log.forall(r1 =>
+val TimeAgreement = g_clock_s.log.forall(r1 =>
     match r1.msg {
       | TimeResponse(t1) =>
-          g_clock::s.log.forall(r2 =>
+          g_clock_s.log.forall(r2 =>
             match r2.msg {
               | TimeResponse(t2) =>
                    (r2.idx > r1.idx) implies {
                     // Check that no OK requests in between
-                    val no_okay_in_between = g_clock::s.log.forall(rm =>
+                    val no_okay_in_between = g_clock_s.log.forall(rm =>
                       (rm.idx > r1.idx and rm.idx < r2.idx) implies {
                         match rm.msg {
                           | OkayRequest(_) => false
@@ -141,8 +133,8 @@ val TimeAgreement = g_clock::s.log.forall(r1 =>
 
 // Property 2 (Time Liveness):  If all registered parties are ready, then time advances.
 // this is non-trivial since we have to track who was registered and corrupted at all times
-val TimeLiveness = g_clock::s.log.forall(r1 =>
-   g_clock::s.log.forall(r2 =>
+val TimeLiveness = g_clock_s.log.forall(r1 =>
+   g_clock_s.log.forall(r2 =>
              (r2.idx == r1.idx + 1) implies {
               match r2.msg {
                 | OkayRequest(p) => {
@@ -150,7 +142,7 @@ val TimeLiveness = g_clock::s.log.forall(r1 =>
                     val all_ready = r1.state.Reg.forall(rp => or {
                      r1.state.ok.contains(rp), 
                      rp == p.party, 
-                     p.party.party.in(g_clock::s.params.C)
+                     p.party.party.in(g_clock_s.params.C)
                     })
 
                       if (r2.state.Reg.contains(p.party) and all_ready) {
@@ -167,8 +159,8 @@ val TimeLiveness = g_clock::s.log.forall(r1 =>
 
 // Property 3 (Time Soundness): If time advanced then all currently registered parties were ready.
 // this is boring since we have a full control of when to advance time
-val TimeSoundness = g_clock::s.log.forall(r1 =>
-   g_clock::s.log.forall(r2 =>
+val TimeSoundness = g_clock_s.log.forall(r1 =>
+   g_clock_s.log.forall(r2 =>
             (r2.idx == r1.idx + 1 and r2.state.TIME > r1.state.TIME) implies {
               match r2.msg {
                 | OkayRequest(p) =>
@@ -176,7 +168,7 @@ val TimeSoundness = g_clock::s.log.forall(r1 =>
                     val all_ready = r1.state.Reg.forall(rp => or {
                         r1.state.ok.contains(rp), 
                         rp == p.party, 
-                        p.party.party.in(g_clock::s.params.C)
+                        p.party.party.in(g_clock_s.params.C)
                     })
 
                     and {
