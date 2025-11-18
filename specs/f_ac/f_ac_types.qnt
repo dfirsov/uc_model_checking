@@ -11,7 +11,10 @@ module f_ac_types {
         | SendRequest({cfg: MsgConfig, Q:Party, x:Data}) 
         | SIMSendHold({cfg: MsgConfig, ctr:Counter, Q:Party, t:Time, x:Data})
         | SIMSendRelease({cfg: MsgConfig, Q:Party, ctr: Counter, t:Time, x : Data})
-        | SendResponse({cfg: MsgConfig, Q:Party, t:Time, x : Data})
+        | ClockRequest({cfg: MsgConfig, Q:Party, ctr:Counter, t: Time, x: Data})
+        | ClockRequestWait({cfg: MsgConfig, Q:Party, ctr:Counter, t: Time, x: Data})
+        | ClockResponse({cfg: MsgConfig, Q:Party, ctr:Counter, t: Time, x: Data})        
+        | SendResponse({cfg: MsgConfig, Q:Party, ctr:Counter, t: Time, x: Data})
 
         | FetchRequest({cfg: MsgConfig})
         | SIMFetchHold({cfg: MsgConfig, t_prim: Time, i_late: Set[Time]})
@@ -19,9 +22,7 @@ module f_ac_types {
         | FetchResponse({cfg: MsgConfig, t_prim: Time, data: Set[Data]})
 
         | OKRequest({cfg: MsgConfig})
-        | ClockRequest({cfg: MsgConfig, t: Time})
-        | ClockRequestWait({cfg: MsgConfig, t: Time})
-        | ClockResponse({cfg: MsgConfig, t: Time})
+        | OKRequestWait({cfg: MsgConfig})
         | OKResponse({cfg: MsgConfig})
 
         | SIMControl  
@@ -37,7 +38,8 @@ module f_ac_types {
         {
             L : {to: Party, ctr: Counter} -> {from: Party, data: Data, time: Time},
             ctr : Counter,
-            done  : {from: Party, to: Party, time: Time, ctr: Counter} -> bool,
+            S_flag: Set[(Party, Time)],
+            F_flag: Set[(Party, Time)],            
         }
 
     type FAC_System = {
@@ -45,7 +47,7 @@ module f_ac_types {
         state : FAC_StateVars,
         input : Set[FAC_Message], // always not more than 1 message in the system
         nonce : Nonce,        // to be able to match requests and responses in the trace
-        log : Set[{idx: int, msg: FAC_Message, time : Time, handles: Set[FAC_Message], done: {from: Party, to: Party, time: Time, ctr: Counter} -> bool }], // state: FAC_StateVars
+        log : Set[{idx: int, msg: FAC_Message, time : Time, handles: Set[FAC_Message],  }], // state: FAC_StateVars
         SIM_handles : Set[FAC_Message],
     }  
 
@@ -71,6 +73,16 @@ module f_ac_types {
         }
         })
     }            
+
+    pure def get_ok_request_wait_messages(messages: Set[FAC_Message]): Set[{cfg: MsgConfig}] = {
+        messages.filterMap(m => {
+        match m {
+            | OKRequestWait(p) => Some(p)
+            | _ => None
+        }
+        })
+    }            
+         
      
 
     pure def get_all_response_messages(messages: Set[FAC_Message]): Set[FAC_Message] = {
@@ -102,7 +114,7 @@ module f_ac_types {
         })
     }
 
-    pure def get_send_response_messages(messages: Set[FAC_Message]): Set[{cfg: MsgConfig, Q:Party, t:Time, x : Data}] = {
+    pure def get_send_response_messages(messages: Set[FAC_Message]): Set[{cfg: MsgConfig, Q:Party, ctr:Counter, t: Time, x: Data}] = {
         messages.filterMap(m => {
         match m {
             | SendResponse(p) => Some(p)
@@ -156,7 +168,7 @@ module f_ac_types {
         })
     }
 
-    pure def get_clock_request_messages(messages: Set[FAC_Message]): Set[{cfg: MsgConfig, t: Time}] = {
+    pure def get_clock_request_messages(messages: Set[FAC_Message]): Set[{cfg: MsgConfig, Q:Party, ctr:Counter, t: Time, x: Data}] = {
         messages.filterMap(m => {
         match m {
             | ClockRequest(p) => Some(p)
@@ -165,7 +177,7 @@ module f_ac_types {
         })
     }
 
-    pure def get_clock_request_wait_messages(messages: Set[FAC_Message]): Set[{cfg: MsgConfig, t: Time}] = {
+    pure def get_clock_request_wait_messages(messages: Set[FAC_Message]): Set[{cfg: MsgConfig, Q:Party, ctr:Counter, t: Time, x: Data}] = {
         messages.filterMap(m => {
         match m {
             | ClockRequestWait(p) => Some(p)
@@ -174,7 +186,7 @@ module f_ac_types {
         })
     }
 
-    pure def get_clock_response_messages(messages: Set[FAC_Message]): Set[{cfg: MsgConfig, t: Time}] = {
+    pure def get_clock_response_messages(messages: Set[FAC_Message]): Set[{cfg: MsgConfig, Q:Party, ctr:Counter, t: Time, x: Data}] = {
         messages.filterMap(m => {
         match m {
             | ClockResponse(p) => Some(p)

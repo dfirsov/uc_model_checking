@@ -71,17 +71,6 @@ module g_clock{
     }
 
     pure def okay_2(sys: GC_System) : Set[GC_Transition] = {
-        sys.input.get_sim_okay_release_messages().map(msg =>
-        {
-            post_state : sys.state,
-            effects : Set(
-                GC_UpdateInput(Set(OkayResponse({nonce: msg.nonce, party: msg.party}))),
-            )
-        }
-        )
-    }
-
-    pure def sim_okay_hold_reqs(sys: GC_System) : Set[GC_Transition] = {
         sys.input.get_sim_okay_hold_messages().map(msg => {
             val hold_msg = SIMOkayRelease({nonce: msg.nonce, party: msg.party})
             {
@@ -94,7 +83,20 @@ module g_clock{
         })
     }
 
-    pure def sim_process_hold_reqs(sys: GC_System) : Set[GC_Transition] = {
+    pure def okay_4(sys: GC_System) : Set[GC_Transition] = {
+        sys.input.get_sim_okay_release_messages().map(msg =>
+        {
+            post_state : sys.state,
+            effects : Set(
+                GC_UpdateInput(Set(OkayResponse({nonce: msg.nonce, party: msg.party}))),
+            )
+        }
+        )
+    }
+
+
+
+    pure def okay_3(sys: GC_System) : Set[GC_Transition] = {
         if(sys.SIM_handles.size() > 0 and sys.input.contains_sim_control()) {
             // Option 1: Release one of the stored hold requests
             val release_trans = sys.SIM_handles.map(release_request => {
@@ -108,15 +110,15 @@ module g_clock{
             })
             
             // Option 2: Give control back to ENV (empty input)
-            val give_control_trans = Set({
-                post_state : sys.state,
-                effects : Set(
-                    GC_UpdateInput(Set()),
-                )
-            })
+            // val give_control_trans = Set({
+            //     post_state : sys.state,
+            //     effects : Set(
+            //         GC_UpdateInput(Set()),
+            //     )
+            // })
             
-            release_trans.union(give_control_trans)
-            //release_trans
+            //release_trans.union(give_control_trans)
+            release_trans
         } else {
             if (sys.input.contains_sim_control()) {
                 // No stored hold requests - give control back to ENV
@@ -137,9 +139,9 @@ module g_clock{
             register(sys),
             time(sys),
             okay_1(sys),
-            sim_okay_hold_reqs(sys),
-            sim_process_hold_reqs(sys),
             okay_2(sys),
+            okay_3(sys),
+            okay_4(sys),
         ).flatten()
     }  
 
@@ -148,9 +150,13 @@ module g_clock{
         transition.effects.fold(new_sys, ((a1,a2) => g_clock_apply_effect(a1,a2)))
     } 
 
+    action gc_step_with(q: (GC_System) => Set[(GC_Transition)]): bool = {
+        nondet transition = q(g_clock_s).oneOf()
+        g_clock_s' = gc_process_transitions(g_clock_s, transition)        
+    }   
+
     action gc_step : bool =  { 
-        nondet transition = gc_main_listener(g_clock_s).oneOf()
-        g_clock_s' = gc_process_transitions(g_clock_s, transition)
+        gc_step_with(gc_main_listener)
     }
 
     action gc_init(C: Set[Party], time : int, Reg: Set[PartySID]): bool = {
@@ -173,5 +179,7 @@ module g_clock{
     action gc_stutter : bool = {
         g_clock_s' = g_clock_s
     }
+
+ 
     
 }

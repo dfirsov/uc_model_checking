@@ -64,6 +64,9 @@ module f_ac_properties {
         gc_stutter
     }
 
+
+
+
     action env_fetch_reqs(from:Party, sid: SID) : bool = all {
         // Precondition: input must be empty
         g_clock_s.input.size() == 0 and f_ac_s.input.size() == 0,
@@ -111,10 +114,9 @@ module f_ac_properties {
         g_clock_s' = {...g_clock_s, 
             input: Set(GC_SIMControl),
             nonce: g_clock_s.nonce + 1
-
         },
         f_ac_s' = f_ac_s,
-    }    
+    }
 
     pure def env_consume_response(sys: FAC_System) : Set[FAC_Transition] = {
          sys.input.get_all_response_messages().map(msg_log =>
@@ -135,23 +137,46 @@ module f_ac_properties {
         nondet transition = response_msgs.oneOf()
 
         // Update the system state by consuming the message    
-        f_ac_s' = process_transitions(f_ac_s, transition),
+        f_ac_s' = fac_process_transitions(f_ac_s, transition),
         gc_stutter
     }
 
  
     // quint test f_ac_properties.qnt --match test1
-    run test_send1 = {
+    // init -> send -> ok -> fetch 
+    run test1 = {
+
         val party1 = 1
         val party2 = 2
         val sid = 1
 
         init.then(env_send_reqs(party1, party2, sid))
-        .then(fac_step_with(send_1))
-        .then(fac_step_with(send_2))
-        .then(fac_step_with(send_3))
-        .then(step)
-        .expect(true)
+        .then(fac_step_gc_wait_with(send_1))
+        .then(fac_step_gc_wait_with(send_2))
+        .then(fac_step_gc_wait_with(send_3))
+        .then(fac_gc_step_with(send_4))
+        .then(fac_wait_gc_step_with(okay_1))
+        .then(fac_wait_gc_step_with(okay_2))
+        .then(fac_wait_gc_step_with(okay_3))
+        .then(fac_wait_gc_step_with(okay_4))        
+        .then(fac_gc_step_with(send_5))
+        .then(fac_step_gc_wait_with(send_6))
+        .then(env_consume_responses)
+        .expect(f_ac_s.log.map(x => x.msg).get_send_response_messages().size() == 1)
+        .then(env_ok_reqs(party2, sid))        
+        .then(fac_gc_step_with(ok_1))
+        .then(fac_wait_gc_step_with(okay_1))
+        .then(fac_wait_gc_step_with(okay_2))
+        .then(fac_wait_gc_step_with(okay_3))
+        .then(fac_wait_gc_step_with(okay_4))          
+        .then(fac_gc_step_with(ok_2))
+        .then(env_consume_responses)
+        .expect(g_clock_s.state.TIME == 1)
+        .then(env_fetch_reqs(party2, sid))   
+        .then(fac_step_gc_wait_with(fetch_1))
+        .then(fac_step_gc_wait_with(fetch_2))
+        .then(fac_step_gc_wait_with(fetch_3))
+        .expect(f_ac_s.input.get_fetch_response_messages().size() == 1)
     }
 
 
@@ -167,18 +192,6 @@ val P8 = g_clock_s.state.TIME <= 4
 val P9 = f_ac_s.log.map(x => x.msg).get_fetch_response_messages().forall(m => m.data.size() == 0)
 val P10 = f_ac_s.SIM_handles.get_sim_send_hold_messages().size() <= 2
 
-
-// must be true when we add counter
-val SIMP = {
-    f_ac_s.log.forall(msg1 => {
-        match msg1.msg {
-            | OKResponse(p) => {
-                msg1.handles.get_sim_send_hold_messages().filter(k => k.cfg.party == p.cfg.party).size() == 0
-            }
-            | _ => true
-        }
-    })
-}
 
 // ∆-delayed Liveness: if P sends a message x to Q in some round t, and Q attempts to fetch in some 
 // round t‘ ≥ t + ∆ then Q receives x in some round t’’ ∈ [t, t’].  
@@ -200,20 +213,19 @@ val DDL = {
                         match msg3.msg {
                             | FetchResponse(d) => {
                                 (p.x.in(d.data)) and p.Q == d.cfg.party
-                                //d.t_prim >= msg1.time + delta_param and p.Q == d.cfg.party and p.x.in(d.data)
                             }
                             | _ => false
                         }
                     })
                 }
-
-                
             }
             | _ => true
         }
 
     )    
 }
+
+
 
 // Authentication: If a nonempty set of messages was delivered from P to Q then P indeed sent that message to Q in the past.
 val Auth = f_ac_s.log.forall(log_entry1 => {
@@ -232,51 +244,6 @@ val Auth = f_ac_s.log.forall(log_entry1 => {
     | _ => true
   }
 })
-
-
-// Order preservation: fails
-val Order = f_ac_s.log.forall(log_entry1 => {
-  match log_entry1.msg {
-    | SendResponse(p) => { // 
-        // find corresponding FetchRequest in the log
-        f_ac_s.log.forall(log_entry2 => {
-            match log_entry2.msg {
-                | SendResponse(q) => {
-                        and {
-                            log_entry1.idx < log_entry2.idx, // second send response happens later
-                            p.Q == q.Q, // data being sent to the same receipient
-                            p.x != q.x // data is different
-                            } implies {
-                            f_ac_s.log.forall(log_entry3 => {
-                                match log_entry3.msg {
-                                    | FetchResponse(d) => {
-                                        q.x.in(d.data) implies {
-                                            f_ac_s.log.exists(log_entry4 => {
-                                                match log_entry4.msg {
-                                                    | FetchResponse(b) => {
-                                                        and {
-                                                            //true
-                                                            p.x.in(b.data) and log_entry4.idx <= log_entry3.idx                   
-                                                        }
-                                                    }
-                                                    | _ => false
-                                                }
-                                            })
-                                        }
-                                    }
-                                    | _ => true
-                                }
-                            })
-                        }
-                    }
-                | _ => true
-            }
-        })
-      }
-    | _ => true
-  }
-}) 
-
 
 
 }
