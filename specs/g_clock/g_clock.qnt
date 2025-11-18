@@ -116,8 +116,19 @@ module g_clock{
             })
             
             release_trans.union(give_control_trans)
+            //release_trans
         } else {
-            Set()
+            if (sys.input.contains_sim_control()) {
+                // No stored hold requests - give control back to ENV
+                Set({
+                    post_state : sys.state,
+                    effects : Set(
+                        GC_UpdateInput(Set()),
+                    )
+                })
+            } else {
+                Set()
+            }
         }
     }
 
@@ -155,7 +166,7 @@ module g_clock{
             nonce : 0,
             input : Set(),
             log : Set(),
-            SIM_handles : Set()
+            SIM_handles : Set(),
         }
     }
 

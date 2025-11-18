@@ -10,7 +10,7 @@ module f_ac_types {
 
         | SendRequest({cfg: MsgConfig, Q:Party, x:Data}) 
         | SIMSendHold({cfg: MsgConfig, ctr:Counter, Q:Party, t:Time, x:Data})
-        | SIMSendRelease({cfg: MsgConfig, Q:Party, t:Time, x : Data})
+        | SIMSendRelease({cfg: MsgConfig, Q:Party, ctr: Counter, t:Time, x : Data})
         | SendResponse({cfg: MsgConfig, Q:Party, t:Time, x : Data})
 
         | FetchRequest({cfg: MsgConfig})
@@ -35,9 +35,9 @@ module f_ac_types {
 
     type FAC_StateVars = SID -> 
         {
-            L : Counter -> {from: Party, to: Party, time: Time, data: Data},
+            L : {to: Party, ctr: Counter} -> {from: Party, data: Data, time: Time},
             ctr : Counter,
-            done  : {from: Party, to: Party, time: Time} -> bool,
+            done  : {from: Party, to: Party, time: Time, ctr: Counter} -> bool,
         }
 
     type FAC_System = {
@@ -45,7 +45,7 @@ module f_ac_types {
         state : FAC_StateVars,
         input : Set[FAC_Message], // always not more than 1 message in the system
         nonce : Nonce,        // to be able to match requests and responses in the trace
-        log : Set[{idx: int, msg: FAC_Message, state: FAC_StateVars}],  
+        log : Set[{idx: int, msg: FAC_Message, time : Time, handles: Set[FAC_Message], done: {from: Party, to: Party, time: Time, ctr: Counter} -> bool }], // state: FAC_StateVars
         SIM_handles : Set[FAC_Message],
     }  
 
@@ -60,26 +60,7 @@ module f_ac_types {
         effects: Set[FAC_Effect]
     }    
 
-    pure def apply_effect(sys: FAC_System, eff: FAC_Effect): FAC_System = {
-        match eff {
-        | FAC_LogMessage(msg) => 
-            {...sys, 
-                log: sys.log.setAdd({idx: sys.log.size(), msg: msg, state : sys.state})
-            }
-        | FAC_UpdateInput(msgs) => 
-            {...sys, 
-                input: msgs
-            }
-        | FAC_AppendHandle(msg) => 
-            {...sys,
-                SIM_handles: sys.SIM_handles.union(Set(msg)),
-            }
-        | FAC_RemoveHandle(handle_to_remove) =>
-            {...sys,
-                SIM_handles: sys.SIM_handles.exclude(Set(handle_to_remove))
-            }
-        }
-    }    
+
     
 
     pure def get_send_request_messages(messages: Set[FAC_Message]): Set[{cfg: MsgConfig, Q:Party, x:Data}] = {
@@ -112,7 +93,7 @@ module f_ac_types {
         })
     }
 
-    pure def get_sim_send_release_messages(messages: Set[FAC_Message]): Set[{cfg: MsgConfig, Q:Party, t:Time, x : Data}] = {
+    pure def get_sim_send_release_messages(messages: Set[FAC_Message]): Set[{cfg: MsgConfig, Q:Party, ctr: Counter, t:Time, x : Data}] = {
         messages.filterMap(m => {
         match m {
             | SIMSendRelease(p) => Some(p)

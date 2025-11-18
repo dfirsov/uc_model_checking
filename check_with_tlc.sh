@@ -15,7 +15,7 @@ STEP="step"  # Default step action
 INVARIANT="true"  # Default invariant
 TEMPORAL=""  # Default temporal properties
 DFID=""  # Default depth-first iterative deepening value
-WORKERS="1"  # Default number of workers for TLC
+WORKERS="AUTO"  # Default number of workers for TLC
 
 # Function to parse command-line arguments
 parse_args() {
@@ -189,7 +189,7 @@ process_file() {
     run_tlc "$tla_file"
 
     # Step 4: Cleanup
-    #rm -f "$tla_file" "$cfg_file"
+    rm -f "$tla_file" "$cfg_file"
 }
 
 # Parse command-line arguments

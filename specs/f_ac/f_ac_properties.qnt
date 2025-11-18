@@ -12,38 +12,19 @@ module f_ac_properties {
     val Parties = Set(1,2)
     val C = Set()
     val sids = Set(1)
-    val delta_param: int = 1
-/*
-Simple setting:
-- initialize both functionalities
-- if none of the systems have input 
-  - then non-deterministically add requests to either functionality
-  - give control to SIM at clock or at f_ac
-- when f_ac has response, consume it
-*/    
-    
+    val delta_param: int = 1   
+
 
     action step : bool = any {
+        fac_step,  
+        gc_step_fac_wait,
+        env_send_all_reqs,
+        env_consume_responses,
+    }
 
-        all {
-            fac_step,  
-            //s' = s
-        },
-        all{
-            f_ac_s' = f_ac_s,
-            gc_step,
-        },
-        all{
-            env_send_reqs,
-            gc_stutter
-        },
-        all {
-            env_consume_responses,
-            gc_stutter
-        }
-
-        
-
+    action gc_step_fac_wait : bool =  all {
+        f_ac_s' = f_ac_s,
+        gc_step,        
     }
 
     action init = all {
@@ -51,44 +32,89 @@ Simple setting:
         gc_init(C,0,Set({party: 1, sid: 1}, {party:2, sid:1})),
     }
 
- 
+    action env_send_all_reqs : bool = all {
+        nondet from = Parties.oneOf()
+        nondet top = Parties.oneOf()
+        nondet sid = sids.oneOf()
 
+        any {
+            env_send_reqs(from, top, sid),
+            env_fetch_reqs(from, sid),
+            env_ok_reqs(from, sid),
+            env_fac_sim_reqs,
+            env_gc_sim_reqs,
+        }
+    }
+
+ 
     // // Environment interaction: non-deterministically add requests when input is empty
-    action env_send_reqs : bool = all {
+    action env_send_reqs(from:Party, top: Party, sid: SID) : bool = all {
         // Precondition: input must be empty
         g_clock_s.input.size() == 0 and f_ac_s.input.size() == 0,
         
         // Non-deterministically choose a party and SID
-        nondet party = Parties.oneOf()
-        nondet sid = sids.oneOf()
-        nondet data = Set(42,43).oneOf()
-        val partySID = {party: party, sid: sid}
-        val cfg = {party: party, sid: sid, nonce: f_ac_s.nonce}
+        nondet data = Set(42,43,44,45).oneOf()
+        val cfg = {party: from, sid: sid, nonce: f_ac_s.nonce}
 
-        // Non-deterministically choose one of the three request types
-        any {
-            // Option 1: Send
-            f_ac_s' = {...f_ac_s, 
-                input: Set(SendRequest({cfg: cfg, Q: party, x: data})),
-                nonce: f_ac_s.nonce + 1
+        f_ac_s' = {...f_ac_s, 
+            input: Set(SendRequest({cfg: cfg, Q: top, x: data})),
+            nonce: f_ac_s.nonce + 1
 
-            },
-            // Option 2: Fetch
-            f_ac_s' = {...f_ac_s, 
-                input: Set(FetchRequest({cfg: cfg})),
-                nonce: f_ac_s.nonce + 1
-
-            },
-
-            // Option 3: OK
-            f_ac_s' = {...f_ac_s, 
-                input: Set(OKRequest({cfg: cfg})),
-                nonce: f_ac_s.nonce + 1
-
-            },
-        }
+        },
+        gc_stutter
     }
 
+    action env_fetch_reqs(from:Party, sid: SID) : bool = all {
+        // Precondition: input must be empty
+        g_clock_s.input.size() == 0 and f_ac_s.input.size() == 0,
+        
+        // Non-deterministically choose a party and SID
+        val cfg = {party: from, sid: sid, nonce: f_ac_s.nonce}
+
+        // Option 2: Fetch
+        f_ac_s' = {...f_ac_s, 
+            input: Set(FetchRequest({cfg: cfg})),
+            nonce: f_ac_s.nonce + 1
+
+        },
+        gc_stutter   
+    }
+
+    action env_ok_reqs(from:Party, sid: SID) : bool = all {
+        // Precondition: input must be empty
+        g_clock_s.input.size() == 0 and f_ac_s.input.size() == 0,
+        
+        // Non-deterministically choose a party and SID
+        val cfg = {party: from, sid: sid, nonce: f_ac_s.nonce}
+
+        // Option 3: OK
+        f_ac_s' = {...f_ac_s, 
+            input: Set(OKRequest({cfg: cfg})),
+            nonce: f_ac_s.nonce + 1
+
+        },   
+        gc_stutter     
+    }
+
+    action env_fac_sim_reqs : bool = all {
+        g_clock_s.input.size() == 0 and f_ac_s.input.size() == 0,
+        f_ac_s' = {...f_ac_s, 
+            input: Set(SIMControl),
+            nonce: f_ac_s.nonce + 1
+
+        },
+        gc_stutter
+    }
+
+    action env_gc_sim_reqs : bool = all {
+        g_clock_s.input.size() == 0 and f_ac_s.input.size() == 0,
+        g_clock_s' = {...g_clock_s, 
+            input: Set(GC_SIMControl),
+            nonce: g_clock_s.nonce + 1
+
+        },
+        f_ac_s' = f_ac_s,
+    }    
 
     pure def env_consume_response(sys: FAC_System) : Set[FAC_Transition] = {
          sys.input.get_all_response_messages().map(msg_log =>
@@ -109,9 +135,24 @@ Simple setting:
         nondet transition = response_msgs.oneOf()
 
         // Update the system state by consuming the message    
-        f_ac_s' = process_transitions(f_ac_s, transition)
+        f_ac_s' = process_transitions(f_ac_s, transition),
+        gc_stutter
     }
 
+ 
+    // quint test f_ac_properties.qnt --match test1
+    run test_send1 = {
+        val party1 = 1
+        val party2 = 2
+        val sid = 1
+
+        init.then(env_send_reqs(party1, party2, sid))
+        .then(fac_step_with(send_1))
+        .then(fac_step_with(send_2))
+        .then(fac_step_with(send_3))
+        .then(step)
+        .expect(true)
+    }
 
 
 // must fail
@@ -119,23 +160,36 @@ val P1 = f_ac_s.input.size() == 0
 val P2 = f_ac_s.log.size() <= 7
 val P3 = f_ac_s.log.map(x => x.msg).get_ok_response_messages().size() <= 2
 val P4 = f_ac_s.log.map(x => x.msg).get_fetch_response_messages().size() <= 2
-val P5 = f_ac_s.log.map(x => x.msg).get_send_response_messages().size() <= 2
+val P5 = f_ac_s.log.map(x => x.msg).get_send_response_messages().size() <= 5
 val P6 = g_clock_s.input.size() == 0
 val P7 = g_clock_s.log.map(x => x.msg).gc_get_all_response_messages().size() == 0
 val P8 = g_clock_s.state.TIME <= 4
 val P9 = f_ac_s.log.map(x => x.msg).get_fetch_response_messages().forall(m => m.data.size() == 0)
+val P10 = f_ac_s.SIM_handles.get_sim_send_hold_messages().size() <= 2
 
+
+// must be true when we add counter
+val SIMP = {
+    f_ac_s.log.forall(msg1 => {
+        match msg1.msg {
+            | OKResponse(p) => {
+                msg1.handles.get_sim_send_hold_messages().filter(k => k.cfg.party == p.cfg.party).size() == 0
+            }
+            | _ => true
+        }
+    })
+}
 
 // ∆-delayed Liveness: if P sends a message x to Q in some round t, and Q attempts to fetch in some 
 // round t‘ ≥ t + ∆ then Q receives x in some round t’’ ∈ [t, t’].  
 val DDL = {
     f_ac_s.log.forall(msg1 =>
         match msg1.msg {
-            | SendResponse(p) => { 
+            | SendRequest(p) => { 
                 val fetch_response_exists = f_ac_s.log.exists(msg3 => {
                     match msg3.msg {
                         | FetchResponse(d) => {
-                            d.t_prim >= p.t + delta_param and p.Q == d.cfg.party
+                            d.t_prim >= msg1.time + delta_param and p.Q == d.cfg.party
                         }
                         | _ => false
                     }
@@ -145,8 +199,8 @@ val DDL = {
                     f_ac_s.log.exists(msg3 => {
                         match msg3.msg {
                             | FetchResponse(d) => {
-                                (p.x.in(d.data))
-                                //true //d.t_prim - p.t <= delta and p.Q == d.cfg.party and p.x.in(d.data)
+                                (p.x.in(d.data)) and p.Q == d.cfg.party
+                                //d.t_prim >= msg1.time + delta_param and p.Q == d.cfg.party and p.x.in(d.data)
                             }
                             | _ => false
                         }
@@ -222,4 +276,7 @@ val Order = f_ac_s.log.forall(log_entry1 => {
     | _ => true
   }
 }) 
+
+
+
 }
