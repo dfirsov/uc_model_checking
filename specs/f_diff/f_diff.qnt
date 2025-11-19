@@ -340,5 +340,50 @@ module f_diff{
                 ).flatten()
         )
     }           
+
+    def dif_process_transitions(sys: DIF_System, transition: DIF_Transition) : DIF_System = {
+        val new_sys = {...sys, state: transition.post_state}
+        transition.effects.fold(new_sys, ((a1,a2) => dif_apply_effect(a1,a2)))
+    } 
+
+    action dif_gc_step_with(q: (DIF_System, GC_System) => Set[(DIF_Transition, GC_Transition)]): bool = {
+        all{ 
+            val ts = q(dif_s, gc_s)
+            all {
+                ts.size() > 0,
+                nondet transition = ts.oneOf()
+                all {
+                    dif_s' = dif_process_transitions(dif_s, transition._1),
+                    gc_s' = gc_process_transitions(gc_s, transition._2)
+                }
+            }
+        }
+    }    
+
+    action dif_step : bool =  all {
+        dif_gc_step_with(dif_main_listener)
+    }
+
+
+    def dif_apply_effect(sys: DIF_System, eff: DIF_Effect): DIF_System = {
+        match eff {
+        | DIF_LogMessage(msg) => 
+            {...sys, 
+                log: sys.log.setAdd({idx: sys.log.size(), msg: msg,  time: gc_s.state.TIME, handles: sys.SIM_handles})
+            }
+        | DIF_UpdateInput(msgs) => 
+            {...sys, 
+                input: msgs
+            }
+        | DIF_AppendHandle(msg) => 
+            {...sys,
+                SIM_handles: sys.SIM_handles.union(Set(msg)),
+            }
+        | DIF_RemoveHandle(handle_to_remove) =>
+            {...sys,
+                SIM_handles: sys.SIM_handles.exclude(Set(handle_to_remove))
+            }
+        }
+    }  
     
 }
