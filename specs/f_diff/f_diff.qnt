@@ -225,7 +225,7 @@ module f_diff{
         }).flatten()
     }        
 
-    def dif_fetch_3(dif : DIF_System) : Set[DIF_Transition] = {
+    pure def dif_fetch_3(dif : DIF_System) : Set[DIF_Transition] = {
         dif.input.dif_get_sim_fetch_release_messages().map(msg => 
             val sid = msg.cfg.sid
             val P = msg.cfg.party
@@ -255,7 +255,7 @@ module f_diff{
         )
     }
 
-   def dif_ok_1(dif : DIF_System, gc: GC_System) : Set[(DIF_Transition, GC_Transition)] = {
+   pure def dif_ok_1(dif : DIF_System, gc: GC_System) : Set[(DIF_Transition, GC_Transition)] = {
         dif.input.dif_get_ok_request_messages().map(msg => 
         {
             val sid = msg.cfg.sid
@@ -282,7 +282,7 @@ module f_diff{
     }     
 
 
-    def dif_ok_2(dif : DIF_System, gc: GC_System) : Set[(DIF_Transition, GC_Transition)] = {
+    pure def dif_ok_2(dif : DIF_System, gc: GC_System) : Set[(DIF_Transition, GC_Transition)] = {
         dif.SIM_handles.dif_get_ok_request_wait_messages().map(msg => 
         {
             gc.input.get_okay_response_messages().map(msg2 => {
@@ -339,7 +339,7 @@ module f_diff{
                 dif_ok_2(dif, clock),
                 ).flatten()
         )
-    }           
+    }
 
     def dif_process_transitions(sys: DIF_System, transition: DIF_Transition) : DIF_System = {
         val new_sys = {...sys, state: transition.post_state}
@@ -347,7 +347,7 @@ module f_diff{
     } 
 
     action dif_gc_step_with(q: (DIF_System, GC_System) => Set[(DIF_Transition, GC_Transition)]): bool = {
-        all{ 
+        all{
             val ts = q(dif_s, gc_s)
             all {
                 ts.size() > 0,
