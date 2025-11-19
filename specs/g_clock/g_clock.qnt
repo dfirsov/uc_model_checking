@@ -5,10 +5,10 @@ module g_clock{
     import common.* from "../common"
 
     // mutable variable represents the system state
-    var g_clock_s : GC_System
+    var gc_s : GC_System
 
 
-    pure def register(sys: GC_System) :  Set[GC_Transition] = { 
+    pure def gc_register(sys: GC_System) :  Set[GC_Transition] = { 
         sys.input.get_register_request_messages().map(msg => 
         {
             post_state : {...sys.state, 
@@ -22,7 +22,7 @@ module g_clock{
         )
     }
 
-    pure def time(sys: GC_System) : Set[GC_Transition] = {
+    pure def gc_time(sys: GC_System) : Set[GC_Transition] = {
         sys.input.get_time_request_messages().map(msg =>
         {
             post_state : sys.state,
@@ -34,7 +34,7 @@ module g_clock{
         )
     }
 
-    pure def okay_1(sys: GC_System) : Set[GC_Transition] = {
+    pure def gc_okay_1(sys: GC_System) : Set[GC_Transition] = {
         sys.input.get_okay_request_messages().map(msg => {
             if(sys.state.Reg.contains(msg.party)) {
                 // Check if all registered parties are ready (including this one)
@@ -70,7 +70,7 @@ module g_clock{
         })
     }
 
-    pure def okay_2(sys: GC_System) : Set[GC_Transition] = {
+    pure def gc_okay_2(sys: GC_System) : Set[GC_Transition] = {
         sys.input.get_sim_okay_hold_messages().map(msg => {
             val hold_msg = SIMOkayRelease({nonce: msg.nonce, party: msg.party})
             {
@@ -83,7 +83,7 @@ module g_clock{
         })
     }
 
-    pure def okay_4(sys: GC_System) : Set[GC_Transition] = {
+    pure def gc_okay_4(sys: GC_System) : Set[GC_Transition] = {
         sys.input.get_sim_okay_release_messages().map(msg =>
         {
             post_state : sys.state,
@@ -96,7 +96,7 @@ module g_clock{
 
 
 
-    pure def okay_3(sys: GC_System) : Set[GC_Transition] = {
+    pure def gc_okay_3(sys: GC_System) : Set[GC_Transition] = {
         if(sys.SIM_handles.size() > 0 and sys.input.contains_sim_control()) {
             // Option 1: Release one of the stored hold requests
             val release_trans = sys.SIM_handles.map(release_request => {
@@ -136,12 +136,12 @@ module g_clock{
 
     pure def gc_main_listener(sys : GC_System) : Set[GC_Transition] = {
         Set(
-            register(sys),
-            time(sys),
-            okay_1(sys),
-            okay_2(sys),
-            okay_3(sys),
-            okay_4(sys),
+            gc_register(sys),
+            gc_time(sys),
+            gc_okay_1(sys),
+            gc_okay_2(sys),
+            gc_okay_3(sys),
+            gc_okay_4(sys),
         ).flatten()
     }  
 
@@ -151,8 +151,8 @@ module g_clock{
     } 
 
     action gc_step_with(q: (GC_System) => Set[(GC_Transition)]): bool = {
-        nondet transition = q(g_clock_s).oneOf()
-        g_clock_s' = gc_process_transitions(g_clock_s, transition)        
+        nondet transition = q(gc_s).oneOf()
+        gc_s' = gc_process_transitions(gc_s, transition)        
     }   
 
     action gc_step : bool =  { 
@@ -160,7 +160,7 @@ module g_clock{
     }
 
     action gc_init(C: Set[Party], time : int, Reg: Set[PartySID]): bool = {
-        g_clock_s' = {
+        gc_s' = {
             params: {
                 C : C,
             },
@@ -177,7 +177,7 @@ module g_clock{
     }
 
     action gc_stutter : bool = {
-        g_clock_s' = g_clock_s
+        gc_s' = gc_s
     }
 
  

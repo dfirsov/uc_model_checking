@@ -10,22 +10,22 @@ module f_ac{
 
 
     // mutable variable represents the system state
-    var f_ac_s : FAC_System
+    var fac_s : FAC_System
 
 
-    def send_1(sys: FAC_System) :  Set[FAC_Transition] = { 
-        sys.input.get_send_request_messages().map(msg => 
+    def fac_send_1(sys: FAC_System) :  Set[FAC_Transition] = { 
+        sys.input.fac_get_send_request_messages().map(msg => 
             val Q = msg.Q
             val x = msg.x
             val sid = msg.cfg.sid
             val P = msg.cfg.party
-            val t = g_clock_s.state.TIME
+            val t = gc_s.state.TIME
             val sid_state = sys.state.get(sid)
 
             if (and {
-                Q.in(f_ac_s.params.P),
-                P.in(f_ac_s.params.P),
-                sid.in(f_ac_s.params.SIDs),
+                Q.in(fac_s.params.P),
+                P.in(fac_s.params.P),
+                sid.in(fac_s.params.SIDs),
                 not ((P, t).in(sid_state.S_flag)),
             }) {
                 val new_ctr = sid_state.ctr + 1
@@ -64,9 +64,9 @@ module f_ac{
         )
     }
 
-    pure def send_2(sys: FAC_System) : Set[FAC_Transition] = {
-        sys.input.get_sim_control_messages().map(c => { // SIM must have a control
-            sys.SIM_handles.get_sim_send_hold_messages().map(msg => {
+    pure def fac_send_2(sys: FAC_System) : Set[FAC_Transition] = {
+        sys.input.fac_get_sim_control_messages().map(c => { // SIM must have a control
+            sys.SIM_handles.fac_get_sim_send_hold_messages().map(msg => {
                 {
                     post_state : sys.state,
                     effects : Set(
@@ -76,11 +76,10 @@ module f_ac{
                 }
             })
         }).flatten()
-
     }    
 
-    pure def send_3(sys: FAC_System) : Set[FAC_Transition] = {
-        sys.input.get_sim_send_release_messages().map(msg => {
+    pure def fac_send_3(sys: FAC_System) : Set[FAC_Transition] = {
+        sys.input.fac_get_sim_send_release_messages().map(msg => {
             val sid = msg.cfg.sid
             val sid_state = sys.state.get(sid)
                 {
@@ -93,8 +92,8 @@ module f_ac{
     }
     
 
-    def send_4(fac:FAC_System, clock: GC_System) : Set[(FAC_Transition, GC_Transition)] = {
-        fac.input.get_clock_request_messages().map(msg => 
+    def fac_send_4(fac:FAC_System, clock: GC_System) : Set[(FAC_Transition, GC_Transition)] = {
+        fac.input.fac_get_clock_request_messages().map(msg => 
         {
             val sid = msg.cfg.sid
             val P   = msg.cfg.party
@@ -120,8 +119,8 @@ module f_ac{
         }).flatten()
     }
 
-    def send_5(fac:FAC_System, clock: GC_System) : Set[(FAC_Transition, GC_Transition)] = {
-        fac.SIM_handles.get_clock_request_wait_messages().map(msg => 
+    def fac_send_5(fac:FAC_System, clock: GC_System) : Set[(FAC_Transition, GC_Transition)] = {
+        fac.SIM_handles.fac_get_clock_request_wait_messages().map(msg => 
         {
             val sid = msg.cfg.sid
             val P   = msg.cfg.party
@@ -150,8 +149,8 @@ module f_ac{
         }).flatten()
     }        
 
-    def send_6(sys : FAC_System) : Set[FAC_Transition] = {
-        sys.input.get_clock_response_messages().map(msg => {
+    def fac_send_6(sys : FAC_System) : Set[FAC_Transition] = {
+        sys.input.fac_get_clock_response_messages().map(msg => {
             val P = msg.cfg.party
             val t = msg.t
             val state = sys.state.get(msg.cfg.sid)
@@ -167,10 +166,10 @@ module f_ac{
 
 
 
-    def fetch_1(sys: FAC_System) : Set[FAC_Transition] = {
-        sys.input.get_fetch_request_messages().map(msg => 
+    def fac_fetch_1(sys: FAC_System) : Set[FAC_Transition] = {
+        sys.input.fac_get_fetch_request_messages().map(msg => 
         {
-            val tp = g_clock_s.state.TIME // to make traces shorter
+            val tp = gc_s.state.TIME // to make traces shorter
             val sid = msg.cfg.sid
             val P = msg.cfg.party
             val delta = sys.params.delta
@@ -178,8 +177,8 @@ module f_ac{
             val L = sid_state.L
             
             if (and {
-                P.in(f_ac_s.params.P),
-                sid.in(f_ac_s.params.SIDs),
+                P.in(fac_s.params.P),
+                sid.in(fac_s.params.SIDs),
                 not ((P, tp).in(sid_state.F_flag)),
             }){
                 val i_late = L.keys().filterMap(k => {
@@ -216,9 +215,9 @@ module f_ac{
         })
     }
 
-    pure def fetch_2(sys: FAC_System) : Set[FAC_Transition] = {
-        sys.input.get_sim_control_messages().map(c => { // sim must have control
-            sys.SIM_handles.get_sim_fetch_hold_messages().map(msg => {
+    pure def fac_fetch_2(sys: FAC_System) : Set[FAC_Transition] = {
+        sys.input.fac_get_sim_control_messages().map(c => { // sim must have control
+            sys.SIM_handles.fac_get_sim_fetch_hold_messages().map(msg => {
                 val sid = msg.cfg.sid
                 val L = sys.state.get(sid).L
                 //L.keys().powerset().map(i_early => 
@@ -241,8 +240,8 @@ module f_ac{
     }    
 
 
-    def fetch_3(sys : FAC_System) : Set[FAC_Transition] = {
-        sys.input.get_sim_fetch_release_messages().map(msg => 
+    def fac_fetch_3(sys : FAC_System) : Set[FAC_Transition] = {
+        sys.input.fac_get_sim_fetch_release_messages().map(msg => 
             val sid = msg.cfg.sid
             val P = msg.cfg.party
             val t_prim = msg.t_prim
@@ -271,8 +270,8 @@ module f_ac{
         )
     }
 
-    def ok_1(fac : FAC_System, gc: GC_System) : Set[(FAC_Transition, GC_Transition)] = {
-        fac.input.get_ok_request_messages().map(msg => 
+    def fac_ok_1(fac : FAC_System, gc: GC_System) : Set[(FAC_Transition, GC_Transition)] = {
+        fac.input.fac_get_ok_request_messages().map(msg => 
         {
             val sid = msg.cfg.sid
             val P   = msg.cfg.party
@@ -297,8 +296,8 @@ module f_ac{
         })
     }
     
-    def ok_2(fac : FAC_System, gc: GC_System) : Set[(FAC_Transition, GC_Transition)] = {
-        fac.SIM_handles.get_ok_request_wait_messages().map(msg => 
+    def fac_ok_2(fac : FAC_System, gc: GC_System) : Set[(FAC_Transition, GC_Transition)] = {
+        fac.SIM_handles.fac_get_ok_request_wait_messages().map(msg => 
         {
             gc.input.get_okay_response_messages().map(msg2 => {
                 if(msg2.nonce == msg.cfg.nonce){
@@ -327,7 +326,7 @@ module f_ac{
 
     // sim might want to give control back to the environment
     pure def fac_sim_loses_ctrl(sys: FAC_System) : Set[FAC_Transition] = {
-        sys.input.get_sim_control_messages().map(c =>  // sim must have control
+        sys.input.fac_get_sim_control_messages().map(c =>  // sim must have control
                     {   
                         post_state : sys.state,
                         effects : Set( 
@@ -337,46 +336,46 @@ module f_ac{
     }    
 
 
-    def main_listener(sys: FAC_System, clock: GC_System) : (Set[(FAC_Transition, GC_Transition)]) = {
+    def fac_main_listener(sys: FAC_System, clock: GC_System) : (Set[(FAC_Transition, GC_Transition)]) = {
         val id : GC_Transition = {post_state: clock.state, effects: Set()}
 
         Set(
-            send_1(sys),
-            send_2(sys),
-            send_3(sys),
-            send_6(sys),            
-            fetch_1(sys),
-            fetch_2(sys),
-            fetch_3(sys),
+            fac_send_1(sys),
+            fac_send_2(sys),
+            fac_send_3(sys),
+            fac_send_6(sys),            
+            fac_fetch_1(sys),
+            fac_fetch_2(sys),
+            fac_fetch_3(sys),
             fac_sim_loses_ctrl(sys)
         ).flatten().map(x => (x,id)).union(
             Set(
-                send_4(sys, clock),
-                send_5(sys, clock),
-                ok_1(sys, clock),
-                ok_2(sys, clock),
+                fac_send_4(sys, clock),
+                fac_send_5(sys, clock),
+                fac_ok_1(sys, clock),
+                fac_ok_2(sys, clock),
                 ).flatten()
         )
     }
 
     def fac_process_transitions(sys: FAC_System, transition: FAC_Transition) : FAC_System = {
         val new_sys = {...sys, state: transition.post_state}
-        transition.effects.fold(new_sys, ((a1,a2) => apply_effect(a1,a2)))
+        transition.effects.fold(new_sys, ((a1,a2) => fac_apply_effect(a1,a2)))
     } 
 
     action fac_step : bool =  all {
-        fac_gc_step_with(main_listener)
+        fac_gc_step_with(fac_main_listener)
     }
 
     action fac_gc_step_with(q: (FAC_System, GC_System) => Set[(FAC_Transition, GC_Transition)]): bool = {
         all{ 
-            val ts = q(f_ac_s, g_clock_s)
+            val ts = q(fac_s, gc_s)
             all {
                 ts.size() > 0,
                 nondet transition = ts.oneOf()
                 all {
-                    f_ac_s' = fac_process_transitions(f_ac_s, transition._1),
-                    g_clock_s' = gc_process_transitions(g_clock_s, transition._2)
+                    fac_s' = fac_process_transitions(fac_s, transition._1),
+                    gc_s' = gc_process_transitions(gc_s, transition._2)
                 }
             }
         }
@@ -394,9 +393,7 @@ module f_ac{
     }
     
 
-
-
-    pure def initial_f_ac(P: Set[Party], C: Set[Party], delta: Time, SIDs: Set[SID]) : FAC_System = {
+    pure def fac_initial(P: Set[Party], C: Set[Party], delta: Time, SIDs: Set[SID]) : FAC_System = {
         {
             params : {
                 P : P,
@@ -420,14 +417,14 @@ module f_ac{
     }
 
     action fac_init(P: Set[Party], C: Set[Party], delta: Time, SIDs: Set[SID]) : bool =  all {
-        f_ac_s' = initial_f_ac(P, C, delta, SIDs)
+        fac_s' = fac_initial(P, C, delta, SIDs)
     }
 
-    def apply_effect(sys: FAC_System, eff: FAC_Effect): FAC_System = {
+    def fac_apply_effect(sys: FAC_System, eff: FAC_Effect): FAC_System = {
         match eff {
         | FAC_LogMessage(msg) => 
             {...sys, 
-                log: sys.log.setAdd({idx: sys.log.size(), msg: msg,  time: g_clock_s.state.TIME, handles: sys.SIM_handles})
+                log: sys.log.setAdd({idx: sys.log.size(), msg: msg,  time: gc_s.state.TIME, handles: sys.SIM_handles})
             }
         | FAC_UpdateInput(msgs) => 
             {...sys, 
