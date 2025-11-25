@@ -8,7 +8,6 @@ module f_crs_properties{
     val Parties = Set(1,2,3)
     val sids = Set(4,5)
     val D = Set(1001,1002,1003)
-    val nonce_start: Nonce = 0
 
     action step : bool = any {
         crs_step,  
