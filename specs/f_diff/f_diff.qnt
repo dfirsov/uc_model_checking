@@ -312,12 +312,12 @@ module f_diff{
     // sim might want to give control back to the environment
     pure def dif_sim_loses_ctrl(dif: DIF_System) : Set[DIF_Transition] = {
         dif.input.dif_get_sim_control_messages().map(c =>  // sim must have control
-                    {   
-                        post_state : dif.state,
-                        effects : Set( 
-                            DIF_UpdateInput(Set()),
-                            )  
-                    })
+            {   
+                post_state : dif.state,
+                effects : Set( 
+                    DIF_UpdateInput(Set()),
+                    )  
+            })
     }
 
     def dif_main_listener(dif: DIF_System, clock: GC_System) : (Set[(DIF_Transition, GC_Transition)]) = {
@@ -384,6 +384,34 @@ module f_diff{
                 SIM_handles: sys.SIM_handles.exclude(Set(handle_to_remove))
             }
         }
-    }  
+    }
+
+
+    pure def dif_initial(P: Set[Party], C: Set[Party], delta: Time, SIDs: Set[SID]) : DIF_System = {
+        {
+            params : {
+                P : P,
+                C : C,
+                delta: delta,
+                SIDs: SIDs,
+            },
+            state : SIDs.mapBy(sid => {
+                {
+                    L : Map(),
+                    ctr : 0,
+                    F_flag : Set(),
+                    D_flag : Set()
+                }
+            }),
+            input : Set(),
+            nonce : 0,        // to be able to match requests and responses in the trace
+            log : Set(),
+            SIM_handles : Set()
+        }        
+    }
+
+    action dif_init(P: Set[Party], C: Set[Party], delta: Time, SIDs: Set[SID]) : bool =  all {
+        dif_s' = dif_initial(P, C, delta, SIDs)
+    }      
     
 }

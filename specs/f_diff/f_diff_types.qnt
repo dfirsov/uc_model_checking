@@ -30,6 +30,19 @@ module f_diff_types {
 
         | SIMControl  
 
+
+    pure def dif_get_all_response_messages(messages: Set[DIF_Message]): Set[DIF_Message] = {
+        messages.filterMap(m => {
+        match m {
+            | DiffuseResponse(p) => Some(DiffuseResponse(p))
+            | FetchResponse(p) => Some(FetchResponse(p))
+            | InjectResponse(p) => Some(InjectResponse(p))  
+            | OKResponse(p) => Some(OKResponse(p))
+            | _ => None
+        }
+        })
+    }      
+
     type DIF_SystemParams = {
         P : Set[Party], // parties who can use the functionality
         C : Set[Party], // corrupted parties
