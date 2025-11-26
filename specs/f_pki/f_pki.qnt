@@ -1,4 +1,4 @@
-module f_pki{
+module f_pki {
 
     import basicSpells.* from "../../spells/basicSpells"
     import rareSpells.* from "../../spells/rareSpells"
@@ -102,7 +102,7 @@ module f_pki{
             val sid_state = pki.state.get(sid)
 
             val vk_res = {
-                val elem = sid_state.Reg.find(x => x.party == party)
+                val elem = sid_state.Reg.find(x => x.party == p.Q)
                 if (elem == None){
                     None
                 }else{
@@ -113,7 +113,7 @@ module f_pki{
             Set({
                 post_state: pki.state,
                 effects: Set( 
-                    PKI_UpdateInput(Set(RetrieveResponse({cfg: p.cfg, vk: vk_res})))
+                    PKI_UpdateInput(Set(RetrieveResponse({cfg: p.cfg, Q: p.Q, vk: vk_res})))
                 )
             })
         }).flatten()
@@ -236,6 +236,5 @@ module f_pki{
     action pki_init(P: Set[Party], all_certs: Set[Certificate], SIDs: Set[SID]) : bool =  all {
         pki_s' = pki_initial(P, all_certs, SIDs)
     }    
-
 
 }

@@ -17,7 +17,7 @@ module f_pki_types {
         | RetrieveRequest({cfg: MsgConfig, Q: Party}) 
         | SIMRetrieveRequestHold({cfg: MsgConfig, Q: Party})
         | SIMRetrieveRequestRelease({cfg: MsgConfig, Q: Party})     
-        | RetrieveResponse({cfg: MsgConfig, vk: Option[VK]})
+        | RetrieveResponse({cfg: MsgConfig, Q: Party, vk: Option[VK]})
 
         | CertVerifyRequest({cfg: MsgConfig, Q: Party, vk: VK, cert: Certificate})
         | CertVerifyResponse({cfg: MsgConfig, Q: Party, vk: VK, cert: Certificate, result: bool})
@@ -132,7 +132,7 @@ module f_pki_types {
         })
     }
 
-    pure def pki_get_retrieve_response_messages(messages: Set[PKI_Message]): Set[{cfg: MsgConfig, vk: Option[VK]}] = {
+    pure def pki_get_retrieve_response_messages(messages: Set[PKI_Message]): Set[{cfg: MsgConfig, Q: Party, vk: Option[VK]}] = {
         messages.filterMap(m => {
         match m {
             | RetrieveResponse(p) => Some(p)
