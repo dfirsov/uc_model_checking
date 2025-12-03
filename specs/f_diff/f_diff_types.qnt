@@ -31,17 +31,6 @@ module f_diff_types {
         | SIMControl  
 
 
-    pure def dif_get_all_response_messages(messages: Set[DIF_Message]): Set[DIF_Message] = {
-        messages.filterMap(m => {
-        match m {
-            | DiffuseResponse(p) => Some(DiffuseResponse(p))
-            | FetchResponse(p) => Some(FetchResponse(p))
-            | InjectResponse(p) => Some(InjectResponse(p))  
-            | OKResponse(p) => Some(OKResponse(p))
-            | _ => None
-        }
-        })
-    }      
 
     type DIF_SystemParams = {
         P : Set[Party], // parties who can use the functionality
@@ -77,6 +66,19 @@ module f_diff_types {
         post_state: DIF_StateVars,
         effects: Set[DIF_Effect]
     }    
+
+    pure def dif_get_all_response_messages(messages: Set[DIF_Message]): Set[DIF_Message] = {
+        messages.filterMap(m => {
+        match m {
+            | DiffuseResponse(p) => Some(DiffuseResponse(p))
+            | FetchResponse(p) => Some(FetchResponse(p))
+            | InjectResponse(p) => Some(InjectResponse(p))  
+            | OKResponse(p) => Some(OKResponse(p))
+            | _ => None
+        }
+        })
+    }      
+
 
     pure def dif_get_inject_request_messages(messages: Set[DIF_Message]): Set[{cfg: MsgConfig, Q:Party, m:Data}] = {
         messages.filterMap(m => {

@@ -25,6 +25,8 @@ module g_clock_types {
         C : Set[Party] // corrupted parties
     }
 
+
+
     type GC_StateVars = {
         TIME : Time,
         Reg : Set[PartySID],

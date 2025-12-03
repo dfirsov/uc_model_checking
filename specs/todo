@@ -1,8 +1,7 @@
-- rewrite F-NIZK within new framework
 - rewrite F-SIG within new framework
+- rewrite F-NIZK within new framework
 - send Time requests instead of reading the variable
-- define F-CRS
-- define F-PKI
 - define F-VC 
-
 - investigate G-MC
++ define F-CRS
++ define F-PKI
