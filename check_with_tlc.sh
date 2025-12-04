@@ -5,7 +5,8 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 source "$SCRIPT_DIR/common.sh" || { echo "Error: Could not load common.sh"; exit 1; }
 
 # Default configurations
-APALACHE_JAR="$HOME/.quint/apalache-dist-0.50.3/apalache/lib/apalache.jar"
+# apalache-dist-0.51.1
+APALACHE_JAR="$HOME/.quint/apalache-dist-0.51.1/apalache/lib/apalache.jar"
 JAVA_OPTS="-Xmx8G -Xss515m"
 
 FILE=""  # Mandatory: User must specify a file

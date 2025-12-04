@@ -7,6 +7,12 @@ module g_clock{
     // mutable variable represents the system state
     var gc_s : GC_System
 
+    pure def gc_id_trans(clock : GC_System) : GC_Transition = {
+        post_state : clock.state,
+        effects : Set(),
+    }
+
+
 
     pure def gc_register(sys: GC_System) :  Set[GC_Transition] = { 
         sys.input.get_register_request_messages().map(msg => 

@@ -8,7 +8,7 @@ module g_ledger_types{
     type TX = int
     type EventId = int
     type Block = int
-    type ValidatorState = (List[Party], TX) => bool
+    type LED_ValidatorState = bool // (List[Party], TX) => bool
 
     type LED_Message =
 
@@ -38,7 +38,7 @@ module g_ledger_types{
         SIDs: Set[SID], 
         delta_latency: Time,
         delta_slack: Time,
-        genesis: Block,
+        genesis: TX,
     }    
 
 
@@ -47,7 +47,7 @@ module g_ledger_types{
         eID: EventId,
         log: List[{tx:TX, time: Time}],
         ptr: Party -> Pointer,
-        Val: ValidatorState,
+        Val: LED_ValidatorState,
     }
 
 
