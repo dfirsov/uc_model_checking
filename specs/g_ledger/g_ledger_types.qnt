@@ -9,6 +9,7 @@ module g_ledger_types{
     type EventId = int
     type Block = int
     type LED_ValidatorState = bool // (List[Party], TX) => bool
+    type LED_Log = List[{tx:TX, time: Time}]
 
     type LED_Message =
 
@@ -45,7 +46,7 @@ module g_ledger_types{
     type LED_StateVars = {
         buffer: EventId -> {tx: TX, time: Time},
         eID: EventId,
-        log: List[{tx:TX, time: Time}],
+        log: LED_Log,
         ptr: Party -> Pointer,
         Val: LED_ValidatorState,
     }
@@ -56,7 +57,7 @@ module g_ledger_types{
         state : LED_StateVars,
         input : Set[LED_Message], // always not more than 1 message in the system
         nonce : Nonce,        // to be able to match requests and responses in the trace
-        log : Set[{idx: int, msg: LED_Message, time : Time, handles: Set[LED_Message],  }], // state: LED_StateVars
+        log : Set[{idx: int, msg: LED_Message, time : Time, state: LED_StateVars,  }], // state: LED_StateVars
         handles : Set[LED_Message],
     }  
 

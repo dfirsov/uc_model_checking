@@ -182,7 +182,7 @@ module g_ledger{
                     post_state: ledger.state,
                     effects: Set(
                         LED_RemoveHandle(ReadSIMHold(p)),
-                        LED_UpdateInput(Set(ReadSIMRelease({cfg:p.cfg, I: List(1,2,3,5,6,7,8,9,10), ptr_prim: 3}))) 
+                        LED_UpdateInput(Set(ReadSIMRelease({cfg:p.cfg, I: List(), ptr_prim: 0}))) 
                     )
                 })
             }).flatten()
@@ -231,7 +231,7 @@ module g_ledger{
                 })                
 
                 val loop = I.foldl({v: ledger.state.Val, I: I, b: ledger.state.buffer, l:ledger.state.log}, (x, i) => {
-                    val y = led_valid(x.v, x.b.get(i).tx)
+                    val y = led_valid(x.v, x.l, x.b.get(i).tx)
                     if(y.valid){
                         {v:y.val_state, I: x.I, b: x.b, l:x.l.append({tx: x.b.get(i).tx, time: t})}
                     }else{
@@ -241,7 +241,7 @@ module g_ledger{
 
                 val ptrP_2 = if (ptr.get(P) < 0) ptr.set(P, 0) else ptr
                 val ptrP_3 = if (ptrP_2.get(P) >= loop.l.length()) ptrP_2.set(P, loop.l.length() - 1) else ptrP_2
-                //val result = loop.l.slice(0,ptrP_3.get(P)).listMap(b => b.tx) // TODO: check off-by-one
+                val result = loop.l.slice(0,ptrP_3.get(P)+1).listMap(b => b.tx) // TODO: check off-by-one
 
                 val led_transition = {
                     post_state: {...ledger.state, 
@@ -252,7 +252,7 @@ module g_ledger{
                     },
                     effects: Set(
                         LED_RemoveHandle(ReadTimeRequestHold(p)),
-                        LED_UpdateInput(Set(ReadResponse({cfg: p.cfg, result: List()})))
+                        LED_UpdateInput(Set(ReadResponse({cfg: p.cfg, result: result})))
                     )
                 }
 
@@ -289,7 +289,7 @@ module g_ledger{
 
         val maxPtr = ledger.state.log.indices().filterMap(idx => {
             val b = ledger.state.log[idx]
-            if(t - b.time > ledger.params.delta_slack) {
+            if(t - b.time >= ledger.params.delta_slack) {
                 Some(idx)
             } else {
                 None
@@ -298,9 +298,9 @@ module g_ledger{
 
         (I, maxPtr) 
     }
-     
+    
     // TODO: either adhoc function, or tx paired with validity flag
-    pure def led_valid(vallidator: LED_ValidatorState, block: Block): {val_state: LED_ValidatorState, valid: bool} = {
+    pure def led_valid(vallidator: LED_ValidatorState, log: LED_Log, tx: TX): {val_state: LED_ValidatorState, valid: bool} = {
         {val_state: vallidator, valid: true} 
     }
         
@@ -326,7 +326,7 @@ module g_ledger{
         match eff {
         | LED_LogMessage(msg) => 
             {...sys, 
-                log: sys.log.setAdd({idx: sys.log.size(), msg: msg,  time: gc_s.state.TIME, handles: sys.handles})
+                log: sys.log.setAdd({idx: sys.log.size(), msg: msg,  time: gc_s.state.TIME, state: sys.state}) 
             }
         | LED_UpdateInput(msgs) => 
             {...sys, 

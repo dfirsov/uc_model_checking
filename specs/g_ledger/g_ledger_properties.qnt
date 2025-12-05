@@ -11,10 +11,10 @@ module g_ledger_properties {
    val txs = 1.to(20)
 
    val Parties = Set(1,2)
-   val C = Set(3)
+   val C = Set()
    val sids = Set(1)
-   val delta_latency = 1
-   val delta_slack = 2
+   val delta_latency = 0
+   val delta_slack = 0
    val genesis = 0
    //pure def Val : LED_ValidatorState = (parties, tx) => true
 
@@ -66,8 +66,7 @@ module g_ledger_properties {
         nondet tx = txs.oneOf()
         any {
             env_led_submit_reqs(from, sid, tx), 
-            //env_led_read_reqs(from, sid),
-
+            env_led_read_reqs(from, sid),
             // bias toward ok requests
             env_ok_reqs(from, sid),
             env_ok_reqs(from, sid),
@@ -79,7 +78,7 @@ module g_ledger_properties {
     }
 
  
-    // // // Environment interaction: non-deterministically add requests when input is empty
+    // Environment interaction: non-deterministically add requests when input is empty
     action env_led_submit_reqs(from:Party, sid: SID, tx: TX) : bool = all {
         // Precondition: input must be empty
         gc_s.input.size() == 0 and g_ledger_s.input.size() == 0,
@@ -144,6 +143,38 @@ module g_ledger_properties {
         g_ledger_s' = g_ledger_s,
     }
 
+    run test1 = {
+
+        val party1 = 1
+        val tx = 2
+        val sid = 1
+
+        init.then(env_led_submit_reqs(party1, sid, tx))
+        .then(led_step)
+        .then(gc_step_led_wait)
+        .then(led_step)
+        .then(led_gc_step_with(led_submit_3))
+        .then(led_step)
+        .then(env_consume_responses)
+
+        .then(env_led_submit_reqs(2, sid, 3))
+        .then(led_step)
+        .then(gc_step_led_wait)
+        .then(led_step)
+        .then(led_gc_step_with(led_submit_3))
+        .then(led_step)
+        .then(env_consume_responses)        
+
+        .then(env_led_read_reqs(party1, sid))
+        .then(led_step)
+        .then(led_gc_step_with(led_read_2))
+        .then(led_step)
+        .then(gc_step_led_wait)
+        .then(led_step)
+        .then(env_consume_responses)
+  
+    }
+
 
 
 // must fail
@@ -156,6 +187,100 @@ val P6 = gc_s.input.size() == 0
 val P7 = gc_s.state.TIME <= 5
 val P8 = g_ledger_s.handles.led_get_submit_sim_hold_messages().size() <= 2
 
+// Liveness: if a tx is submitted (SubmitResponse exists) at time t by some (honest) party, and 
+// the transaction remains valid for some number of rounds, then every other (honest) party will see it as part of 
+// its (local) log at time t + ∆_latency +  ∆_slack.
+val LED_Liveness = g_ledger_s.log.forall(log_entry1 => {
+    match log_entry1.msg {
+        | SubmitResponse(p) => {
+             g_ledger_s.log.forall(log_entry2 => {
+                match log_entry2.msg {
+                    | ReadRequest(q) => {
+                        g_ledger_s.log.forall(log_entry3 => {
+                            match log_entry3.msg {
+                                | ReadResponse(d) => {
+                                    and {
+                                        (log_entry1.time + delta_latency + delta_slack < log_entry2.time),
+                                        log_entry1.idx < log_entry2.idx,
+                                        d.cfg.nonce == q.cfg.nonce    
+                                    } implies {
+                                        (d.result.listHas(p.tx))
+                                    }
+                                }
+                                | _ => true
+                            }
+                        })
+                    }
+                    | _ => true
+                }
+             })
+        }
+        | _ => true
+    }
+})
 
-    
+//Consistency: for any two parties P and Q, with local logs log[0:ptr[P]] 
+// and log[0:ptr[Q]] we either have log[0:ptr[P]]is a prefix of log[0:ptr[Q]] or vice versa.
+val LED_Consistency = g_ledger_s.log.forall(log_entry1 => {
+    match log_entry1.msg {
+        | ReadResponse(p) => {
+            g_ledger_s.log.forall(log_entry2 => {
+                match log_entry2.msg {
+                    | ReadResponse(q) => {
+                        or {
+                            p.result.isPrefixOf(q.result),
+                            q.result.isPrefixOf(p.result),
+                        }
+                    }
+                    | _ => true
+                }
+            })
+        }   
+        | _ => true     
+    }
+})
+
+// Validity: For any (honest) P with local log log_P, all transactions in log_P are valid. 
+val LED_Validity = g_ledger_s.log.forall(log_entry => {
+    match log_entry.msg {
+        | ReadRequest(p) => {
+            g_ledger_s.log.forall(log_entry2 => {
+                match log_entry2.msg {
+                    ReadResponse(q) => {
+                        (p.cfg.nonce == q.cfg.nonce) implies {
+                            g_ledger_s.state.log.indices().forall(i => {
+                                val tx = g_ledger_s.state.log[i].tx
+                                // NOTE: expecting that Val is pure def
+                                led_valid(log_entry.state.Val, log_entry.state.log, tx).valid 
+                            })
+                        }
+                    }
+                    | _ => true
+                }       
+            })
+        }   
+        | _ => true
+    }
+})
+
+// Persistence: once a tx is added to log, it remains there forever.
+val LED_Persistance = g_ledger_s.log.forall(log_entry1 => {
+    match log_entry1.msg {
+        | ReadResponse(p) => {
+            g_ledger_s.log.forall(log_entry2 => {
+                match log_entry2.msg {
+                    | ReadResponse(q) => {
+                        (log_entry1.idx < log_entry2.idx) implies {
+                            p.result.isPrefixOf(q.result)
+                        }
+                    }
+                    | _ => true
+                }
+            })
+        }
+        | _ => true
+    }
+})
+
 }
+
