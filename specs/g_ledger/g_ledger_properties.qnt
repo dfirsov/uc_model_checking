@@ -14,7 +14,7 @@ module g_ledger_properties {
    val C = Set()
    val sids = Set(1)
    val delta_latency = 0
-   val delta_slack = 0
+   val delta_slack = 1
    val genesis = 0
    //pure def Val : LED_ValidatorState = (parties, tx) => true
 
@@ -55,7 +55,7 @@ module g_ledger_properties {
    }        
   
     action init = all {
-        led_init(Parties, C, sids, delta_latency, delta_slack, genesis, true),
+        led_init(Parties, C, sids, delta_latency, delta_slack, true),
         gc_init(C,0,Set({party: 1, sid: 1}, {party:2, sid:1})),
     }
 
@@ -70,8 +70,8 @@ module g_ledger_properties {
             // bias toward ok requests
             env_ok_reqs(from, sid),
             env_ok_reqs(from, sid),
-            env_ok_reqs(from, sid),
-            env_ok_reqs(from, sid),
+            //env_ok_reqs(from, sid),
+            //env_ok_reqs(from, sid),
             env_led_sim_reqs,
             env_gc_sim_reqs,
         }
@@ -143,35 +143,50 @@ module g_ledger_properties {
         g_ledger_s' = g_ledger_s,
     }
 
-    run test1 = {
 
-        val party1 = 1
-        val tx = 2
-        val sid = 1
-
-        init.then(env_led_submit_reqs(party1, sid, tx))
-        .then(led_step)
-        .then(gc_step_led_wait)
-        .then(led_step)
-        .then(led_gc_step_with(led_submit_3))
-        .then(led_step)
-        .then(env_consume_responses)
-
-        .then(env_led_submit_reqs(2, sid, 3))
+    run submit_cycle(party : Party, sid: SID, tx: TX) : bool = {
+        (env_led_submit_reqs(party, sid, tx))
         .then(led_step)
         .then(gc_step_led_wait)
         .then(led_step)
         .then(led_gc_step_with(led_submit_3))
         .then(led_step)
         .then(env_consume_responses)        
+    }
 
-        .then(env_led_read_reqs(party1, sid))
+    run read_cycle(party : Party, sid: SID) : bool = {
+        env_led_read_reqs(party, sid)
         .then(led_step)
-        .then(led_gc_step_with(led_read_2))
+        .then(led_read_2_act)
         .then(led_step)
         .then(gc_step_led_wait)
         .then(led_step)
-        .then(env_consume_responses)
+        .then(env_consume_responses)      
+    }
+
+    run ok_cycle(party : Party, sid: SID) : bool = {
+        env_ok_reqs(party, sid)
+        .then(led_step)
+        .then(gc_step_led_wait)
+        .then(gc_step_led_wait)
+        .then(gc_step_led_wait)
+        .then(gc_step_led_wait)
+        .then(led_step)
+        .then(env_consume_responses)      
+    }
+
+    run test1 = {
+
+        val party1 = 1
+        val tx = 2
+        val sid = 1
+
+        init
+        .then(ok_cycle(party1, sid))
+        .then(ok_cycle(2,1))
+        .then(submit_cycle(party1, sid, tx))
+        .then(submit_cycle(2,sid,3))     
+        .then(read_cycle(party1, sid))
   
     }
 
@@ -184,12 +199,12 @@ val P3 = g_ledger_s.log.map(x => x.msg).led_get_ok_response_messages().size() <=
 val P4 = g_ledger_s.log.map(x => x.msg).led_get_submit_response_messages().size() <= 2
 val P5 = g_ledger_s.log.map(x => x.msg).led_get_read_response_messages().size() <= 5
 val P6 = gc_s.input.size() == 0
-val P7 = gc_s.state.TIME <= 5
+val P7 = gc_s.state.TIME <= 3
 val P8 = g_ledger_s.handles.led_get_submit_sim_hold_messages().size() <= 2
 
-// Liveness: if a tx is submitted (SubmitResponse exists) at time t by some (honest) party, and 
-// the transaction remains valid for some number of rounds, then every other (honest) party will see it as part of 
-// its (local) log at time t + ∆_latency +  ∆_slack.
+// Liveness: if a tx is submitted at time t by some party, and 
+// the transaction remains valid for some number of rounds, then every other party will see it as part of 
+// its (local) log at time t + ∆_latency + ∆_slack.
 val LED_Liveness = g_ledger_s.log.forall(log_entry1 => {
     match log_entry1.msg {
         | SubmitResponse(p) => {
@@ -277,6 +292,15 @@ val LED_Persistance = g_ledger_s.log.forall(log_entry1 => {
                     | _ => true
                 }
             })
+        }
+        | _ => true
+    }
+})
+
+val LED_CommonPrefix = g_ledger_s.log.forall(log_entry => {
+    match log_entry.msg {
+        | ReadResponse(p) => {
+            p.result.length() >= log_entry.state.log.length() - g_ledger_s.params.delta_slack
         }
         | _ => true
     }

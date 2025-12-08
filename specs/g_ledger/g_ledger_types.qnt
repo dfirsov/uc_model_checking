@@ -6,19 +6,16 @@ module g_ledger_types{
     // define types of the system  
     type Pointer = int
     type TX = int
-    type EventId = int
-    type Block = int
     type LED_ValidatorState = bool // (List[Party], TX) => bool
-    type LED_Log = List[{tx:TX, time: Time}]
+    type LED_Log = List[{tx:TX, time: Time}] // mentally this is a list of (tx, time) pairs indexed by Pointer
 
     type LED_Message =
 
         | SubmitRequest({cfg: MsgConfig, tx: TX}) 
         | SubmitTimeRequestHold({cfg: MsgConfig, tx:TX})
-        //| SubmitTimeRequestRelease({cfg: MsgConfig, tx:TX, t: Time})
-        | SubmitSIMHold({cfg: MsgConfig, tx:TX, eID: EventId, t: Time})
-        | SubmitSIMRelease({cfg: MsgConfig, tx:TX, eID: EventId, t: Time})
-        | SubmitResponse({cfg: MsgConfig, tx:TX, eID: EventId, t: Time})
+        | SubmitSIMHold({cfg: MsgConfig, tx:TX, eID: Pointer, t: Time})
+        | SubmitSIMRelease({cfg: MsgConfig, tx:TX, eID: Pointer, t: Time})
+        | SubmitResponse({cfg: MsgConfig, tx:TX, eID: Pointer, t: Time})
 
         | OKRequest({cfg: MsgConfig})
         | OKRequestWait({cfg: MsgConfig})
@@ -39,13 +36,12 @@ module g_ledger_types{
         SIDs: Set[SID], 
         delta_latency: Time,
         delta_slack: Time,
-        genesis: TX,
     }    
 
 
     type LED_StateVars = {
-        buffer: EventId -> {tx: TX, time: Time},
-        eID: EventId,
+        buffer: Pointer -> {tx: TX, time: Time},
+        eID: Pointer,
         log: LED_Log,
         ptr: Party -> Pointer,
         Val: LED_ValidatorState,
@@ -55,8 +51,8 @@ module g_ledger_types{
     type LED_System = {
         params : LED_SystemParams,
         state : LED_StateVars,
-        input : Set[LED_Message], // always not more than 1 message in the system
-        nonce : Nonce,        // to be able to match requests and responses in the trace
+        input : Set[LED_Message], 
+        nonce : Nonce,        
         log : Set[{idx: int, msg: LED_Message, time : Time, state: LED_StateVars,  }], // state: LED_StateVars
         handles : Set[LED_Message],
     }  
@@ -72,6 +68,10 @@ module g_ledger_types{
     type LED_Transition = {
         post_state: LED_StateVars,
         effects: Set[LED_Effect]
+    }    
+
+    pure def led_access_check(cfg: MsgConfig, params: LED_SystemParams): bool = {
+            cfg.party.in(params.P) and cfg.sid.in(params.SIDs)
     }    
 
 
@@ -105,16 +105,7 @@ module g_ledger_types{
         })
     }
 
-    // pure def led_get_submit_time_request_release_messages(messages: Set[LED_Message]): Set[{cfg: MsgConfig, tx:TX, t: Time}] = {
-    //     messages.filterMap(m => {
-    //     match m {
-    //         | SubmitTimeRequestRelease(p) => Some(p)
-    //         | _ => None
-    //     }
-    //     })
-    // }
-
-    pure def led_get_submit_sim_hold_messages(messages: Set[LED_Message]): Set[{cfg: MsgConfig, tx:TX, eID: EventId, t: Time}] = {
+    pure def led_get_submit_sim_hold_messages(messages: Set[LED_Message]): Set[{cfg: MsgConfig, tx:TX, eID: Pointer, t: Time}] = {
         messages.filterMap(m => {
         match m {
             | SubmitSIMHold(p) => Some(p)
@@ -123,7 +114,7 @@ module g_ledger_types{
         })
     }
 
-    pure def led_get_submit_sim_release_messages(messages: Set[LED_Message]): Set[{cfg: MsgConfig, tx:TX, eID: EventId, t: Time}] = {
+    pure def led_get_submit_sim_release_messages(messages: Set[LED_Message]): Set[{cfg: MsgConfig, tx:TX, eID: Pointer, t: Time}] = {
         messages.filterMap(m => {
         match m {
             | SubmitSIMRelease(p) => Some(p)
@@ -132,7 +123,7 @@ module g_ledger_types{
         })
     }
 
-    pure def led_get_submit_response_messages(messages: Set[LED_Message]): Set[{cfg: MsgConfig, tx:TX, eID: EventId, t: Time}] = {
+    pure def led_get_submit_response_messages(messages: Set[LED_Message]): Set[{cfg: MsgConfig, tx:TX, eID: Pointer, t: Time}] = {
         messages.filterMap(m => {
         match m {
             | SubmitResponse(p) => Some(p)
@@ -206,16 +197,7 @@ module g_ledger_types{
         })
     }
 
-    // pure def led_get_read_time_request_release_messages(messages: Set[LED_Message]): Set[{cfg: MsgConfig, I : List[Pointer], ptr_prim : Pointer, t: Time}] = {
-    //     messages.filterMap(m => {
-    //     match m {
-    //         | ReadTimeRequestRelease(p) => Some(p)
-    //         | _ => None
-    //     }
-    //     })
-    // }
-
-    pure def led_get_read_response_messages(messages: Set[LED_Message]): Set[{cfg: MsgConfig, result: List[Block]}] = {
+    pure def led_get_read_response_messages(messages: Set[LED_Message]): Set[{cfg: MsgConfig, result: List[TX]}] = {
         messages.filterMap(m => {
         match m {
             | ReadResponse(p) => Some(p)
