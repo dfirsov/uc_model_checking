@@ -7,7 +7,7 @@ module g_ledger{
     import g_clock_types.* from "../g_clock/g_clock_types"    
     import g_ledger_types.* from "./g_ledger_types"
     
-
+ 
     var g_ledger_s : LED_System
 
     // SIM gives control back to the environment
@@ -36,7 +36,7 @@ module g_ledger{
 
             val gc_transition = {
                 post_state: clock.state, 
-                effects: Set(GC_UpdateInput(Set(TimeRequest({nonce: p.cfg.nonce, party: {party: p.cfg.party, sid: p.cfg.sid}}))))
+                effects: Set(GC_UpdateInput(Set(TimeRequest({cfg: p.cfg}))))
             }
 
             (ledger_transition, gc_transition)
@@ -46,7 +46,7 @@ module g_ledger{
 
     pure def led_submit_2(ledger : LED_System, clock : GC_System) : Set[(LED_Transition, GC_Transition)] = {
         clock.input.get_time_response_messages().map(q => {
-            ledger.handles.led_get_submit_time_request_hold_messages().filter(p => p.cfg.nonce == q.nonce).map(p => {
+            ledger.handles.led_get_submit_time_request_hold_messages().filter(p => p.cfg.nonce == q.cfg.nonce).map(p => {
                 val t = q.time
                 val eID = ledger.state.eID + 1
                 val buffer = ledger.state.buffer.put(eID, ({tx: p.tx, time:t}))
@@ -112,7 +112,7 @@ module g_ledger{
             val gc_transition = {
                 post_state: clock.state,
                 effects: Set(
-                    GC_UpdateInput(Set(OkayRequest({nonce: msg.cfg.nonce, party:{party: msg.cfg.party, sid: msg.cfg.sid}})))
+                    GC_UpdateInput(Set(OkayRequest({cfg: msg.cfg})))
                 )
             }
 
@@ -122,7 +122,7 @@ module g_ledger{
 
     pure def led_ok_2(led : LED_System, clock: GC_System) : Set[(LED_Transition, GC_Transition)] = {
         led.handles.led_get_ok_request_wait_messages().map(msg => {
-            clock.input.get_okay_response_messages().filter(msg2 => msg2.nonce == msg.cfg.nonce).map(msg2 => {
+            clock.input.get_okay_response_messages().filter(msg2 => msg2.cfg.nonce == msg.cfg.nonce).map(msg2 => {
 
                     val led_transition = {
                         post_state: led.state,
@@ -181,13 +181,13 @@ module g_ledger{
             // val simI = List()
             // val simPtr_prim = -1
 
-            val ts = led_read_2(g_ledger_s, gc_s, simI, simPtr_prim)
+            val ts = led_read_2(g_ledger_s, g_clock_s, simI, simPtr_prim)
             all {
                 ts.size() > 0,
                 nondet transition = ts.oneOf()
                 all {
                     g_ledger_s' = led_process_transitions(g_ledger_s, transition._1),
-                    gc_s' = gc_process_transitions(gc_s, transition._2)
+                    g_clock_s' = gc_process_transitions(g_clock_s, transition._2)
                 }
             }
         }
@@ -207,7 +207,7 @@ module g_ledger{
             val gc_transition = {
                 post_state: clock.state,
                 effects: Set(
-                    GC_UpdateInput(Set(TimeRequest({nonce: p.cfg.nonce, party: {party: p.cfg.party, sid: p.cfg.sid}})))
+                    GC_UpdateInput(Set(TimeRequest({cfg: p.cfg})))
                 )
             }
 
@@ -217,7 +217,7 @@ module g_ledger{
 
     pure def led_read_4(led: LED_System, clock: GC_System) : Set[(LED_Transition,GC_Transition)] = {
         clock.input.get_time_response_messages().map(q => {
-            led.handles.led_get_read_time_request_hold_messages().filter(p => p.cfg.nonce == q.nonce).map(p => {
+            led.handles.led_get_read_time_request_hold_messages().filter(p => p.cfg.nonce == q.cfg.nonce).map(p => {
 
                 val t = q.time
                 val P = p.cfg.party
@@ -353,7 +353,7 @@ module g_ledger{
         match eff {
         | LED_LogMessage(msg) => 
             {...sys, 
-                log: sys.log.setAdd({idx: sys.log.size(), msg: msg,  time: gc_s.state.TIME, state: sys.state}) 
+                log: sys.log.setAdd({idx: sys.log.size(), msg: msg,  time: g_clock_s.state.TIME, state: sys.state}) 
             }
         | LED_UpdateInput(msgs) => 
             {...sys, 
@@ -377,13 +377,13 @@ module g_ledger{
 
     action led_gc_step_with(q: (LED_System, GC_System) => Set[(LED_Transition, GC_Transition)]): bool = {
         all{
-            val ts = q(g_ledger_s, gc_s)
+            val ts = q(g_ledger_s, g_clock_s)
             all {
                 ts.size() > 0,
                 nondet transition = ts.oneOf()
                 all {
                     g_ledger_s' = led_process_transitions(g_ledger_s, transition._1),
-                    gc_s' = gc_process_transitions(gc_s, transition._2)
+                    g_clock_s' = gc_process_transitions(g_clock_s, transition._2)
                 }
             }
         }

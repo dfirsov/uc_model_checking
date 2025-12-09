@@ -8,23 +8,25 @@ module g_clock_types {
     type PartySID = {party: Party, sid: SID}
 
     type GC_Message =
-        | RegisterRequest({nonce: Nonce, party: PartySID})
-        | RegisterResponse({nonce: Nonce, party: PartySID})
+        | RegisterRequest({cfg: MsgConfig})
+        | RegisterResponse({cfg: MsgConfig})
 
-        | TimeRequest({nonce: Nonce, party: PartySID})
-        | TimeResponse({nonce: Nonce, party: PartySID, time: Time})
+        | TimeRequest({cfg: MsgConfig})
+        | TimeResponse({cfg: MsgConfig, time: Time})
 
-        | OkayRequest({nonce: Nonce, party: PartySID})
-        | SIMOkayHold({nonce: Nonce, party: PartySID})
-        | SIMOkayRelease({nonce: Nonce, party: PartySID})
-        | OkayResponse({nonce: Nonce, party: PartySID})
+        | OkayRequest({cfg: MsgConfig})
+        | SIMOkayHold({cfg: MsgConfig})
+        | SIMOkayRelease({cfg: MsgConfig})
+        | OkayResponse({cfg: MsgConfig})
 
         | GC_SIMControl
 
+
     type GC_SystemParams = {
+        // P : Nat
+        // SIDs : Nat
         C : Set[Party] // corrupted parties
     }
-
 
 
     type GC_StateVars = {
@@ -76,7 +78,7 @@ module g_clock_types {
         }
     }   
 
-    pure def get_register_request_messages(messages: Set[GC_Message]): Set[{nonce: Nonce, party: PartySID}] = {
+    pure def get_register_request_messages(messages: Set[GC_Message]): Set[{cfg: MsgConfig}] = {
         messages.filterMap(m => {
         match m {
             | RegisterRequest(p) => Some(p)
@@ -85,7 +87,7 @@ module g_clock_types {
         })
     }
 
-    pure def get_time_request_messages(messages: Set[GC_Message]): Set[{nonce: Nonce, party: PartySID}] = {
+    pure def get_time_request_messages(messages: Set[GC_Message]): Set[{cfg: MsgConfig}] = {
         messages.filterMap(m => {
         match m {
             | TimeRequest(p) => Some(p)
@@ -94,7 +96,16 @@ module g_clock_types {
         })
     }
 
-    pure def get_okay_request_messages(messages: Set[GC_Message]): Set[{nonce: Nonce, party: PartySID}] = {
+    pure def gc_get_sim_control_messages(messages: Set[GC_Message]): Set[GC_Message] = {
+        messages.filter(m => {
+        match m {
+            | GC_SIMControl => true
+            | _ => false
+        }
+        })
+    }
+
+    pure def get_okay_request_messages(messages: Set[GC_Message]): Set[{cfg: MsgConfig}] = {
         messages.filterMap(m => {
         match m {
             | OkayRequest(p) => Some(p)
@@ -103,7 +114,7 @@ module g_clock_types {
         })
     }
 
-    pure def get_okay_response_messages(messages: Set[GC_Message]): Set[{nonce: Nonce, party: PartySID}] = {
+    pure def get_okay_response_messages(messages: Set[GC_Message]): Set[{cfg: MsgConfig}] = {
         messages.filterMap(m => {
         match m {
             | OkayResponse(p) => Some(p)
@@ -112,7 +123,7 @@ module g_clock_types {
         })
     }
 
-    pure def get_register_response_messages(messages: Set[GC_Message]): Set[{nonce: Nonce, party: PartySID}] = {
+    pure def get_register_response_messages(messages: Set[GC_Message]): Set[{cfg: MsgConfig}] = {
         messages.filterMap(m => {
         match m {
             | RegisterResponse(p) => Some(p)
@@ -121,7 +132,7 @@ module g_clock_types {
         })
     }
 
-    pure def get_time_response_messages(messages: Set[GC_Message]): Set[{nonce: Nonce, party: PartySID, time: Time}] = {
+    pure def get_time_response_messages(messages: Set[GC_Message]): Set[{cfg: MsgConfig, time: Time}] = {
         messages.filterMap(m => {
         match m {
             | TimeResponse(p) => Some(p)
@@ -141,7 +152,7 @@ module g_clock_types {
         })
     }
 
-    pure def get_sim_okay_release_messages(messages: Set[GC_Message]): Set[{nonce: Nonce, party: PartySID}] = {
+    pure def get_sim_okay_release_messages(messages: Set[GC_Message]): Set[{cfg: MsgConfig}] = {
         messages.filterMap(m => {
         match m {
             | SIMOkayRelease(p) => Some(p)
@@ -150,7 +161,7 @@ module g_clock_types {
         })
     }
 
-    pure def get_sim_okay_hold_messages(messages: Set[GC_Message]): Set[{nonce: Nonce, party: PartySID}] = {
+    pure def get_sim_okay_hold_messages(messages: Set[GC_Message]): Set[{cfg: MsgConfig}] = {
         messages.filterMap(m => {
         match m {
             | SIMOkayHold(p) => Some(p)

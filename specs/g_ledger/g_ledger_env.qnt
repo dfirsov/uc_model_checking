@@ -78,7 +78,7 @@ module g_ledger_env {
     // Environment interaction: non-deterministically add requests when input is empty
     action env_led_submit_reqs(from:Party, sid: SID, tx: TX) : bool = all {
         // Precondition: input must be empty
-        gc_s.input.size() == 0 and g_ledger_s.input.size() == 0,
+        g_clock_s.input.size() == 0 and g_ledger_s.input.size() == 0,
         
         // Non-deterministically choose a party and SID
         val cfg = {party: from, sid: sid, nonce: g_ledger_s.nonce}
@@ -92,7 +92,7 @@ module g_ledger_env {
 
     action env_led_read_reqs(from:Party, sid: SID) : bool = all {
         // Precondition: input must be empty
-        gc_s.input.size() == 0 and g_ledger_s.input.size() == 0,
+        g_clock_s.input.size() == 0 and g_ledger_s.input.size() == 0,
         
         // Non-deterministically choose a party and SID
         val cfg = {party: from, sid: sid, nonce: g_ledger_s.nonce}
@@ -108,7 +108,7 @@ module g_ledger_env {
 
     action env_ok_reqs(from:Party, sid: SID) : bool = all {
         // Precondition: input must be empty
-        gc_s.input.size() == 0 and g_ledger_s.input.size() == 0,
+        g_clock_s.input.size() == 0 and g_ledger_s.input.size() == 0,
         
         // Non-deterministically choose a party and SID
         val cfg = {party: from, sid: sid, nonce: g_ledger_s.nonce}
@@ -123,7 +123,7 @@ module g_ledger_env {
     }
 
     action env_led_sim_reqs : bool = all {
-        gc_s.input.size() == 0 and g_ledger_s.input.size() == 0,
+        g_clock_s.input.size() == 0 and g_ledger_s.input.size() == 0,
         g_ledger_s' = {...g_ledger_s, 
             input: Set(SIMControl),
             nonce: g_ledger_s.nonce + 1
@@ -132,10 +132,10 @@ module g_ledger_env {
     }
 
     action env_gc_sim_reqs : bool = all {
-        gc_s.input.size() == 0 and g_ledger_s.input.size() == 0,
-        gc_s' = {...gc_s, 
+        g_clock_s.input.size() == 0 and g_ledger_s.input.size() == 0,
+        g_clock_s' = {...g_clock_s, 
             input: Set(GC_SIMControl),
-            nonce: gc_s.nonce + 1
+            nonce: g_clock_s.nonce + 1
         },
         g_ledger_s' = g_ledger_s,
     }

@@ -35,8 +35,6 @@ module g_ledger_tests {
         .then(led_step)
         .then(gc_step_led_wait)
         .then(gc_step_led_wait)
-        .then(gc_step_led_wait)
-        .then(gc_step_led_wait)
         .then(led_step)
         .then(env_consume_responses)      
     }

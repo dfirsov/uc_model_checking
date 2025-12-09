@@ -18,8 +18,8 @@ val P2 = g_ledger_s.log.size() <= 7
 val P3 = g_ledger_s.log.map(x => x.msg).led_get_ok_response_messages().size() <= 2
 val P4 = g_ledger_s.log.map(x => x.msg).led_get_submit_response_messages().size() <= 2
 val P5 = g_ledger_s.log.map(x => x.msg).led_get_read_response_messages().size() <= 5
-val P6 = gc_s.input.size() == 0
-val P7 = gc_s.state.TIME <= 3
+val P6 = g_clock_s.input.size() == 0
+val P7 = g_clock_s.state.TIME <= 3
 val P8 = g_ledger_s.handles.led_get_submit_sim_hold_messages().size() <= 2
 
 // Liveness: if a tx is submitted at time t by some party, and 
@@ -53,7 +53,7 @@ val LED_Liveness = g_ledger_s.log.forall(log_entry1 => {
         | _ => true
     }
 })
-
+ 
 //Consistency: for any two parties P and Q, with local logs log[0:ptr[P]] 
 // and log[0:ptr[Q]] we either have log[0:ptr[P]]is a prefix of log[0:ptr[Q]] or vice versa.
 val LED_Consistency = g_ledger_s.log.forall(log_entry1 => {

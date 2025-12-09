@@ -35,7 +35,7 @@ module common {
       if (start >= end or start < 0 or end > l.length()) {
           List()
       } else {
-          range(0,l.length()-1).foldl(List(), (r, i) => { 
+          range(0,l.length()).foldl(List(), (r, i) => { 
               if (i >= start and i < end) {
                   r.append(l[i])
               } else {

@@ -17,11 +17,9 @@ module g_clock_properties {
         env_consume_responses, // consumes interface-level responses
     }
 
-
     action init = {
         gc_init(C,0,Set())
     }
-
  
 
     // Environment interaction: non-deterministically add requests when input is empty
@@ -33,24 +31,25 @@ module g_clock_properties {
         nondet party = P.oneOf()
         nondet sid = SIDS.oneOf()
         val partySID = {party: party, sid: sid}
+        val cfg = {nonce: g_clock_s.nonce, party: party, sid: sid}
         
         // Non-deterministically choose one of the three request types
         any {
             // Option 1: RegisterRequest
             g_clock_s' = {...g_clock_s, 
-                input: Set(RegisterRequest({nonce: g_clock_s.nonce,party: partySID})),
+                input: Set(RegisterRequest({cfg: cfg})),
                 nonce: g_clock_s.nonce + 1
 
             },
-            // Option 2: TimeRequest
+            //Option 2: TimeRequest
             g_clock_s' = {...g_clock_s, 
-                input: Set(TimeRequest({nonce: g_clock_s.nonce, party: partySID})),
+                input: Set(TimeRequest({cfg: cfg})),
                 nonce: g_clock_s.nonce + 1
             },
 
-            // Option 3: OkayRequest
+            // // Option 3: OkayRequest
             g_clock_s' = {...g_clock_s, 
-                input: Set(OkayRequest({nonce: g_clock_s.nonce, party: partySID})),
+                input: Set(OkayRequest({cfg: cfg})),
                 nonce: g_clock_s.nonce + 1
             },
         }
@@ -90,11 +89,11 @@ val LogGrows =
 val RegSize = g_clock_s.state.Reg.size() < 2
 
 // must fail
-val TimeAdvances = g_clock_s.state.TIME < 2
+val TimeAdvances = g_clock_s.state.TIME < 7
 
 // must fail
 val HandlesLiveness = 
-    g_clock_s.SIM_handles.size() < 2
+    g_clock_s.SIM_handles.size() < 7
 
 
 // system is well-defined
@@ -141,22 +140,22 @@ val TimeLiveness = g_clock_s.log.forall(r1 =>
                       // check if all registered parties were ready at r1
                     val all_ready = r1.state.Reg.forall(rp => or {
                      r1.state.ok.contains(rp), 
-                     rp == p.party, 
-                     p.party.party.in(g_clock_s.params.C)
+                     rp == {party: p.cfg.party, sid: p.cfg.sid},
+                     p.cfg.party.in(g_clock_s.params.C)
                     })
 
-                      if (r2.state.Reg.contains(p.party) and all_ready) {
-                        r2.state.TIME == r1.state.TIME + 1
-                      } else {
-                        r2.state.TIME == r1.state.TIME
-                      }
+                    if (r2.state.Reg.contains({party: p.cfg.party, sid: p.cfg.sid}) and all_ready) {
+                      r2.state.TIME == r1.state.TIME + 1
+                    } else {
+                      r2.state.TIME == r1.state.TIME
+                    }
                 }
                 | _ => r2.state.TIME == r1.state.TIME
               }
             } 
           )
   )  
-
+ 
 // Property 3 (Time Soundness): If time advanced then all currently registered parties were ready.
 // this is boring since we have a full control of when to advance time
 val TimeSoundness = g_clock_s.log.forall(r1 =>
@@ -165,11 +164,11 @@ val TimeSoundness = g_clock_s.log.forall(r1 =>
               match r2.msg {
                 | OkayRequest(p) =>
                       // time advanced, check that all registered parties were ready
-                    val all_ready = r1.state.Reg.forall(rp => or {
-                        r1.state.ok.contains(rp), 
-                        rp == p.party, 
-                        p.party.party.in(g_clock_s.params.C)
-                    })
+                      val all_ready = r1.state.Reg.forall(rp => or {
+                          r1.state.ok.contains(rp), 
+                          rp == {party: p.cfg.party, sid: p.cfg.sid}, 
+                          p.cfg.party.in(g_clock_s.params.C)
+                      })
 
                     and {
                       all_ready,
