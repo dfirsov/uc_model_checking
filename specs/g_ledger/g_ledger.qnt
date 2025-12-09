@@ -46,8 +46,7 @@ module g_ledger{
 
     pure def led_submit_2(ledger : LED_System, clock : GC_System) : Set[(LED_Transition, GC_Transition)] = {
         clock.input.get_time_response_messages().map(q => {
-            ledger.handles.led_get_submit_time_request_hold_messages().map(p => {
-            if(p.cfg.nonce == q.nonce){
+            ledger.handles.led_get_submit_time_request_hold_messages().filter(p => p.cfg.nonce == q.nonce).map(p => {
                 val t = q.time
                 val eID = ledger.state.eID + 1
                 val buffer = ledger.state.buffer.put(eID, ({tx: p.tx, time:t}))
@@ -67,11 +66,8 @@ module g_ledger{
                         GC_UpdateInput(Set())
                     )
                 }
-                Set((ledger_transition, gc_transition))
-            }else{
-                Set()
-            }
-          }).flatten()
+                (ledger_transition, gc_transition)
+          })
         }).flatten()        
     }
 
@@ -141,7 +137,8 @@ module g_ledger{
                         effects: Set(
                             GC_UpdateInput(Set())
                         )
-                    }                    
+                    }     
+
                     (led_transition, gc_transition)
             })
         }).flatten()
@@ -160,11 +157,11 @@ module g_ledger{
         }).map(t => (t, gc_id_trans(clock)))
     }
  
-    pure def led_read_2(ledger : LED_System, clock: GC_System, simI : List[Pointer], simPtr_prim:Pointer) : Set[(LED_Transition, GC_Transition)] = {
-        ledger.input.led_get_sim_control_messages().map(q => {  
-        ledger.handles.led_get_read_sim_hold_messages().map(p => {
+    pure def led_read_2(led : LED_System, clock: GC_System, simI : List[Pointer], simPtr_prim:Pointer) : Set[(LED_Transition, GC_Transition)] = {
+        led.input.led_get_sim_control_messages().map(q => {  
+            led.handles.led_get_read_sim_hold_messages().map(p => {
                 {
-                    post_state: ledger.state,
+                    post_state: led.state,
                     effects: Set(
                         LED_RemoveHandle(ReadSIMHold(p)),
                         LED_UpdateInput(Set(ReadSIMRelease({cfg:p.cfg, I: simI, ptr_prim: simPtr_prim}))) 
@@ -178,12 +175,11 @@ module g_ledger{
         all {
             //nondet simI_set = apalache::generate(5) // TODO: determine appropriate size
             //val simI = simI_set.toList((a,b) => EQ)
-
-            //nondet simI_set = 1.to(10).powerset().oneOf() // TODO: determine appropriate size
-            //val simI = simI_set.toList((a,b) => EQ)
-            //nondet simPtr_prim = 1.to(10).oneOf() // TODO: what is the right range here?
-            val simI = List()
-            val simPtr_prim = -1
+            nondet simI_set = 1.to(10).powerset().oneOf() // TODO: determine appropriate size
+            val simI = simI_set.toList((a,b) => EQ)
+            nondet simPtr_prim = 1.to(10).oneOf() // TODO: what is the right range here?
+            // val simI = List()
+            // val simPtr_prim = -1
 
             val ts = led_read_2(g_ledger_s, gc_s, simI, simPtr_prim)
             all {
@@ -197,10 +193,11 @@ module g_ledger{
         }
     }
 
-    pure def led_read_3(ledger: LED_System, clock: GC_System) : Set[(LED_Transition,GC_Transition)] = {
-        ledger.input.led_get_read_sim_release_messages().map(p => {
+    pure def led_read_3(led: LED_System, clock: GC_System) : Set[(LED_Transition,GC_Transition)] = {
+        led.input.led_get_read_sim_release_messages().map(p => {
+
             val led_transition = {
-                post_state: ledger.state,
+                post_state: led.state,
                 effects: Set(
                     LED_UpdateInput(Set()),
                     LED_AppendHandle(ReadTimeRequestHold({cfg: p.cfg, I: p.I, ptr_prim: p.ptr_prim}))
@@ -260,7 +257,7 @@ module g_ledger{
                         }
                     }else{
                         val ptr = led.state.ptr.put(P, ptrP.unwrap())
-                        val result = log.slice(0,ptr.get(P)+1).listMap(b => b.tx) // TODO: check off-by-one
+                        val result = log.mySlice(0,ptr.get(P)+1).listMap(b => b.tx) // TODO: check off-by-one
 
                         {
                             post_state: {...led.state, 
@@ -347,7 +344,7 @@ module g_ledger{
             //led_read_2(led, clock), // a direct action instead
             led_read_3(led, clock),
             led_read_4(led, clock),
-            //led_sim_loses_ctrl(led, clock)
+            //led_sim_loses_ctrl(led, clock) // 
         ).flatten()
     }    
 

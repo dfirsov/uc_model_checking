@@ -31,5 +31,19 @@ module common {
       a.fold(min, (r, x) => if (x > r) x else r)
   }
 
+  pure def mySlice(l : List[a], start: int, end: int) : List[a] = {
+      if (start >= end or start < 0 or end > l.length()) {
+          List()
+      } else {
+          range(0,l.length()-1).foldl(List(), (r, i) => { 
+              if (i >= start and i < end) {
+                  r.append(l[i])
+              } else {
+                  r
+              }
+          })
+      }
+  }
+
 
 }
