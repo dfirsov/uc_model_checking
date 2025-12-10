@@ -53,8 +53,9 @@ val LED_Liveness = g_ledger_s.log.forall(log_entry1 => {
         | _ => true
     }
 })
+
  
-//Consistency: for any two parties P and Q, with local logs log[0:ptr[P]] 
+// Consistency: for any two parties P and Q, with local logs log[0:ptr[P]] 
 // and log[0:ptr[Q]] we either have log[0:ptr[P]]is a prefix of log[0:ptr[Q]] or vice versa.
 val LED_Consistency = g_ledger_s.log.forall(log_entry1 => {
     match log_entry1.msg {
@@ -76,17 +77,17 @@ val LED_Consistency = g_ledger_s.log.forall(log_entry1 => {
 })
 
 // Validity: For any (honest) P with local log log_P, all transactions in log_P are valid. 
-val LED_Validity = g_ledger_s.log.forall(log_entry => {
-    match log_entry.msg {
+val LED_Validity = g_ledger_s.log.forall(log_entry1 => {
+    match log_entry1.msg {
         | ReadRequest(p) => {
             g_ledger_s.log.forall(log_entry2 => {
                 match log_entry2.msg {
                     ReadResponse(q) => {
                         (p.cfg.nonce == q.cfg.nonce) implies {
-                            g_ledger_s.state.log.indices().forall(i => {
-                                val tx = g_ledger_s.state.log[i].tx
+                            q.result.indices().forall(i => {
+                                val tx = q.result[i]
                                 // NOTE: expecting that Val is pure def
-                                led_valid(log_entry.state.Val, log_entry.state.log, tx).valid 
+                                led_valid(log_entry1.state.Val, log_entry2.state.log.mySlice(0,i), tx).valid 
                             })
                         }
                     }
@@ -105,8 +106,8 @@ val LED_Persistance = g_ledger_s.log.forall(log_entry1 => {
             g_ledger_s.log.forall(log_entry2 => {
                 match log_entry2.msg {
                     | ReadResponse(q) => {
-                        (log_entry1.idx < log_entry2.idx) implies {
-                            p.result.isPrefixOf(q.result)
+                        (log_entry1.idx < log_entry2.idx and p.cfg.party == q.cfg.party) implies {
+                            p.result.isPrefixOf(q.result) //or q.result.isPrefixOf(p.result)
                         }
                     }
                     | _ => true
@@ -117,14 +118,53 @@ val LED_Persistance = g_ledger_s.log.forall(log_entry1 => {
     }
 })
 
-val LED_CommonPrefix = g_ledger_s.log.forall(log_entry => {
-    match log_entry.msg {
+// Agreed Prefix: TODO
+val LED_AgreedPrefix = g_ledger_s.log.forall(log_entry1 => {
+    match log_entry1.msg {
         | ReadResponse(p) => {
-            p.result.length() >= log_entry.state.log.length() - g_ledger_s.params.delta_slack
+            g_ledger_s.log.forall(log_entry2 => {
+                match log_entry2.msg {
+                    | ReadRequest(q) => {
+                        (q.cfg.nonce == p.cfg.nonce) implies {
+                        p.result.length() >= log_entry1.state.log.indices().filter(i => {
+                            log_entry2.time - log_entry1.state.log[i].time >= g_ledger_s.params.delta_slack
+                        }).size()
+
+                        }
+                    }   
+                    | _ => true
+                }
+            })
+
         }
         | _ => true
     }
 })
+
+
+val AllProps = all {
+    LED_Liveness,
+    LED_Consistency,
+    LED_Validity,
+    LED_Persistance,
+    LED_AgreedPrefix,
+}
+
+temporal NeverStuck = {
+  // WF is required because TLA+ semantics treat stuttering as a valid step even if not explicitly modeled
+  step.weakFair(Set(g_ledger_s)).implies ({
+    step.weakFair(Set(g_clock_s)).implies ({
+        not (eventually(
+                always(
+                    or {
+                        g_ledger_s.input != Set(),
+                        g_clock_s.input != Set()
+                    }
+                )
+        ))
+    })
+  })
+}
 
 }
 

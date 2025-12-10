@@ -11,8 +11,8 @@ module g_ledger_env {
    val Parties = Set(1,2)
    val C = Set()
    val sids = Set(1)
-   val delta_latency = 0
-   val delta_slack = 0
+   val delta_latency = 1
+   val delta_slack = 1
    //pure def Val : LED_ValidatorState = (parties, tx) => true
 
 
@@ -43,12 +43,15 @@ module g_ledger_env {
         // Precondition: there is a response message in input
         val response_msgs = env_consume_response(g_ledger_s)
         
+        all {
         // Non-deterministically choose one response message to consume
-        nondet transition = response_msgs.oneOf()
+            response_msgs.size() > 0,
+            nondet transition = response_msgs.oneOf()
 
         // Update the system state by consuming the message    
-        g_ledger_s' = led_process_transitions(g_ledger_s, transition),
-        gc_stutter
+            g_ledger_s' = led_process_transitions(g_ledger_s, transition),
+            gc_stutter
+        }
    }        
   
     action init = all {

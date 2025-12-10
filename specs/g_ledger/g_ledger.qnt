@@ -326,9 +326,9 @@ module g_ledger{
         }
     }
     
-    // TODO: either adhoc function, or tx paired with validity flag
+    // None: instantiated to a particular function
     pure def led_valid(vallidator: LED_ValidatorState, log: LED_Log, tx: TX): {val_state: LED_ValidatorState, valid: bool} = {
-        {val_state: vallidator, valid: true} 
+        {val_state: vallidator, valid: log.indices().forall(i => log[i].tx != tx)} 
     }
         
 
@@ -344,7 +344,7 @@ module g_ledger{
             //led_read_2(led, clock), // a direct action instead
             led_read_3(led, clock),
             led_read_4(led, clock),
-            //led_sim_loses_ctrl(led, clock) // 
+            led_sim_loses_ctrl(led, clock) 
         ).flatten()
     }    
 

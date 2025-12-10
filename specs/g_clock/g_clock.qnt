@@ -96,8 +96,13 @@ module g_clock{
     } 
 
     action gc_step_with(q: (GC_System) => Set[(GC_Transition)]): bool = {
-        nondet transition = q(g_clock_s).oneOf()
-        g_clock_s' = gc_process_transitions(g_clock_s, transition)        
+        val trans = q(g_clock_s)
+
+        all {
+            trans.size() > 0,
+            nondet transition = trans.oneOf()
+            g_clock_s' = gc_process_transitions(g_clock_s, transition)        
+        }
     }   
 
     action gc_step : bool =  { 
