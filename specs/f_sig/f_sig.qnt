@@ -1,0 +1,334 @@
+module f_sig{
+
+    import common.* from "../common"
+    import basicSpells.* from "../../spells/basicSpells"
+    import rareSpells.* from "../../spells/rareSpells"    
+    import f_sig_types.* from "./f_sig_types"
+
+    var f_sig_s : SIG_System
+
+    pure def sig_gen_1(sig: SIG_System): Set[SIG_Transition] = {
+        sig.input.sig_get_gen_request_messages().map(p => {
+            if(sig_signer_access_check(p.cfg, sig.params)){
+                Set({
+                    post_state: sig.state,
+                    effects: Set(
+                        SIG_LogMessage(GenRequest(p)),
+                        SIG_UpdateInput(Set(SIMControl)),
+                        SIG_AppendHandle(SIMGenHold({cfg: p.cfg}))
+                    )
+                })
+            }else{
+                Set({
+                    post_state: sig.state,
+                    effects: Set( // ignore unauthorized gen request, log it or not?
+                        SIG_UpdateInput(Set())
+                    )
+                })
+            }           
+        }).flatten()
+    }
+
+
+    pure def sig_gen_2(sig: SIG_System, sim_vk: SIG_VK): Set[SIG_Transition] = {
+        sig.input.sig_get_sim_control_messages().map(q => {
+            sig.handles.sig_get_sim_gen_hold_messages().map(p => {
+                {
+                    post_state: sig.state,
+                    effects: Set(
+                        SIG_UpdateInput(Set(SIMGenRelease({cfg: p.cfg, vk: sim_vk}))),
+                        SIG_RemoveHandle(SIMGenHold(p))
+                    )
+                }     
+            })
+        }).flatten()
+    }
+
+    action sig_gen_2_act : bool = all {
+        f_sig_s.input.sig_get_sim_control_messages().size() > 0,
+        f_sig_s.handles.sig_get_sim_gen_hold_messages().size() > 0,
+        nondet sim_vk = 1.to(100).oneOf()
+        val ts = sig_gen_2(f_sig_s, sim_vk)
+        all {
+            ts.size() > 0,
+            nondet t = ts.oneOf()
+            f_sig_s' =  sig_process_transitions(f_sig_s, t),
+        }
+    }    
+
+    pure def sig_gen_3(sig: SIG_System): Set[SIG_Transition] = {
+        sig.input.sig_get_sim_gen_release_messages().map(p => {
+            val party = p.cfg.party
+            val sid = p.cfg.sid
+            val sid_state = sig.state.get(sid)
+
+            val maybe_vk = sid_state.VK.find(x => x.party == party)
+
+            if(maybe_vk == None){
+                def predicate = (vk) => {
+                    or { 
+                        sid_state.VK.exists(y => y.vk == p.vk),
+                        sid_state.Ver.exists(y => y.vk == p.vk)
+                    }
+                }
+
+                val new_vk = if (predicate(p.vk)){
+                    p.vk.to(1000).find(x => not (predicate(x))).unwrap() // make sure this always succeeds
+                }else{
+                    p.vk
+                }
+
+                {
+                    post_state: sig.state.set(sid, {...sid_state, VK: sid_state.VK.setAdd({party: party, vk: new_vk})}),
+                    effects: Set(
+                        SIG_UpdateInput(Set(GenResponse({cfg:p.cfg, vk: new_vk}))),
+                    )
+                }
+                    
+            }else{
+                {
+                    post_state: sig.state,
+                    effects: Set(
+                        SIG_UpdateInput(Set(GenResponse({cfg:p.cfg, vk: maybe_vk.unwrap().vk})))
+                    )
+                }
+            }
+        })
+    }
+
+    pure def sig_sign_1(sig: SIG_System): Set[SIG_Transition] = {
+        sig.input.sig_get_sign_request_messages().map(p => {
+            if(sig_signer_access_check(p.cfg, sig.params)){
+                val party = p.cfg.party
+                val sid = p.cfg.sid
+                val sid_state = sig.state.get(sid)                
+
+                val maybe_vk = sid_state.VK.find(x => x.party == party)
+
+                if(maybe_vk == None){
+                    {
+                        post_state: sig.state,
+                        effects: Set(
+                            SIG_LogMessage(SignRequest(p)),
+                            SIG_UpdateInput(Set(SignResponse({cfg:p.cfg, sig: None})))
+                        )
+                    }
+                }else{
+                    {
+                        post_state: sig.state,
+                        effects: Set(
+                            SIG_LogMessage(SignRequest(p)),
+                            SIG_UpdateInput(Set(SIMControl)),
+                            SIG_AppendHandle(SIMSignHold({cfg: p.cfg, m: p.m}))
+                        )
+                    }
+                }
+            }else{
+                {
+                    post_state: sig.state,
+                    effects: Set( // ignore unauthorized sign request, log it or not?
+                        SIG_UpdateInput(Set())
+                    )
+                }
+            }           
+        })
+    }
+
+    pure def sig_sign_2(sig: SIG_System, sim_sig: SIG_Signature): Set[SIG_Transition] = {
+        sig.input.sig_get_sim_control_messages().map(q => {
+            sig.handles.sig_get_sim_sign_hold_messages().map(p => {
+                {
+                    post_state: sig.state,
+                    effects: Set(
+                        SIG_UpdateInput(Set(SIMSignRelease({cfg: p.cfg, m: p.m, sig: sim_sig}))),
+                        SIG_RemoveHandle(SIMSignHold(p))
+                    )
+                }     
+            })
+        }).flatten()
+    }
+
+    action sig_sign_2_act : bool = all {
+        f_sig_s.input.sig_get_sim_control_messages().size() > 0,
+        f_sig_s.handles.sig_get_sim_sign_hold_messages().size() > 0,
+        nondet sim_sig = 1.to(100).oneOf()
+        val ts = sig_sign_2(f_sig_s, sim_sig)
+        all {
+            ts.size() > 0,
+            nondet t = ts.oneOf()
+            f_sig_s' =  sig_process_transitions(f_sig_s, t),
+        }
+    }
+
+    pure def sig_sign_3(sig: SIG_System): Set[SIG_Transition] = {
+        sig.handles.sig_get_sim_sign_release_messages().map(q => {
+
+            val party = q.cfg.party
+            val sid = q.cfg.sid
+            val sid_state = sig.state.get(sid)                
+            val maybe_vk = sid_state.VK.find(x => x.party == party)
+            val vk = maybe_vk.unwrap().vk
+
+            if (maybe_vk == None){
+                // this should never happen: rise error
+                Set()
+            }else{
+                def predicate = (vk) => {
+                    sid_state.Ver.exists(x => {
+                        and {
+                            x.vk == vk,
+                            x.m == q.m,
+                            x.sig == q.sig
+                        }
+                    })
+                }
+
+                val new_sig = if (predicate(q.sig)){
+                    q.sig.to(1000).find(x => not (predicate(x))).unwrap() // make sure this always succeeds
+                }else{
+                    q.sig
+                }
+
+                Set({
+                    post_state: sig.state.set(sid, {...sid_state, Ver: sid_state.Ver.setAdd({vk: vk, m: q.m, sig: new_sig, b: true})}),
+                    effects: Set(
+                        SIG_UpdateInput(Set(SignResponse({cfg: q.cfg, sig: Some(new_sig)}))),
+                    )
+                })
+            }
+        }).flatten()
+    }
+
+    pure def sig_verify_1(sig: SIG_System): Set[SIG_Transition] = {
+        sig.input.sig_get_verify_request_messages().map(p => {
+            if(sig_verifier_access_check(p.cfg, sig.params)){           
+                {
+                    post_state: sig.state,
+                    effects: Set(
+                        SIG_UpdateInput(Set(SIMControl)),
+                        SIG_AppendHandle(SIMVerifyHold(p))
+                    )
+                }
+            }else{
+                {
+                    post_state: sig.state,
+                    effects: Set( // ignore unauthorized verify request, log it or not?
+                        SIG_UpdateInput(Set())
+                    )
+                }
+            }           
+        })
+    }
+
+    pure def sig_verify_2(sig: SIG_System): Set[SIG_Transition] = {
+        sig.input.sig_get_sim_control_messages().map(p => {
+            sig.handles.sig_get_sim_verify_hold_messages().map(q => {
+                Set(false, true).map(b => {
+                    {
+                        post_state: sig.state,
+                        effects: Set(
+                            SIG_UpdateInput(Set(SIMReleaseVerify({cfg: q.cfg, vk:q.vk, m:q.m, sig:q.sig, b: b}))),
+                            SIG_RemoveHandle(SIMVerifyHold(q))
+                        )
+                    }
+                })
+            }).flatten()
+        }).flatten()
+    }
+
+    pure def sig_verify_3(sig: SIG_System): Set[SIG_Transition] = {
+        sig.input.sig_get_sim_release_verify_messages().map(p => {
+
+            val party = p.cfg.party
+            val sid = p.cfg.sid
+            val sid_state = sig.state.get(sid)                
+   
+            if(sid_state.Ver.exists(x => x.vk == p.vk and x.m == p.m and x.sig == p.sig)){
+                val b = sid_state.Ver.find(x => x.vk == p.vk and x.m == p.m and x.sig == p.sig).unwrap().b
+                Set({
+                    post_state: sig.state,
+                    effects: Set(
+                        SIG_UpdateInput(Set(VerifyResponse({cfg: p.cfg, b: b}))),
+                    )
+                })
+            }else{
+                val new_b = if(sid_state.VK.exists(x => x.vk == p.vk and not (x.party.in(sig.params.C)))){
+                    false
+                }else{
+                    p.b
+                }
+
+                Set({
+                    post_state: sig.state.set(sid, {...sid_state, Ver: sid_state.Ver.setAdd({vk: p.vk, m: p.m, sig: p.sig, b: new_b})}),
+                    effects: Set(
+                        SIG_UpdateInput(Set(VerifyResponse({cfg: p.cfg, b: new_b}))),
+                    )
+                })
+            }
+        }).flatten()
+    }
+
+   def sig_main_listener(sig: SIG_System) : (Set[SIG_Transition]) = {
+        Set(
+            sig_gen_1(f_sig_s),
+           //sig_gen_2(f_sig_s),
+            sig_gen_3(f_sig_s),
+
+            sig_sign_1(f_sig_s),
+           //sig_sign_2(f_sig_s),
+            sig_sign_3(f_sig_s),
+
+            sig_verify_1(f_sig_s),
+            sig_verify_2(f_sig_s),
+            sig_verify_3(f_sig_s),
+        ).flatten()
+    }        
+
+    def sig_process_transitions(sys: SIG_System, transition: SIG_Transition) : SIG_System = {
+        val new_sys = {...sys, state: transition.post_state}
+        transition.effects.fold(new_sys, ((a1,a2) => sig_apply_effect(a1,a2)))
+    } 
+
+    action sig_step_with(q: (SIG_System) => Set[(SIG_Transition)]): bool = {
+        all{
+            val ts = q(f_sig_s)
+            all {
+                ts.size() > 0,
+                nondet transition = ts.oneOf()
+                all {
+                    f_sig_s' = sig_process_transitions(f_sig_s, transition),
+                }
+            }
+        }
+    }        
+    
+    action led_step : bool =  any {
+        sig_step_with(sig_main_listener),
+        sig_sign_2_act,
+        sig_gen_2_act
+    }        
+
+
+   action sig_init(P: Set[Party], SIDs: Set[SID], C: Set[Party], S: Set[Party]) : bool =  all {
+        C.subseteq(P),
+        S.subseteq(P),
+
+        f_sig_s' = {
+            params : {
+                P: P,
+                C: C,
+                SIDs: SIDs,
+                S: S
+            },
+            state : SIDs.mapBy(sid => {
+                VK: Set(),
+                Ver: Set(),
+            }),
+            input : Set(),
+            nonce : 0,
+            log : Set(),
+            handles : Set(),
+        }
+    }    
+
+}
