@@ -18,12 +18,12 @@
         | SignRequest({cfg: MsgConfig, m: SIG_Document}) 
         | SIMSignHold({cfg: MsgConfig, m: SIG_Document,})  
         | SIMSignRelease({cfg: MsgConfig, m: SIG_Document, sig: SIG_Signature}) // output of SIM
-        | SignResponse({cfg: MsgConfig, sig: Option[SIG_Signature]})
+        | SignResponse({cfg: MsgConfig, m: SIG_Document, sig: Option[SIG_Signature]})
 
         | VerifyRequest({cfg: MsgConfig, vk: SIG_VK, m: SIG_Document, sig: SIG_Signature}) // input to FSig
         | SIMVerifyHold({cfg: MsgConfig, vk: SIG_VK, m: SIG_Document, sig: SIG_Signature}) // input to SIM
         | SIMReleaseVerify({cfg: MsgConfig, vk: SIG_VK, m: SIG_Document, sig: SIG_Signature, b: bool}) // output of SIM
-        | VerifyResponse({cfg: MsgConfig, b: bool})
+        | VerifyResponse({cfg: MsgConfig, vk: SIG_VK, m: SIG_Document, sig: SIG_Signature, b: bool})
 
         | SIMControl
   
@@ -33,6 +33,9 @@
         C: Set[Party],
         SIDs: Set[SID], 
         S: Set[Party], 
+
+        ALL_VKs: Set[SIG_VK],
+        ALL_SIGs: Set[SIG_Signature],
     }        
 
     type SIG_StateVars = SID -> 
@@ -146,7 +149,7 @@
             })
         }
 
-        pure def sig_get_sign_response_messages(messages: Set[SIG_Message]): Set[{cfg: MsgConfig, sig: Option[SIG_Signature]}] = {
+        pure def sig_get_sign_response_messages(messages: Set[SIG_Message]): Set[{cfg: MsgConfig, m: SIG_Document, sig: Option[SIG_Signature]}] = {
             messages.filterMap(m => {
             match m {
                 | SignResponse(p) => Some(p)
@@ -182,7 +185,7 @@
             })
         }
 
-        pure def sig_get_verify_response_messages(messages: Set[SIG_Message]): Set[{cfg: MsgConfig, b: bool}] = {
+        pure def sig_get_verify_response_messages(messages: Set[SIG_Message]): Set[{cfg: MsgConfig, vk: SIG_VK, m: SIG_Document, sig: SIG_Signature, b: bool}] = {
             messages.filterMap(m => {
             match m {
                 | VerifyResponse(p) => Some(p)

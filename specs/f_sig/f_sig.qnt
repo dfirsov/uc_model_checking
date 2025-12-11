@@ -4,7 +4,7 @@ module f_sig{
     import basicSpells.* from "../../spells/basicSpells"
     import rareSpells.* from "../../spells/rareSpells"    
     import f_sig_types.* from "./f_sig_types"
-
+ 
     var f_sig_s : SIG_System
 
     pure def sig_gen_1(sig: SIG_System): Set[SIG_Transition] = {
@@ -47,7 +47,7 @@ module f_sig{
     action sig_gen_2_act : bool = all {
         f_sig_s.input.sig_get_sim_control_messages().size() > 0,
         f_sig_s.handles.sig_get_sim_gen_hold_messages().size() > 0,
-        nondet sim_vk = 1.to(100).oneOf()
+        nondet sim_vk = f_sig_s.params.ALL_VKs.oneOf()
         val ts = sig_gen_2(f_sig_s, sim_vk)
         all {
             ts.size() > 0,
@@ -67,22 +67,33 @@ module f_sig{
             if(maybe_vk == None){
                 def predicate = (vk) => {
                     or { 
-                        sid_state.VK.exists(y => y.vk == p.vk),
-                        sid_state.Ver.exists(y => y.vk == p.vk)
+                        sid_state.VK.exists(y => y.vk == vk),
+                        sid_state.Ver.exists(y => y.vk == vk)
                     }
                 }
 
-                val new_vk = if (predicate(p.vk)){
-                    p.vk.to(1000).find(x => not (predicate(x))).unwrap() // make sure this always succeeds
+                val maybe_new_vk = if (predicate(p.vk)){
+                    sig.params.ALL_VKs.find(x => not (predicate(x))) // make sure this always succeeds
                 }else{
-                    p.vk
+                    Some(p.vk)
                 }
 
-                {
-                    post_state: sig.state.set(sid, {...sid_state, VK: sid_state.VK.setAdd({party: party, vk: new_vk})}),
-                    effects: Set(
-                        SIG_UpdateInput(Set(GenResponse({cfg:p.cfg, vk: new_vk}))),
-                    )
+                if (maybe_new_vk == None){
+                    // we exhausted all possible VKs, so system cannot proceed
+                    {
+                        post_state: sig.state,
+                        effects: Set(
+                            SIG_UpdateInput(Set()), // return the original vk even if it collides
+                        )
+                    }
+                }else{
+                    val new_vk = maybe_new_vk.unwrap()
+                    {
+                        post_state: sig.state.set(sid, {...sid_state, VK: sid_state.VK.setAdd({party: party, vk: new_vk})}),
+                        effects: Set(
+                            SIG_UpdateInput(Set(GenResponse({cfg:p.cfg, vk: new_vk}))),
+                        )
+                    }
                 }
                     
             }else{
@@ -110,7 +121,7 @@ module f_sig{
                         post_state: sig.state,
                         effects: Set(
                             SIG_LogMessage(SignRequest(p)),
-                            SIG_UpdateInput(Set(SignResponse({cfg:p.cfg, sig: None})))
+                            SIG_UpdateInput(Set(SignResponse({cfg:p.cfg, m: p.m, sig: None})))
                         )
                     }
                 }else{
@@ -151,7 +162,7 @@ module f_sig{
     action sig_sign_2_act : bool = all {
         f_sig_s.input.sig_get_sim_control_messages().size() > 0,
         f_sig_s.handles.sig_get_sim_sign_hold_messages().size() > 0,
-        nondet sim_sig = 1.to(100).oneOf()
+        nondet sim_sig = f_sig_s.params.ALL_SIGs.oneOf()
         val ts = sig_sign_2(f_sig_s, sim_sig)
         all {
             ts.size() > 0,
@@ -161,7 +172,7 @@ module f_sig{
     }
 
     pure def sig_sign_3(sig: SIG_System): Set[SIG_Transition] = {
-        sig.handles.sig_get_sim_sign_release_messages().map(q => {
+        sig.input.sig_get_sim_sign_release_messages().map(q => {
 
             val party = q.cfg.party
             val sid = q.cfg.sid
@@ -171,30 +182,44 @@ module f_sig{
 
             if (maybe_vk == None){
                 // this should never happen: rise error
+                val x = Map().get(0)
                 Set()
             }else{
-                def predicate = (vk) => {
+                def predicate = (sig) => {
                     sid_state.Ver.exists(x => {
                         and {
                             x.vk == vk,
                             x.m == q.m,
-                            x.sig == q.sig
+                            x.sig == sig,
+                            x.b == false 
                         }
                     })
                 }
 
-                val new_sig = if (predicate(q.sig)){
-                    q.sig.to(1000).find(x => not (predicate(x))).unwrap() // make sure this always succeeds
+                val maybe_new_sig = if (predicate(q.sig)){
+                    sig.params.ALL_SIGs.find(x => not (predicate(x))) // make sure this always succeeds
                 }else{
-                    q.sig
+                    Some(q.sig)
                 }
 
-                Set({
-                    post_state: sig.state.set(sid, {...sid_state, Ver: sid_state.Ver.setAdd({vk: vk, m: q.m, sig: new_sig, b: true})}),
-                    effects: Set(
-                        SIG_UpdateInput(Set(SignResponse({cfg: q.cfg, sig: Some(new_sig)}))),
-                    )
-                })
+                if(maybe_new_sig == None){
+                    // we exhausted all possible signatures, so system cannot proceed
+                    Set({
+                        post_state: sig.state,
+                        effects: Set(
+                            SIG_UpdateInput(Set()),
+                        )
+                    })
+                }else{
+                    val new_sig = maybe_new_sig.unwrap()
+
+                    Set({
+                        post_state: sig.state.set(sid, {...sid_state, Ver: sid_state.Ver.setAdd({vk: vk, m: q.m, sig: new_sig, b: true})}),
+                        effects: Set(
+                            SIG_UpdateInput(Set(SignResponse({cfg: q.cfg, m: q.m, sig: Some(new_sig)}))),
+                        )
+                    })
+                }
             }
         }).flatten()
     }
@@ -205,6 +230,7 @@ module f_sig{
                 {
                     post_state: sig.state,
                     effects: Set(
+                        SIG_LogMessage(VerifyRequest(p)),
                         SIG_UpdateInput(Set(SIMControl)),
                         SIG_AppendHandle(SIMVerifyHold(p))
                     )
@@ -242,13 +268,13 @@ module f_sig{
             val party = p.cfg.party
             val sid = p.cfg.sid
             val sid_state = sig.state.get(sid)                
-   
+
             if(sid_state.Ver.exists(x => x.vk == p.vk and x.m == p.m and x.sig == p.sig)){
                 val b = sid_state.Ver.find(x => x.vk == p.vk and x.m == p.m and x.sig == p.sig).unwrap().b
                 Set({
                     post_state: sig.state,
                     effects: Set(
-                        SIG_UpdateInput(Set(VerifyResponse({cfg: p.cfg, b: b}))),
+                        SIG_UpdateInput(Set(VerifyResponse({...p, b: b}))),
                     )
                 })
             }else{
@@ -261,7 +287,7 @@ module f_sig{
                 Set({
                     post_state: sig.state.set(sid, {...sid_state, Ver: sid_state.Ver.setAdd({vk: p.vk, m: p.m, sig: p.sig, b: new_b})}),
                     effects: Set(
-                        SIG_UpdateInput(Set(VerifyResponse({cfg: p.cfg, b: new_b}))),
+                        SIG_UpdateInput(Set(VerifyResponse({...p, b: new_b}))),
                     )
                 })
             }
@@ -302,14 +328,14 @@ module f_sig{
         }
     }        
     
-    action led_step : bool =  any {
+    action sig_step : bool =  any {
         sig_step_with(sig_main_listener),
         sig_sign_2_act,
         sig_gen_2_act
     }        
 
 
-   action sig_init(P: Set[Party], SIDs: Set[SID], C: Set[Party], S: Set[Party]) : bool =  all {
+   action sig_init(P: Set[Party], C: Set[Party],SIDs: Set[SID], S: Set[Party], ALL_VKs: Set[SIG_VK], ALL_SIGs: Set[SIG_Signature]) : bool =  all {
         C.subseteq(P),
         S.subseteq(P),
 
@@ -318,7 +344,10 @@ module f_sig{
                 P: P,
                 C: C,
                 SIDs: SIDs,
-                S: S
+                S: S,
+
+                ALL_VKs: ALL_VKs,
+                ALL_SIGs: ALL_SIGs,
             },
             state : SIDs.mapBy(sid => {
                 VK: Set(),
