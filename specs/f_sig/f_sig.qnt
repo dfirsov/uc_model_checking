@@ -8,7 +8,7 @@ module f_sig{
     var f_sig_s : SIG_System
 
     // SIM gives control back to the environment
-    pure def led_sim_loses_ctrl(sig: SIG_System) : Set[SIG_Transition] = {
+    pure def sig_sim_loses_ctrl(sig: SIG_System) : Set[SIG_Transition] = {
         sig.input.sig_get_sim_control_messages().map(c =>  // sim must have control
             {   
                 post_state : sig.state,
@@ -311,7 +311,7 @@ module f_sig{
             //sig_verify_2(sig),
             sig_verify_3(sig),
 
-            led_sim_loses_ctrl(sig),
+            sig_sim_loses_ctrl(sig),
             
         ).flatten()
     }        
@@ -325,7 +325,6 @@ module f_sig{
         all{
             val ts = q(f_sig_s)
             all {
-                ts.size() > 0,
                 nondet transition = ts.oneOf()
                 all {
                     f_sig_s' = sig_process_transitions(f_sig_s, transition),
