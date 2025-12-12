@@ -7,7 +7,7 @@ module f_sig_properties {
     import common.* from "../common"    
 
 
-    // FUST FAILS   
+    // MUST FAILS   
     val GenLiveness  = sids.forall(sid => f_sig_s.state.get(sid).VK.size() <= Signers.size() - 1) 
     val SignLiveness = sids.forall(sid => f_sig_s.state.get(sid).Ver.size() <= 5) 
     // If Ver containts some vk entry  then VK table must  contain respective entry

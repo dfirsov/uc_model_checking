@@ -10,25 +10,24 @@ module f_sig{
     pure def sig_gen_1(sig: SIG_System): Set[SIG_Transition] = {
         sig.input.sig_get_gen_request_messages().map(p => {
             if(sig_signer_access_check(p.cfg, sig.params)){
-                Set({
+                {
                     post_state: sig.state,
                     effects: Set(
                         SIG_LogMessage(GenRequest(p)),
                         SIG_UpdateInput(Set(SIMControl)),
                         SIG_AppendHandle(SIMGenHold({cfg: p.cfg}))
                     )
-                })
+                }
             }else{
-                Set({
+                {
                     post_state: sig.state,
                     effects: Set( // ignore unauthorized gen request, log it or not?
                         SIG_UpdateInput(Set())
                     )
-                })
+                }
             }           
-        }).flatten()
+        })
     }
-
 
     pure def sig_gen_2(sig: SIG_System, sim_vk: SIG_VK): Set[SIG_Transition] = {
         sig.input.sig_get_sim_control_messages().map(q => {
@@ -48,12 +47,8 @@ module f_sig{
         f_sig_s.input.sig_get_sim_control_messages().size() > 0,
         f_sig_s.handles.sig_get_sim_gen_hold_messages().size() > 0,
         nondet sim_vk = f_sig_s.params.ALL_VKs.oneOf()
-        val ts = sig_gen_2(f_sig_s, sim_vk)
-        all {
-            ts.size() > 0,
-            nondet t = ts.oneOf()
-            f_sig_s' =  sig_process_transitions(f_sig_s, t),
-        }
+        nondet t = sig_gen_2(f_sig_s, sim_vk).oneOf()
+        f_sig_s' =  sig_process_transitions(f_sig_s, t),
     }    
 
     pure def sig_gen_3(sig: SIG_System): Set[SIG_Transition] = {
@@ -64,8 +59,15 @@ module f_sig{
 
             val maybe_vk = sid_state.VK.find(x => x.party == party)
 
-            if(maybe_vk == None){
-                def predicate = (vk) => {
+            if(maybe_vk != None){
+               {
+                    post_state: sig.state,
+                    effects: Set(
+                        SIG_UpdateInput(Set(GenResponse({cfg:p.cfg, vk: maybe_vk.unwrap().vk})))
+                    )
+                }                                    
+            }else{
+                 def predicate = (vk) => {
                     or { 
                         sid_state.VK.exists(y => y.vk == vk),
                         sid_state.Ver.exists(y => y.vk == vk)
@@ -94,14 +96,6 @@ module f_sig{
                             SIG_UpdateInput(Set(GenResponse({cfg:p.cfg, vk: new_vk}))),
                         )
                     }
-                }
-                    
-            }else{
-                {
-                    post_state: sig.state,
-                    effects: Set(
-                        SIG_UpdateInput(Set(GenResponse({cfg:p.cfg, vk: maybe_vk.unwrap().vk})))
-                    )
                 }
             }
         })
@@ -163,12 +157,9 @@ module f_sig{
         f_sig_s.input.sig_get_sim_control_messages().size() > 0,
         f_sig_s.handles.sig_get_sim_sign_hold_messages().size() > 0,
         nondet sim_sig = f_sig_s.params.ALL_SIGs.oneOf()
-        val ts = sig_sign_2(f_sig_s, sim_sig)
-        all {
-            ts.size() > 0,
-            nondet t = ts.oneOf()
-            f_sig_s' =  sig_process_transitions(f_sig_s, t),
-        }
+        nondet t = sig_sign_2(f_sig_s, sim_sig).oneOf()
+        f_sig_s' =  sig_process_transitions(f_sig_s, t),
+        
     }
 
     pure def sig_sign_3(sig: SIG_System): Set[SIG_Transition] = {
@@ -180,48 +171,42 @@ module f_sig{
             val maybe_vk = sid_state.VK.find(x => x.party == party)
             val vk = maybe_vk.unwrap().vk
 
-            if (maybe_vk == None){
-                // this should never happen: rise error
-                val x = Map().get(0)
-                Set()
+   
+            def predicate = (sig) => {
+                sid_state.Ver.exists(x => {
+                    and {
+                        x.vk == vk,
+                        x.m == q.m,
+                        x.sig == sig,
+                        x.b == false 
+                    }
+                })
+            }
+
+            val maybe_new_sig = if (predicate(q.sig)){
+                sig.params.ALL_SIGs.find(x => not (predicate(x))) // make sure this always succeeds
             }else{
-                def predicate = (sig) => {
-                    sid_state.Ver.exists(x => {
-                        and {
-                            x.vk == vk,
-                            x.m == q.m,
-                            x.sig == sig,
-                            x.b == false 
-                        }
-                    })
+                Some(q.sig)
+            }
+
+            if(maybe_new_sig == None){
+                // we exhausted all possible signatures, so system cannot proceed
+                {
+                    post_state: sig.state,
+                    effects: Set(
+                        SIG_UpdateInput(Set()),
+                    )
                 }
-
-                val maybe_new_sig = if (predicate(q.sig)){
-                    sig.params.ALL_SIGs.find(x => not (predicate(x))) // make sure this always succeeds
-                }else{
-                    Some(q.sig)
-                }
-
-                if(maybe_new_sig == None){
-                    // we exhausted all possible signatures, so system cannot proceed
-                    Set({
-                        post_state: sig.state,
-                        effects: Set(
-                            SIG_UpdateInput(Set()),
-                        )
-                    })
-                }else{
-                    val new_sig = maybe_new_sig.unwrap()
-
-                    Set({
-                        post_state: sig.state.set(sid, {...sid_state, Ver: sid_state.Ver.setAdd({vk: vk, m: q.m, sig: new_sig, b: true})}),
-                        effects: Set(
-                            SIG_UpdateInput(Set(SignResponse({cfg: q.cfg, m: q.m, sig: Some(new_sig)}))),
-                        )
-                    })
+            }else{
+                val new_sig = maybe_new_sig.unwrap()
+                {
+                    post_state: sig.state.set(sid, {...sid_state, Ver: sid_state.Ver.setAdd({vk: vk, m: q.m, sig: new_sig, b: true})}),
+                    effects: Set(
+                        SIG_UpdateInput(Set(SignResponse({cfg: q.cfg, m: q.m, sig: Some(new_sig)}))),
+                    )
                 }
             }
-        }).flatten()
+        })
     }
 
     pure def sig_verify_1(sig: SIG_System): Set[SIG_Transition] = {
@@ -271,12 +256,12 @@ module f_sig{
 
             if(sid_state.Ver.exists(x => x.vk == p.vk and x.m == p.m and x.sig == p.sig)){
                 val b = sid_state.Ver.find(x => x.vk == p.vk and x.m == p.m and x.sig == p.sig).unwrap().b
-                Set({
+                {
                     post_state: sig.state,
                     effects: Set(
                         SIG_UpdateInput(Set(VerifyResponse({...p, b: b}))),
                     )
-                })
+                }
             }else{
                 val new_b = if(sid_state.VK.exists(x => x.vk == p.vk and not (x.party.in(sig.params.C)))){
                     false
@@ -284,29 +269,29 @@ module f_sig{
                     p.b
                 }
 
-                Set({
+                {
                     post_state: sig.state.set(sid, {...sid_state, Ver: sid_state.Ver.setAdd({vk: p.vk, m: p.m, sig: p.sig, b: new_b})}),
                     effects: Set(
                         SIG_UpdateInput(Set(VerifyResponse({...p, b: new_b}))),
                     )
-                })
+                }
             }
-        }).flatten()
+        })
     }
 
-   def sig_main_listener(sig: SIG_System) : (Set[SIG_Transition]) = {
+   pure def sig_main_listener(sig: SIG_System) : (Set[SIG_Transition]) = {
         Set(
-            sig_gen_1(f_sig_s),
+            sig_gen_1(sig),
            //sig_gen_2(f_sig_s),
-            sig_gen_3(f_sig_s),
+            sig_gen_3(sig),
 
-            sig_sign_1(f_sig_s),
+            sig_sign_1(sig),
            //sig_sign_2(f_sig_s),
-            sig_sign_3(f_sig_s),
+            sig_sign_3(sig),
 
-            sig_verify_1(f_sig_s),
-            sig_verify_2(f_sig_s),
-            sig_verify_3(f_sig_s),
+            sig_verify_1(sig),
+            sig_verify_2(sig),
+            sig_verify_3(sig),
         ).flatten()
     }        
 
