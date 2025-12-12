@@ -27,6 +27,7 @@ module f_sig_env{
         sig_step,  
         env_send_all_reqs,
         env_consume_responses,
+        env_give_control_to_simulator,
     }
 
     pure def env_consume_response(sys: SIG_System) : Set[SIG_Transition] = {
@@ -39,6 +40,15 @@ module f_sig_env{
             )
          })
     }    
+
+    action env_give_control_to_simulator : bool = all {
+        // Precondition: input must be empty
+        f_sig_s.input.size() == 0,
+
+        f_sig_s' = {...f_sig_s, 
+            input: Set(SIMControl),
+        }
+    }
 
     action env_consume_responses : bool =  all {
         // Precondition: there is a response message in input
@@ -83,12 +93,17 @@ module f_sig_env{
         f_sig_s.input.size() == 0,
 
         nondet msg = ALL_MSGs.oneOf()
+        env_sign_reqs_msg(cfg, msg)
+    }
 
+    action env_sign_reqs_msg(cfg: MsgConfig, msg: SIG_Document) : bool = all {
+        // Precondition: input must be empty
         f_sig_s' = {...f_sig_s, 
             input: Set(SignRequest({cfg: cfg, m: msg})),
             nonce: f_sig_s.nonce + 1
         }
     }
+
 
     action env_verify_reqs(cfg: MsgConfig) : bool = all {
         // Precondition: input must be empty
@@ -97,9 +112,12 @@ module f_sig_env{
         nondet msg = ALL_MSGs.oneOf()
         nondet sig = ALL_SIGs.oneOf()
         nondet vk  = ALL_VKs.oneOf()
+        env_verify_reqs_args(cfg, vk, msg, sig)
+    }
 
+    action env_verify_reqs_args(cfg: MsgConfig, vk: SIG_VK, m: SIG_Document, sig: SIG_Signature) : bool = all {
         f_sig_s' = {...f_sig_s, 
-            input: Set(VerifyRequest({cfg: cfg, vk: vk, m: msg, sig: sig}) ),
+            input: Set(VerifyRequest({cfg: cfg, vk: vk, m: m, sig: sig}) ),
             nonce: f_sig_s.nonce + 1
         }
     }
@@ -116,6 +134,5 @@ module f_sig_env{
     action init = all {
         sig_init(Parties, Corrupted, sids, Signers, ALL_VKs, ALL_SIGs),
     }    
-
 
 }

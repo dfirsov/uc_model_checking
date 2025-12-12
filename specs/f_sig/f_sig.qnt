@@ -7,6 +7,17 @@ module f_sig{
  
     var f_sig_s : SIG_System
 
+    // SIM gives control back to the environment
+    pure def led_sim_loses_ctrl(sig: SIG_System) : Set[SIG_Transition] = {
+        sig.input.sig_get_sim_control_messages().map(c =>  // sim must have control
+            {   
+                post_state : sig.state,
+                effects : Set( 
+                    SIG_UpdateInput(Set())
+                )  
+            })
+    }    
+
     pure def sig_gen_1(sig: SIG_System): Set[SIG_Transition] = {
         sig.input.sig_get_gen_request_messages().map(p => {
             if(sig_signer_access_check(p.cfg, sig.params)){
@@ -231,21 +242,28 @@ module f_sig{
         })
     }
 
-    pure def sig_verify_2(sig: SIG_System): Set[SIG_Transition] = {
+    pure def sig_verify_2(sig: SIG_System, sim_b: bool): Set[SIG_Transition] = {
         sig.input.sig_get_sim_control_messages().map(p => {
             sig.handles.sig_get_sim_verify_hold_messages().map(q => {
-                Set(false, true).map(b => {
                     {
                         post_state: sig.state,
                         effects: Set(
-                            SIG_UpdateInput(Set(SIMReleaseVerify({cfg: q.cfg, vk:q.vk, m:q.m, sig:q.sig, b: b}))),
+                            SIG_UpdateInput(Set(SIMReleaseVerify({cfg: q.cfg, vk:q.vk, m:q.m, sig:q.sig, b: sim_b}))),
                             SIG_RemoveHandle(SIMVerifyHold(q))
                         )
                     }
-                })
-            }).flatten()
+            })
         }).flatten()
     }
+
+    action sig_verify_2_act : bool = all {
+        f_sig_s.input.sig_get_sim_control_messages().size() > 0,
+        f_sig_s.handles.sig_get_sim_verify_hold_messages().size() > 0,
+        nondet sim_b = Set(true, false).oneOf()
+        nondet t = sig_verify_2(f_sig_s, sim_b).oneOf()
+        f_sig_s' =  sig_process_transitions(f_sig_s, t),
+        
+    }    
 
     pure def sig_verify_3(sig: SIG_System): Set[SIG_Transition] = {
         sig.input.sig_get_sim_release_verify_messages().map(p => {
@@ -290,8 +308,10 @@ module f_sig{
             sig_sign_3(sig),
 
             sig_verify_1(sig),
-            sig_verify_2(sig),
+            //sig_verify_2(sig),
             sig_verify_3(sig),
+
+            led_sim_loses_ctrl(sig),
             
         ).flatten()
     }        
@@ -317,7 +337,8 @@ module f_sig{
     action sig_step : bool =  any {
         sig_step_with(sig_main_listener),
         sig_sign_2_act,
-        sig_gen_2_act
+        sig_gen_2_act,
+        sig_verify_2_act
     }        
 
 
