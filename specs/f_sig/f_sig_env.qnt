@@ -8,8 +8,8 @@ module f_sig_env{
 
    
    val Parties = Set(1,2,3)
-   val Signers = Set(1,2)
-   val Corrupted = Set()
+   val Signers = Set(1,2,3)
+   val Corrupted = Set(3)
    val sids = Set(1)
 
    val ALL_MSGs = Set(
