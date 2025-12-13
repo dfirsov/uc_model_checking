@@ -1,0 +1,137 @@
+module f_ac_env{
+    
+    import basicSpells.* from "../../spells/basicSpells"
+    import rareSpells.* from "../../spells/rareSpells"
+    import common.* from "../common"
+    import g_clock_types.* from "../g_clock/g_clock_types"
+    import g_clock.* from "../g_clock/g_clock"    
+    import f_ac_types.*   from "./f_ac_types"
+    import f_ac.*  from "./f_ac"
+
+  
+    val Parties = Set(1,2)
+    val Corrupted = Set()
+    val sids = Set(1)
+    val delta_param: int = 2   
+
+    action step : bool = any {
+        fac_step,  
+        gc_step_fac_wait,
+        env_fac_send_all_reqs,
+        env_consume_responses,
+    }
+
+    action gc_step_fac_wait : bool =  all {
+        f_ac_s' = f_ac_s,
+        gc_step,        
+    }
+
+    action init = all {
+        fac_init(Parties, Corrupted, delta_param, sids),
+        gc_init(Corrupted,0,Set({party: 1, sid: 1}, {party:2, sid:1})),
+    }
+
+    action env_fac_send_all_reqs : bool = all {
+        nondet from = Parties.oneOf()
+        nondet top = Parties.oneOf()
+        nondet sid = sids.oneOf()
+        val cfg = {party: from, sid: sid, nonce: f_ac_s.nonce}
+
+        any {
+            env_fac_send_reqs(cfg, top),
+            env_fac_fetch_reqs(cfg),
+            env_ok_reqs(cfg),
+            env_fac_sim_reqs,
+            env_gc_sim_reqs,
+        }
+        
+    }
+
+ 
+    // // Environment interaction: non-deterministically add requests when input is empty
+    action env_fac_send_reqs(cfg:MsgConfig, top: Party) : bool = all {
+        // Precondition: input must be empty
+        g_clock_s.input.size() == 0 and f_ac_s.input.size() == 0,
+        
+        // Non-deterministically choose a party and SID
+        nondet data = Set(42,43,44,45).oneOf()
+        f_ac_s' = {...f_ac_s, 
+            input: Set(SendRequest({cfg: cfg, Q: top, x: data})),
+            nonce: f_ac_s.nonce + 1
+
+        },
+        gc_stutter
+    }
+
+
+
+
+    action env_fac_fetch_reqs(cfg: MsgConfig) : bool = all {
+        // Precondition: input must be empty
+        g_clock_s.input.size() == 0 and f_ac_s.input.size() == 0,
+
+        // Option 2: Fetch
+        f_ac_s' = {...f_ac_s, 
+            input: Set(FetchRequest({cfg: cfg})),
+            nonce: f_ac_s.nonce + 1
+
+        },
+        gc_stutter   
+    }
+
+    action env_ok_reqs(cfg: MsgConfig) : bool = all {
+        // Precondition: input must be empty
+        g_clock_s.input.size() == 0 and f_ac_s.input.size() == 0,
+
+        // Option 3: OK
+        f_ac_s' = {...f_ac_s, 
+            input: Set(OKRequest({cfg: cfg})),
+            nonce: f_ac_s.nonce + 1
+
+        },   
+        gc_stutter     
+    }
+
+    action env_fac_sim_reqs : bool = all {
+        g_clock_s.input.size() == 0 and f_ac_s.input.size() == 0,
+        f_ac_s' = {...f_ac_s, 
+            input: Set(SIMControl),
+            nonce: f_ac_s.nonce + 1
+
+        },
+        gc_stutter
+    }
+
+    action env_gc_sim_reqs : bool = all {
+        g_clock_s.input.size() == 0 and f_ac_s.input.size() == 0,
+        g_clock_s' = {...g_clock_s, 
+            input: Set(GC_SIMControl),
+            nonce: g_clock_s.nonce + 1
+        },
+        f_ac_s' = f_ac_s,
+    }
+
+    pure def env_consume_response(sys: FAC_System) : Set[FAC_Transition] = {
+         sys.input.fac_get_all_response_messages().map(msg_log =>
+         {
+            post_state : sys.state,
+            effects : Set(
+                FAC_LogMessage(msg_log),
+                FAC_UpdateInput(Set())
+            )
+         })
+    }
+
+    action env_consume_responses : bool =  all {
+        // Precondition: there is a response message in input
+        val response_msgs = env_consume_response(f_ac_s)
+        
+        // Non-deterministically choose one response message to consume
+        nondet transition = response_msgs.oneOf()
+
+        // Update the system state by consuming the message    
+        f_ac_s' = fac_process_transitions(f_ac_s, g_clock_s, transition),
+        gc_stutter
+    }
+
+}

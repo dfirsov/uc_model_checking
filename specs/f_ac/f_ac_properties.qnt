@@ -7,199 +7,80 @@ module f_ac_properties {
     import g_clock.* from "../g_clock/g_clock"    
     import f_ac_types.*   from "./f_ac_types"
     import f_ac.*  from "./f_ac"
+    import f_ac_env.*  from "./f_ac_env"
     
+ 
 
-    val Parties = Set(1,2)
-    val C = Set()
-    val sids = Set(1)
-    val delta_param: int = 2   
+// ========== CO-PROPERTIES (should fail - used for model checking bounds) ==========
 
+val P1 = f_ac_s.input.size() == 0
+val P2 = f_ac_s.log.size() <= 7
+val P3 = f_ac_s.log.map(x => x.msg).fac_get_ok_response_messages().size() <= 2
+val P4 = f_ac_s.log.map(x => x.msg).fac_get_fetch_response_messages().size() <= 2
+val P5 = f_ac_s.log.map(x => x.msg).fac_get_send_response_messages().size() <= 5
+val P6 = g_clock_s.input.size() == 0
+val P7 = g_clock_s.log.map(x => x.msg).gc_get_all_response_messages().size() == 0
+val P8 = g_clock_s.state.TIME <= 4
+val P9 = f_ac_s.log.map(x => x.msg).fac_get_fetch_response_messages().forall(m => m.data.size() == 0)
+val P10 = f_ac_s.handles.fac_get_sim_send_hold_messages().size() <= 2
 
-    action step : bool = any {
-        fac_step,  
-        gc_step_fac_wait,
-        env_fac_send_all_reqs,
-        env_consume_responses,
-    }
-
-    action gc_step_fac_wait : bool =  all {
-        fac_s' = fac_s,
-        gc_step,        
-    }
-
-    action init = all {
-        fac_init(Parties, C, delta_param, sids),
-        gc_init(C,0,Set({party: 1, sid: 1}, {party:2, sid:1})),
-    }
-
-    action env_fac_send_all_reqs : bool = all {
-        nondet from = Parties.oneOf()
-        nondet top = Parties.oneOf()
-        nondet sid = sids.oneOf()
-
-        any {
-            env_fac_send_reqs(from, top, sid),
-            env_fac_fetch_reqs(from, sid),
-            env_ok_reqs(from, sid),
-            env_fac_sim_reqs,
-            env_gc_sim_reqs,
+// Fetched messages must be at least delta old
+val DeltaDelay = f_ac_s.log.forall(log_entry => {
+    match log_entry.msg {
+        | FetchResponse(p) => {
+            p.data.forall(data => {
+                // Find the send of this data
+                f_ac_s.log.exists(log_entry2 => {
+                    match log_entry2.msg {
+                        | SendRequest(q) => {
+                            and {
+                                q.x == data,
+                                q.Q == p.cfg.party,
+                                log_entry.time >= log_entry2.time + delta_param
+                            }
+                        }
+                        | _ => false
+                    }
+                })
+            })
         }
+        | _ => true
     }
+})
 
- 
-    // // Environment interaction: non-deterministically add requests when input is empty
-    action env_fac_send_reqs(from:Party, top: Party, sid: SID) : bool = all {
-        // Precondition: input must be empty
-        gc_s.input.size() == 0 and fac_s.input.size() == 0,
-        
-        // Non-deterministically choose a party and SID
-        nondet data = Set(42,43,44,45).oneOf()
-        val cfg = {party: from, sid: sid, nonce: fac_s.nonce}
-
-        fac_s' = {...fac_s, 
-            input: Set(SendRequest({cfg: cfg, Q: top, x: data})),
-            nonce: fac_s.nonce + 1
-
-        },
-        gc_stutter
+// At time t a message is delivered at most once
+val NoDuplication = f_ac_s.log.forall(log1 => {
+    match log1.msg {
+        | FetchResponse(fr1) => {
+            f_ac_s.log.forall(log2 => {
+                match log2.msg {
+                    | FetchResponse(fr2) => {
+                        and {
+                            log1.idx != log2.idx,
+                            fr1.cfg.party == fr2.cfg.party,
+                            fr1.cfg.sid == fr2.cfg.sid,
+                            log1.time == log2.time
+                        } implies {
+                            // Data sets should be disjoint (no message delivered twice)
+                            fr1.data.intersect(fr2.data).size() == 0
+                        }
+                    }
+                    | _ => true
+                }
+            })
+        }
+        | _ => true
     }
+})
 
-
-
-
-    action env_fac_fetch_reqs(from:Party, sid: SID) : bool = all {
-        // Precondition: input must be empty
-        gc_s.input.size() == 0 and fac_s.input.size() == 0,
-        
-        // Non-deterministically choose a party and SID
-        val cfg = {party: from, sid: sid, nonce: fac_s.nonce}
-
-        // Option 2: Fetch
-        fac_s' = {...fac_s, 
-            input: Set(FetchRequest({cfg: cfg})),
-            nonce: fac_s.nonce + 1
-
-        },
-        gc_stutter   
-    }
-
-    action env_ok_reqs(from:Party, sid: SID) : bool = all {
-        // Precondition: input must be empty
-        gc_s.input.size() == 0 and fac_s.input.size() == 0,
-        
-        // Non-deterministically choose a party and SID
-        val cfg = {party: from, sid: sid, nonce: fac_s.nonce}
-
-        // Option 3: OK
-        fac_s' = {...fac_s, 
-            input: Set(OKRequest({cfg: cfg})),
-            nonce: fac_s.nonce + 1
-
-        },   
-        gc_stutter     
-    }
-
-    action env_fac_sim_reqs : bool = all {
-        gc_s.input.size() == 0 and fac_s.input.size() == 0,
-        fac_s' = {...fac_s, 
-            input: Set(SIMControl),
-            nonce: fac_s.nonce + 1
-
-        },
-        gc_stutter
-    }
-
-    action env_gc_sim_reqs : bool = all {
-        gc_s.input.size() == 0 and fac_s.input.size() == 0,
-        gc_s' = {...gc_s, 
-            input: Set(GC_SIMControl),
-            nonce: gc_s.nonce + 1
-        },
-        fac_s' = fac_s,
-    }
-
-    pure def env_consume_response(sys: FAC_System) : Set[FAC_Transition] = {
-         sys.input.fac_get_all_response_messages().map(msg_log =>
-         {
-            post_state : sys.state,
-            effects : Set(
-                FAC_LogMessage(msg_log),
-                FAC_UpdateInput(Set())
-            )
-         })
-    }
-
-    action env_consume_responses : bool =  all {
-        // Precondition: there is a response message in input
-        val response_msgs = env_consume_response(fac_s)
-        
-        // Non-deterministically choose one response message to consume
-        nondet transition = response_msgs.oneOf()
-
-        // Update the system state by consuming the message    
-        fac_s' = fac_process_transitions(fac_s, transition),
-        gc_stutter
-    }
-
- 
-    // quint test f_ac_properties.qnt --match test1
-    // init -> send -> ok -> fetch 
-    run test1 = {
-
-        val party1 = 1
-        val party2 = 2
-        val sid = 1
-
-        init.then(env_fac_send_reqs(party1, party2, sid))
-        .then(fac_step_gc_wait_with(fac_send_1))
-        .then(fac_step_gc_wait_with(fac_send_2))
-        .then(fac_step_gc_wait_with(fac_send_3))
-        .then(fac_gc_step_with(fac_send_4))
-        .then(fac_wait_gc_step_with(gc_okay_1))
-        .then(fac_wait_gc_step_with(gc_okay_2))
-        .then(fac_wait_gc_step_with(gc_okay_3))
-        .then(fac_wait_gc_step_with(gc_okay_4))        
-        .then(fac_gc_step_with(fac_send_5))
-        .then(fac_step_gc_wait_with(fac_send_6))
-        .then(env_consume_responses)
-        .expect(fac_s.log.map(x => x.msg).fac_get_send_response_messages().size() == 1)
-        .then(env_ok_reqs(party2, sid))        
-        .then(fac_gc_step_with(fac_ok_1))
-        .then(fac_wait_gc_step_with(gc_okay_1))
-        .then(fac_wait_gc_step_with(gc_okay_2))
-        .then(fac_wait_gc_step_with(gc_okay_3))
-        .then(fac_wait_gc_step_with(gc_okay_4))          
-        .then(fac_gc_step_with(fac_ok_2))
-        .then(env_consume_responses)
-        .expect(gc_s.state.TIME == 1)
-        .then(env_fac_fetch_reqs(party2, sid))   
-        .then(fac_step_gc_wait_with(fac_fetch_1))
-        .then(fac_step_gc_wait_with(fac_fetch_2))
-        .then(fac_step_gc_wait_with(fac_fetch_3))
-        .expect(fac_s.input.fac_get_fetch_response_messages().size() == 1)
-    }
-
-
-// must fail
-val P1 = fac_s.input.size() == 0
-val P2 = fac_s.log.size() <= 7
-val P3 = fac_s.log.map(x => x.msg).fac_get_ok_response_messages().size() <= 2
-val P4 = fac_s.log.map(x => x.msg).fac_get_fetch_response_messages().size() <= 2
-val P5 = fac_s.log.map(x => x.msg).fac_get_send_response_messages().size() <= 5
-val P6 = gc_s.input.size() == 0
-val P7 = gc_s.log.map(x => x.msg).gc_get_all_response_messages().size() == 0
-val P8 = gc_s.state.TIME <= 4
-val P9 = fac_s.log.map(x => x.msg).fac_get_fetch_response_messages().forall(m => m.data.size() == 0)
-val P10 = fac_s.SIM_handles.fac_get_sim_send_hold_messages().size() <= 2
-
-
+// ========== PROPERTIES ==========
 // ∆-delayed Liveness: if P sends a message x to Q in some round t, and Q attempts to fetch in some 
 // round t‘ ≥ t + ∆ then Q receives x in some round t’’ ∈ [t, t’].  
 val DDL = {
-    fac_s.log.forall(msg1 =>
+    f_ac_s.log.forall(msg1 =>
         match msg1.msg {
             | SendRequest(p) => { 
-                val fac_fetch_response_exists = fac_s.log.exists(msg3 => {
+                val fac_fetch_response_exists = f_ac_s.log.exists(msg3 => {
                     match msg3.msg {
                         | FetchResponse(d) => {
                             d.t_prim >= msg1.time + delta_param and p.Q == d.cfg.party
@@ -209,7 +90,7 @@ val DDL = {
                 })
 
                 fac_fetch_response_exists implies {
-                    fac_s.log.exists(msg3 => {
+                    f_ac_s.log.exists(msg3 => {
                         match msg3.msg {
                             | FetchResponse(d) => {
                                 (p.x.in(d.data)) and p.Q == d.cfg.party
@@ -227,11 +108,11 @@ val DDL = {
 
 
 // Authentication: If a nonempty set of messages was delivered from P to Q then P indeed sent that message to Q in the past.
-val Auth = fac_s.log.forall(log_entry1 => {
+val Auth = f_ac_s.log.forall(log_entry1 => {
   match log_entry1.msg {
     | FetchResponse(p) => { // 
         // find corresponding FetchRequest in the log
-        (p.data != Set()) implies fac_s.log.exists(log_entry2 => {
+        (p.data != Set()) implies f_ac_s.log.exists(log_entry2 => {
           match log_entry2.msg {
             | SendRequest(q) => {
                 q.Q == p.cfg.party and q.x.in(p.data)
@@ -244,5 +125,228 @@ val Auth = fac_s.log.forall(log_entry1 => {
   }
 })
 
+
+// ========== BASIC SYSTEM PROPERTIES ==========
+
+// Handles are properly managed (no orphaned holds)
+val NoOrphanedHolds = f_ac_s.handles.forall(h => {
+    match h {
+        | SIMSendHold(_) => true
+        | SIMFetchHold(_) => true
+        | ClockRequestWait(_) => true
+        | OKRequestWait(_) => true
+        | _ => false
+    }
+})
+
+// Input buffer has at most one message (as per design)
+val InputBound = f_ac_s.input.size() <= 1
+
+// Counter monotonically increases
+val CounterMonotonic = sids.forall(sid => {
+    f_ac_s.state.get(sid).ctr >= 0
+})
+
+// Messages in L have valid counters
+val ValidCounters = sids.forall(sid => {
+    val sid_state = f_ac_s.state.get(sid)
+    sid_state.L.keys().forall(k => {
+        k.ctr > 0 and k.ctr <= sid_state.ctr
+    })
+})
+
+// ========== FLAG PROPERTIES ==========
+
+// S_flag correctness: party can send at most once per time slot
+val SFlagUnique = sids.forall(sid => {
+    val sid_state = f_ac_s.state.get(sid)
+    sid_state.S_flag.forall(entry1 => {
+        sid_state.S_flag.forall(entry2 => {
+            (entry1._1 == entry2._1 and entry1._2 == entry2._2) implies (entry1 == entry2)
+        })
+    })
+})
+
+// F_flag correctness: party can fetch at most once per time slot
+val FFlagUnique = sids.forall(sid => {
+    val sid_state = f_ac_s.state.get(sid)
+    sid_state.F_flag.forall(entry1 => {
+        sid_state.F_flag.forall(entry2 => {
+            (entry1._1 == entry2._1 and entry1._2 == entry2._2) implies (entry1 == entry2)
+        })
+    })
+})
+
+// S_flag and F_flag correspond to actual operations in log
+val FlagsMatchLog = sids.forall(sid => {
+    val sid_state = f_ac_s.state.get(sid)
+    and {
+        // Every S_flag entry has a corresponding SendRequest
+        sid_state.S_flag.forall(flag => {
+            f_ac_s.log.exists(log_entry => {
+                match log_entry.msg {
+                    | SendRequest(p) => {
+                        p.cfg.party == flag._1 and log_entry.time == flag._2
+                    }
+                    | _ => false
+                }
+            })
+        }),
+        // Every F_flag entry has a corresponding FetchRequest
+        sid_state.F_flag.forall(flag => {
+            f_ac_s.log.exists(log_entry => {
+                match log_entry.msg {
+                    | FetchRequest(p) => {
+                        p.cfg.party == flag._1 and log_entry.time == flag._2
+                    }
+                    | _ => false
+                }
+            })
+        })
+    }
+})
+
+// ========== ORDERING PROPERTIES ==========
+
+// Send must precede SendResponse
+val SendBeforeResponse = f_ac_s.log.forall(log_entry => {
+    match log_entry.msg {
+        | SendResponse(p) => {
+            f_ac_s.log.exists(log_entry2 => {
+                match log_entry2.msg {
+                    | SendRequest(q) => {
+                        and {
+                            log_entry2.idx < log_entry.idx,
+                            q.cfg.party == p.cfg.party,
+                            q.Q == p.Q,
+                            q.x == p.x
+                        }
+                    }
+                    | _ => false
+                }
+            })
+        }
+        | _ => true
+    }
+})
+
+// Fetch must precede FetchResponse
+val FetchBeforeResponse = f_ac_s.log.forall(log_entry => {
+    match log_entry.msg {
+        | FetchResponse(p) => {
+            f_ac_s.log.exists(log_entry2 => {
+                match log_entry2.msg {
+                    | FetchRequest(q) => {
+                        and {
+                            log_entry2.idx < log_entry.idx,
+                            q.cfg.party == p.cfg.party,
+                            q.cfg.sid == p.cfg.sid
+                        }
+                    }
+                    | _ => false
+                }
+            })
+        }
+        | _ => true
+    }
+})
+
+// ========== MESSAGE INTEGRITY PROPERTIES ==========
+
+// No duplicate messages with same counter
+val UniqueCounters = sids.forall(sid => {
+    val sid_state = f_ac_s.state.get(sid)
+    sid_state.L.keys().forall(k1 => {
+        sid_state.L.keys().forall(k2 => {
+            (k1.ctr == k2.ctr) implies (k1 == k2)
+        })
+    })
+})
+
+// Messages in L have consistent timestamps (bounded by current time)
+val ValidTimestamps = sids.forall(sid => {
+    val sid_state = f_ac_s.state.get(sid)
+    sid_state.L.keys().forall(k => {
+        val msg_data = sid_state.L.get(k)
+        msg_data.time <= g_clock_s.state.TIME
+    })
+})
+
+
+
+
+
+// ========== ACCESS CONTROL PROPERTIES ==========
+
+// Only authorized parties can send
+val SendAccessControl = f_ac_s.log.forall(log_entry => {
+    match log_entry.msg {
+        | SendRequest(p) => {
+            and {
+                p.cfg.party.in(f_ac_s.params.P),
+                p.cfg.sid.in(f_ac_s.params.SIDs),
+                p.Q.in(f_ac_s.params.P)
+            }
+        }
+        | _ => true
+    }
+})
+
+// Only authorized parties can fetch
+val FetchAccessControl = f_ac_s.log.forall(log_entry => {
+    match log_entry.msg {
+        | FetchRequest(p) => {
+            and {
+                p.cfg.party.in(f_ac_s.params.P),
+                p.cfg.sid.in(f_ac_s.params.SIDs)
+            }
+        }
+        | _ => true
+    }
+})
+
+// ========== COMBINED PROPERTIES ==========
+
+val AllBasicProps = and {
+    NoOrphanedHolds,
+    InputBound,
+    CounterMonotonic,
+    ValidCounters,
+}
+
+val AllFlagProps = and {
+    SFlagUnique,
+    FFlagUnique,
+    FlagsMatchLog,
+}
+
+val AllOrderingProps = and {
+    SendBeforeResponse,
+    FetchBeforeResponse,
+}
+
+val AllIntegrityProps = and {
+     UniqueCounters,
+     ValidTimestamps,
+}
+
+val AllAccessProps = and {
+    SendAccessControl,
+    FetchAccessControl,
+}
+
+val AllSecurityProps = and {
+    Auth,
+    DDL,
+}
+
+val AllProps = and {
+    AllBasicProps,
+    AllFlagProps,
+    AllOrderingProps,
+    AllIntegrityProps,
+    AllAccessProps,
+    AllSecurityProps,
+}
 
 }

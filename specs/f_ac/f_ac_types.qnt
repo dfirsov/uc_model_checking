@@ -3,6 +3,8 @@ module f_ac_types {
     import basicSpells.* from "../../spells/basicSpells"
     import common.* from "../common"
 
+    import g_clock_types.* from "../g_clock/g_clock_types"
+
     // define types of the system  
     type Data = int
     
@@ -32,7 +34,7 @@ module f_ac_types {
         C : Set[Party], // corrupted parties
         delta: Time,
         SIDs: Set[SID],
-    }
+    } 
 
     type FAC_StateVars = SID -> 
         {
@@ -48,7 +50,7 @@ module f_ac_types {
         input : Set[FAC_Message], // always not more than 1 message in the system
         nonce : Nonce,        // to be able to match requests and responses in the trace
         log : Set[{idx: int, msg: FAC_Message, time : Time, handles: Set[FAC_Message],  }], // state: FAC_StateVars
-        SIM_handles : Set[FAC_Message],
+        handles : Set[FAC_Message],
     }  
 
     type FAC_Effect = 
@@ -62,6 +64,26 @@ module f_ac_types {
         effects: Set[FAC_Effect]
     }    
 
+    def fac_apply_effect(sys: FAC_System, clock: GC_System, eff: FAC_Effect): FAC_System = {
+        match eff {
+        | FAC_LogMessage(msg) => 
+            {...sys, 
+                log: sys.log.setAdd({idx: sys.log.size(), msg: msg,  time: clock.state.TIME, handles: sys.handles})
+            }
+        | FAC_UpdateInput(msgs) => 
+            {...sys, 
+                input: msgs
+            }
+        | FAC_AppendHandle(msg) => 
+            {...sys,
+                handles: sys.handles.union(Set(msg)),
+            }
+        | FAC_RemoveHandle(handle_to_remove) =>
+            {...sys,
+                handles: sys.handles.exclude(Set(handle_to_remove))
+            }
+        }
+    }    
 
 
     pure def fac_get_send_request_messages(messages: Set[FAC_Message]): Set[{cfg: MsgConfig, Q:Party, x:Data}] = {
@@ -211,6 +233,12 @@ module f_ac_types {
         }
         })
     }
+
+    pure def fac_access_check(cfg: MsgConfig, params: FAC_SystemParams): bool = {
+            cfg.party.in(params.P) and cfg.sid.in(params.SIDs)
+    } 
+
+    
  
 
    
