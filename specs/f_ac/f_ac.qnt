@@ -79,6 +79,11 @@ module f_ac{
         }).flatten().map(x => (x, gc_id_trans(clock)))
     }    
 
+    action fac_send_2_act : bool = all {
+        fac_gc_step_with((fac, gc) => fac_send_2(fac, gc))
+    }     
+
+
     pure def fac_send_3(ac: FAC_System, clock: GC_System) : Set[(FAC_Transition, GC_Transition)] = {
         ac.input.fac_get_sim_send_release_messages().map(msg => {
             val sid = msg.cfg.sid

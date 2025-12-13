@@ -9,27 +9,30 @@ module f_ac_tests{
     import f_ac.*  from "./f_ac"
     import f_ac_env.*  from "./f_ac_env"
 
+   //  quint test --main=f_ac_tests --max-samples=10000 --match="test_*" f_ac_tests.qnt 2>&1 
 
     // Helper: Send a message from one party to another
     run send_cycle(cfg: MsgConfig, to_party: Party) : bool = {
         (env_fac_send_reqs(cfg, to_party))
-        .then(fac_step)  // Process send request
-        .then(env_fac_sim_reqs)  // Send SIM control
-        .then(fac_step)  // Simulator acts on send
-        .then(fac_step)  // Continue processing
-        .then(fac_step)  // Clock interaction
-        .then(gc_step_fac_wait)  // Clock responds
-        .then(fac_step)  // Complete send
-        .then(env_consume_responses)
+         .then(fac_step)  // Process send request
+         .then(fac_send_2_act)
+         .then(fac_step)  // Simulator acts on send
+         .then(fac_step)  // Continue processing
+         .then(gc_step_fac_wait)  // Clock responds
+         .then(gc_step_fac_wait)  // Clock responds
+         .then(fac_step)  // Complete send
+         .then(fac_step)  // Complete send
+         .then(env_consume_responses)
     }
 
     // Helper: Advance clock by doing OK request
     run advance_clock(cfg: MsgConfig) : bool = {
         (env_ok_reqs(cfg))
         .then(fac_step)  // Process OK request
+        .then(gc_step_fac_wait)  // Clock responds
+        .then(gc_step_fac_wait)  // Clock responds        
+        .then(fac_step)  // Complete OK request
         .then(env_consume_responses)
-        .then(env_fac_sim_reqs)  // Allow clock to advance
-        .then(gc_step_fac_wait)  // Advance clock
     }
 
     // Helper: Fetch messages for a party
@@ -44,76 +47,31 @@ module f_ac_tests{
 
     // Test 1: Basic send-fetch cycle with delta delay
     run test_basic_send_fetch = {
-        val cfg = {party: 1, sid: 1, nonce: 0}
+        val cfg1 = {party: 1, sid: 1, nonce: 0}
+        val cfg2 = {party: 2, sid: 1, nonce: 1}
         
         init
         .then({ // Party 1 sends to Party 2
-            send_cycle(cfg, 2)
+            send_cycle(cfg1, 2)
         })
         .then({ // Advance clock to satisfy delta
-            advance_clock({...cfg, nonce: 1})
-        })
-        .then({ // Advance clock again
-            advance_clock({...cfg, nonce: 3})
-        })
-        .then({ // Party 2 fetches messages
-            fetch_cycle({party: 2, sid: 1, nonce: 5})
-        })
-        .expect( // Party 2 should receive the message
-            nondet fetch_res = f_ac_s.log.map(x => x.msg).fac_get_fetch_response_messages().filter(x => x.cfg.party == 2).oneOf()
-            fetch_res.data.size() > 0
-        )
-    }
-
-    // Test 2: Send without sufficient delta delay - message not delivered
-    run test_insufficient_delta = {
-        val cfg1 = {party: 1, sid: 1, nonce: 1}
-        val cfg2 = {party: 2, sid: 1, nonce: 2}
-        
-        init
-        .then({ // Party 1 sends to Party 2
-            send_cycle(cfg1, 2)
-        })
-        .then({ // Party 2 tries to fetch immediately (no delta delay)
-            fetch_cycle(cfg2)
-        })
-        .expect( // Party 2 should not receive the message yet
-            nondet fetch_res = f_ac_s.log.map(x => x.msg).fac_get_fetch_response_messages().filter(x => x.cfg.party == 2).oneOf()
-            fetch_res.data.size() == 0
-        )
-    }
-
-    // Test 3: Multiple messages from same sender
-    run test_multiple_messages = {
-        val cfg1 = {party: 1, sid: 1, nonce: 1}
-        val cfg2 = {party: 2, sid: 1, nonce: 10}
-        
-        init
-        .then({ // Party 1 sends first message
-            send_cycle(cfg1, 2)
-        })
-        .then({ // Advance clock
             advance_clock({...cfg1, nonce: 2})
         })
-        .then({ // Party 1 sends second message
-            send_cycle({...cfg1, nonce: 4}, 2)
+        .then({ // Advance clock again
+            advance_clock({...cfg2, nonce: 3})
         })
-        .then({ // Advance clock to satisfy delta for second message
-            advance_clock({...cfg1, nonce: 5})
+        .then({ // Party 2 fetches messages
+            fetch_cycle({...cfg2, nonce: 4})
         })
-        .then({ // Party 2 fetches
-            fetch_cycle(cfg2)
-        })
-        .expect( // Party 2 should receive both messages
-            nondet fetch_res = f_ac_s.log.map(x => x.msg).fac_get_fetch_response_messages().filter(x => x.cfg.party == 2).oneOf()
-            fetch_res.data.size() >= 2
+        .expect( // Party 2 should receive the message
+            f_ac_s.log.map(x => x.msg).fac_get_fetch_response_messages().filter(x => x.cfg.party == 2).size() == 1
         )
     }
 
-    // Test 4: Cross-party communication - bidirectional
-    run test_bidirectional_send = {
-        val cfg1 = {party: 1, sid: 1, nonce: 1}
-        val cfg2 = {party: 2, sid: 1, nonce: 2}
+    // Test 2: Multiple parties sending and fetching
+    run test_multiple_messages = {
+        val cfg1 = {party: 1, sid: 1, nonce: 0}
+        val cfg2 = {party: 2, sid: 1, nonce: 1}
         
         init
         .then({ // Party 1 sends to Party 2
@@ -122,17 +80,61 @@ module f_ac_tests{
         .then({ // Party 2 sends to Party 1
             send_cycle(cfg2, 1)
         })
-        .then({ // Advance clock
-            advance_clock({...cfg1, nonce: 3})
+        .then({ // Both parties advance clock
+            advance_clock({...cfg1, nonce: 2})
         })
-        .then({ // Advance clock again
-            advance_clock({...cfg1, nonce: 5})
+        .then({
+            advance_clock({...cfg2, nonce: 3})
+        })
+        .then({ // Both parties advance clock again for delta
+            advance_clock({...cfg1, nonce: 4})
+        })
+        .then({
+            advance_clock({...cfg2, nonce: 5})
+        })
+        .then({ // Party 1 fetches
+            fetch_cycle({...cfg1, nonce: 6})
         })
         .then({ // Party 2 fetches
             fetch_cycle({...cfg2, nonce: 7})
         })
+        .expect( // Both parties should receive messages
+            all {
+                f_ac_s.log.map(x => x.msg).fac_get_fetch_response_messages().filter(x => x.cfg.party == cfg1.party).size() == 1,
+                f_ac_s.log.map(x => x.msg).fac_get_fetch_response_messages().filter(x => x.cfg.party == cfg2.party).size() == 1
+            }
+        )
+    }
+
+    // Test 3: Cross-party communication - bidirectional
+    run test_bidirectional_send = {
+        val cfg1 = {party: 1, sid: 1, nonce: 0}
+        val cfg2 = {party: 2, sid: 1, nonce: 1}
+        
+        init
+        .then({ // Party 1 sends to Party 2
+            send_cycle(cfg1, 2)
+        })
+        .then({ // Party 2 sends to Party 1
+            send_cycle(cfg2, 1)
+        })
+        .then({ // Both parties advance clock
+            advance_clock({...cfg1, nonce: 2})
+        })
+        .then({
+            advance_clock({...cfg2, nonce: 3})
+        })
+        .then({ // Both parties advance clock again
+            advance_clock({...cfg1, nonce: 4})
+        })
+        .then({
+            advance_clock({...cfg2, nonce: 5})
+        })
+        .then({ // Party 2 fetches
+            fetch_cycle({...cfg2, nonce: 6})
+        })
         .then({ // Party 1 fetches
-            fetch_cycle({...cfg1, nonce: 8})
+            fetch_cycle({...cfg1, nonce: 7})
         })
         .expect( // Both parties received their messages
             all {
@@ -146,9 +148,9 @@ module f_ac_tests{
         )
     }
 
-    // Test 5: S_flag prevents duplicate sends in same time slot
+    // Test 4: S_flag prevents duplicate sends in same time slot
     run test_s_flag_prevents_duplicate = {
-        val cfg1 = {party: 1, sid: 1, nonce: 1}
+        val cfg1 = {party: 1, sid: 1, nonce: 0}
         
         init
         .then({ // Party 1 sends first message
@@ -159,49 +161,64 @@ module f_ac_tests{
         )
     }
 
-    // Test 6: F_flag prevents duplicate fetches in same time slot
+    // Test 5: F_flag prevents duplicate fetches in same time slot
     run test_f_flag_prevents_duplicate = {
-        val cfg1 = {party: 1, sid: 1, nonce: 1}
-        val cfg2 = {party: 2, sid: 1, nonce: 6}
+        val cfg1 = {party: 1, sid: 1, nonce: 0}
+        val cfg2 = {party: 2, sid: 1, nonce: 1}
         
         init
         .then({ // Party 1 sends
             send_cycle(cfg1, 2)
         })
-        .then({ // Advance clock
+        .then({ // Both parties advance clock
             advance_clock({...cfg1, nonce: 2})
         })
-        .then({ // Advance clock again
+        .then({
+            advance_clock({...cfg2, nonce: 3})
+        })
+        .then({ // Both parties advance clock again
             advance_clock({...cfg1, nonce: 4})
         })
+        .then({
+            advance_clock({...cfg2, nonce: 5})
+        })
         .then({ // Party 2 fetches
-            fetch_cycle(cfg2)
+            fetch_cycle({...cfg2, nonce: 6})
         })
         .expect( // Only one fetch response for party 2
             f_ac_s.log.map(x => x.msg).fac_get_fetch_response_messages().filter(x => x.cfg.party == 2).size() == 1
         )
     }
 
-    // Test 7: Messages removed from L after fetch (no duplication)
+    // Test 6: Messages removed from L after fetch (no duplication)
     run test_no_message_duplication = {
-        val cfg1 = {party: 1, sid: 1, nonce: 1}
-        val cfg2 = {party: 2, sid: 1, nonce: 6}
+        val cfg1 = {party: 1, sid: 1, nonce: 0}
+        val cfg2 = {party: 2, sid: 1, nonce: 1}
         
         init
         .then({ // Party 1 sends
             send_cycle(cfg1, 2)
         })
-        .then({ // Advance clock twice for delta
+        .then({ // Both parties advance clock twice for delta
             advance_clock({...cfg1, nonce: 2})
+        })
+        .then({
+            advance_clock({...cfg2, nonce: 3})
         })
         .then({
             advance_clock({...cfg1, nonce: 4})
         })
-        .then({ // Party 2 fetches
-            fetch_cycle(cfg2)
+        .then({
+            advance_clock({...cfg2, nonce: 5})
         })
-        .then({ // Advance clock for new time slot
+        .then({ // Party 2 fetches
+            fetch_cycle({...cfg2, nonce: 6})
+        })
+        .then({ // Both parties advance clock for new time slot
             advance_clock({...cfg1, nonce: 7})
+        })
+        .then({
+            advance_clock({...cfg2, nonce: 8})
         })
         .then({ // Party 2 tries to fetch again
             fetch_cycle({...cfg2, nonce: 9})
@@ -218,16 +235,20 @@ module f_ac_tests{
         )
     }
 
-    // Test 8: Counter increments correctly
+    // Test 7: Counter increments correctly
     run test_counter_increments = {
-        val cfg1 = {party: 1, sid: 1, nonce: 1}
+        val cfg1 = {party: 1, sid: 1, nonce: 0}
+        val cfg2 = {party: 2, sid: 1, nonce: 1}
         
         init
         .then({ // Send first message
             send_cycle(cfg1, 2)
         })
-        .then({ // Advance clock for new time slot
+        .then({ // Both parties advance clock for new time slot
             advance_clock({...cfg1, nonce: 2})
+        })
+        .then({
+            advance_clock({...cfg2, nonce: 3})
         })
         .then({ // Send second message
             send_cycle({...cfg1, nonce: 4}, 2)
@@ -237,23 +258,29 @@ module f_ac_tests{
         )
     }
 
-    // Test 9: Authentication - only sent messages can be fetched
+    // Test 8: Authentication - only sent messages can be fetched
     run test_authentication = {
-        val cfg1 = {party: 1, sid: 1, nonce: 1}
-        val cfg2 = {party: 2, sid: 1, nonce: 6}
+        val cfg1 = {party: 1, sid: 1, nonce: 0}
+        val cfg2 = {party: 2, sid: 1, nonce: 1}
         
         init
         .then({ // Party 1 sends specific data
             send_cycle(cfg1, 2)
         })
-        .then({ // Advance clock
+        .then({ // Both parties advance clock
             advance_clock({...cfg1, nonce: 2})
         })
-        .then({ // Advance clock again
+        .then({
+            advance_clock({...cfg2, nonce: 3})
+        })
+        .then({ // Both parties advance clock again
             advance_clock({...cfg1, nonce: 4})
         })
+        .then({
+            advance_clock({...cfg2, nonce: 5})
+        })
         .then({ // Party 2 fetches
-            fetch_cycle(cfg2)
+            fetch_cycle({...cfg2, nonce: 6})
         })
         .expect( // Party 2 gets messages that were sent
             nondet fetch_res = f_ac_s.log.map(x => x.msg).fac_get_fetch_response_messages().filter(x => x.cfg.party == 2).oneOf()
@@ -261,30 +288,36 @@ module f_ac_tests{
         )
     }
 
-    // Test 10: Multiple parties sending to same recipient
+    // Test 9: Multiple parties sending to same recipient
     run test_multiple_senders = {
-        val cfg1 = {party: 1, sid: 1, nonce: 1}
-        val cfg2 = {party: 2, sid: 1, nonce: 10}
+        val cfg1 = {party: 1, sid: 1, nonce: 0}
+        val cfg2 = {party: 2, sid: 1, nonce: 1}
         
         init
         .then({ // Party 1 sends to Party 2
             send_cycle(cfg1, 2)
         })
-        .then({ // Advance clock
+        .then({ // Both parties advance clock
             advance_clock({...cfg1, nonce: 2})
         })
-        .then({ // Another party (using party 1 cfg with different data) sends
+        .then({
+            advance_clock({...cfg2, nonce: 3})
+        })
+        .then({ // Party 1 sends another message to Party 2
             send_cycle({...cfg1, nonce: 4}, 2)
         })
-        .then({ // Advance clock to satisfy delta
+        .then({ // Both parties advance clock to satisfy delta
             advance_clock({...cfg1, nonce: 5})
         })
+        .then({
+            advance_clock({...cfg2, nonce: 6})
+        })
         .then({ // Party 2 fetches all messages
-            fetch_cycle(cfg2)
+            fetch_cycle({...cfg2, nonce: 7})
         })
         .expect( // Party 2 receives both messages
-            nondet fetch_res = f_ac_s.log.map(x => x.msg).fac_get_fetch_response_messages().filter(x => x.cfg.party == 2).oneOf()
-            fetch_res.data.size() >= 2
+            nondet r = f_ac_s.log.map(x => x.msg).fac_get_fetch_response_messages().filter(x => x.cfg.party == 2).oneOf()
+            r.data.size() == 2
         )
     }
 

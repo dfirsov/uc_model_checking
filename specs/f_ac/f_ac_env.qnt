@@ -26,9 +26,13 @@ module f_ac_env{
         gc_step,        
     }
 
-    action init = all {
-        fac_init(Parties, Corrupted, delta_param, sids),
-        gc_init(Corrupted,0,Set({party: 1, sid: 1}, {party:2, sid:1})),
+    action init = {
+        val clock_regs = sids.map(sid => Parties.map(party => ({party: party, sid: sid}))).flatten()
+
+        all {
+            fac_init(Parties, Corrupted, delta_param, sids),
+            gc_init(Corrupted,0,clock_regs)
+        }
     }
 
     action env_fac_send_all_reqs : bool = all {

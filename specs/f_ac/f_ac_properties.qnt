@@ -73,6 +73,8 @@ val NoDuplication = f_ac_s.log.forall(log1 => {
     }
 })
 
+// TODO: If message was sent at time t then it cannot be fetched before t + delta
+
 // ========== PROPERTIES ==========
 // ∆-delayed Liveness: if P sends a message x to Q in some round t, and Q attempts to fetch in some 
 // round t‘ ≥ t + ∆ then Q receives x in some round t’’ ∈ [t, t’].  
