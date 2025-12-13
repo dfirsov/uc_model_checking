@@ -9,6 +9,13 @@ module f_ac_tests{
     import f_ac.*  from "./f_ac"
     import f_ac_env.*  from "./f_ac_env"
 
+
+    // paramters for tests
+    // val Parties = Set(1,2)
+    // val Corrupted = Set()
+    // val sids = Set(1)
+    // val delta_param: int = 2   
+
    //  quint test --main=f_ac_tests --max-samples=10000 --match="test_*" f_ac_tests.qnt 2>&1 
 
     // Helper: Send a message from one party to another
@@ -100,8 +107,12 @@ module f_ac_tests{
         })
         .expect( // Both parties should receive messages
             all {
-                f_ac_s.log.map(x => x.msg).fac_get_fetch_response_messages().filter(x => x.cfg.party == cfg1.party).size() == 1,
-                f_ac_s.log.map(x => x.msg).fac_get_fetch_response_messages().filter(x => x.cfg.party == cfg2.party).size() == 1
+                nondet t1 = f_ac_s.log.map(x => x.msg).fac_get_fetch_response_messages().filter(x => x.cfg.party == cfg1.party).oneOf()
+                nondet t2 = f_ac_s.log.map(x => x.msg).fac_get_fetch_response_messages().filter(x => x.cfg.party == cfg2.party).oneOf()
+                and {
+                    t1.data.size() == 1,
+                    t2.data.size() == 1
+                }
             }
         )
     }

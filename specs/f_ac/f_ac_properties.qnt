@@ -73,7 +73,35 @@ val NoDuplication = f_ac_s.log.forall(log1 => {
     }
 })
 
-// TODO: If message was sent at time t then it cannot be fetched before t + delta
+// Co-property: Message sent at time t cannot be fetched before t + delta (should fail - messages can be fetched early)
+val AtLeastDeltaDelayed = and {
+    f_ac_s.log.map(x => x.msg).fac_get_fetch_request_messages().size() == 1,
+    f_ac_s.log.map(x => x.msg).fac_get_send_request_messages().size() == 1
+} implies
+    
+    f_ac_s.log.forall(log_entry => {
+        match log_entry.msg {
+            | FetchResponse(fr) => {
+                // For each data item in the fetch response
+                fr.data.forall(data => {
+                    // Find when this data was sent
+                    f_ac_s.log.forall(log_entry2 => {
+                        match log_entry2.msg {
+                            | SendResponse(sr) => {
+                                // If this is the matching send
+                                (sr.x == data and sr.Q == fr.cfg.party) implies {
+                                    // Then fetch time must be at least t + delta
+                                    log_entry.time >= log_entry2.time + delta_param
+                                }
+                            }
+                            | _ => true
+                        }
+                    })
+                })
+            }
+            | _ => true
+        }
+    })
 
 // ========== PROPERTIES ==========
 // ∆-delayed Liveness: if P sends a message x to Q in some round t, and Q attempts to fetch in some 
