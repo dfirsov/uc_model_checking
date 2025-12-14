@@ -1,6 +1,5 @@
-module f_diff_properties{
+module f_diff_properties {
     
-
     import basicSpells.* from "../../spells/basicSpells"
     import rareSpells.* from "../../spells/rareSpells"
     import common.* from "../common"
@@ -8,175 +7,89 @@ module f_diff_properties{
     import g_clock.* from "../g_clock/g_clock"    
     import f_diff_types.*   from "./f_diff_types"
     import f_diff.*  from "./f_diff"
-    
-
-    val Parties = Set(1,2,3)
-    val C = Set(3)
-    val sids = Set(1)
-    val delta_param: int = 2   
+    import f_diff_env.*  from "./f_diff_env" 
 
 
-    action step : bool = any {
-        dif_step,  
-        gc_step_fac_wait,
-        env_fac_send_all_reqs,
-        env_consume_responses,
-    }
+// ========== CO-PROPERTIES (should fail - used for model checking bounds) ==========
 
-    action gc_step_fac_wait : bool =  all {
-        dif_s' = dif_s,
-        gc_step,        
-    }
+val P1 = f_dif_s.input.size() == 0
+val P2 = f_dif_s.log.size() <= 7
+val P3 = f_dif_s.log.map(x => x.msg).dif_get_ok_response_messages().size() <= 2
+val P4 = f_dif_s.log.map(x => x.msg).dif_get_fetch_response_messages().size() <= 2
+val P5 = f_dif_s.log.map(x => x.msg).dif_get_diffuse_response_messages().size() <= 4
+val P6 = g_clock_s.input.size() == 0
+val P7 = g_clock_s.input.map(x => x).gc_get_all_response_messages().size() == 0
+val P8 = g_clock_s.state.TIME <= 5
+val P9 = f_dif_s.log.map(x => x.msg).dif_get_fetch_response_messages().forall(m => m.data.size() == 0)
+val P10 = f_dif_s.handles.dif_get_sim_diffuse_hold_messages().size() <= 2
 
-    action init = all {
-        dif_init(Parties, C, delta_param, sids),
-        gc_init(C,0,Set({party: 1, sid: 1}, {party:2, sid:1})),
-    }
 
-    action env_fac_send_all_reqs : bool = all {
-        nondet from = Parties.oneOf()
-        nondet top = Parties.oneOf()
-        nondet sid = sids.oneOf()
 
-        any {
-            env_dif_send_reqs(from, top, sid),
-            env_dif_inject_reqs(from, top, sid),
-            env_dif_fetch_reqs(from, sid),
-            env_ok_reqs(from, sid),
-            env_dif_sim_reqs,
-            env_gc_sim_reqs,
+// At time t a message is delivered at most once to the same party
+val NoDuplication = f_dif_s.log.forall(log1 => {
+    match log1.msg {
+        | FetchResponse(fr1) => {
+            f_dif_s.log.forall(log2 => {
+                match log2.msg {
+                    | FetchResponse(fr2) => {
+                        and {
+                            log1.idx != log2.idx,
+                            fr1.cfg.party == fr2.cfg.party,
+                            fr1.cfg.sid == fr2.cfg.sid,
+                            log1.time == log2.time
+                        } implies {
+                            // Data sets should be disjoint (no message delivered twice)
+                            fr1.data.intersect(fr2.data).size() == 0
+                        }
+                    }
+                    | _ => true
+                }
+            })
         }
+        | _ => true
     }
-
- 
-    // // Environment interaction: non-deterministically add requests when input is empty
-    action env_dif_send_reqs(from:Party, top: Party, sid: SID) : bool = all {
-        // Precondition: input must be empty
-        gc_s.input.size() == 0 and dif_s.input.size() == 0,
-        
-        // Non-deterministically choose a party and SID
-        nondet data = Set(42,43,44,45).oneOf()
-        val cfg = {party: from, sid: sid, nonce: dif_s.nonce}
-        dif_s' = {...dif_s, 
-            input: Set(DiffuseRequest({cfg: cfg, m: data})),
-            nonce: dif_s.nonce + 1
-
-        },
-        gc_stutter
-    }
-
-    // // Environment interaction: non-deterministically add requests when input is empty
-    action env_dif_inject_reqs(from:Party, top: Party, sid: SID) : bool = all {
-        // Precondition: input must be empty
-        gc_s.input.size() == 0 and dif_s.input.size() == 0,
-        
-        // Non-deterministically choose a party and SID
-        nondet data = Set(42,43,44,45).oneOf()
-        val cfg = {party: from, sid: sid, nonce: dif_s.nonce}
-        dif_s' = {...dif_s, 
-            input: Set(InjectRequest({cfg: cfg, Q: top, m: data})),
-            nonce: dif_s.nonce + 1
-
-        },
-        gc_stutter
-    }
+})
 
 
+// Broadcast property: At every moment L[*,ctr] > 1 then {P | L[P,ctr]} == P
+// (not true because fetch breaks L)
+val BroadcastToAll = sids.forall(sid => {
+    val sid_state = f_dif_s.state.get(sid)
+    // For each counter value in L
+    sid_state.L.keys().forall(k1 => {
+        // If message was diffused (same counter appears for multiple recipients)
+        val same_ctr_keys = sid_state.L.keys().filter(k2 => k2.ctr == k1.ctr)
+        (same_ctr_keys.size() > 1) implies {
+            // Then it should exist for all parties
+            f_dif_s.params.P.forall(party => {
+                same_ctr_keys.exists(k => k.to == party)
+            })
+        }
+    })
+})
 
-    action env_dif_fetch_reqs(from:Party, sid: SID) : bool = all {
-        // Precondition: input must be empty
-        gc_s.input.size() == 0 and dif_s.input.size() == 0,
-        
-        // Non-deterministically choose a party and SID
-        val cfg = {party: from, sid: sid, nonce: dif_s.nonce}
+// ========== PROPERTIES ==========
 
-        // Option 2: Fetch
-        dif_s' = {...dif_s, 
-            input: Set(FetchRequest({cfg: cfg})),
-            nonce: dif_s.nonce + 1
-
-        },
-        gc_stutter   
-    }
-
-    action env_ok_reqs(from:Party, sid: SID) : bool = all {
-        // Precondition: input must be empty
-        gc_s.input.size() == 0 and dif_s.input.size() == 0,
-        
-        // Non-deterministically choose a party and SID
-        val cfg = {party: from, sid: sid, nonce: dif_s.nonce}
-
-        // Option 3: OK
-        dif_s' = {...dif_s, 
-            input: Set(OKRequest({cfg: cfg})),
-            nonce: dif_s.nonce + 1
-
-        },   
-        gc_stutter     
-    }
-
-    action env_dif_sim_reqs : bool = all {
-        gc_s.input.size() == 0 and dif_s.input.size() == 0,
-        dif_s' = {...dif_s, 
-            input: Set(SIMControl),
-            nonce: dif_s.nonce + 1
-        },
-        gc_stutter
-    }
-
-    action env_gc_sim_reqs : bool = all {
-        gc_s.input.size() == 0 and dif_s.input.size() == 0,
-        gc_s' = {...gc_s, 
-            input: Set(GC_SIMControl),
-            nonce: gc_s.nonce + 1
-        },
-        dif_s' = dif_s,
-    }
-
-    pure def env_consume_response(sys: DIF_System) : Set[DIF_Transition] = {
-         sys.input.dif_get_all_response_messages().map(msg_log =>
-         {
-            post_state : sys.state,
-            effects : Set(
-                DIF_LogMessage(msg_log),
-                DIF_UpdateInput(Set())
-            )
-         })
-    }
-
-    action env_consume_responses : bool =  all {
-        // Precondition: there is a response message in input
-        val response_msgs = env_consume_response(dif_s)
-        
-        // Non-deterministically choose one response message to consume
-        nondet transition = response_msgs.oneOf()
-
-        // Update the system state by consuming the message    
-        dif_s' = dif_process_transitions(dif_s, transition),
-        gc_stutter
-    }
-
-
-// ∆-delayed Liveness: if P sends a message x to Q in some round t, and Q attempts to fetch in some 
-// round t‘ ≥ t + ∆ then Q receives x in some round t’’ ∈ [t, t’].  
+// ∆-delayed Liveness: if P diffuses a message m in some round t, and Q attempts to fetch in some 
+// round t' ≥ t + ∆ then Q receives m in some round t'' ∈ [t, t'].  
 val DDL = {
-    dif_s.log.forall(msg1 =>
+    f_dif_s.log.forall(msg1 =>
         match msg1.msg {
             | DiffuseRequest(p) => { 
-                val dif_fetch_response_exists = dif_s.log.exists(msg3 => {
+                val dif_fetch_response_exists = f_dif_s.log.exists(msg3 => {
                     match msg3.msg {
                         | FetchResponse(d) => {
-                            d.t_prim >= msg1.time + delta_param  //and p.Q == d.cfg.party
+                            d.t_prim >= msg1.time + delta_param
                         }
                         | _ => false
                     }
                 })
 
                 dif_fetch_response_exists implies {
-                    dif_s.log.exists(msg3 => {
+                    f_dif_s.log.exists(msg3 => {
                         match msg3.msg {
                             | FetchResponse(d) => {
-                                (p.m.in(d.data)) //and p.Q == d.cfg.party
+                                p.m.in(d.data)
                             }
                             | _ => false
                         }
@@ -188,22 +101,130 @@ val DDL = {
     )    
 }
 
-// Authentication: If a nonempty set of messages was delivered from P to Q then P indeed sent a diffuse message in the past.
-val Auth = dif_s.log.forall(log_entry1 => {
-  match log_entry1.msg {
-    | FetchResponse(p) => { // 
-        // find corresponding FetchRequest in the log
-        (p.data != Set()) implies dif_s.log.exists(log_entry2 => {
-          match log_entry2.msg {
-            | DiffuseRequest(q) => {
-                 q.m.in(p.data)
-              }
-            | _ => false
-          }
-        })
-      }
-    | _ => true
-  }
-})    
+// Authentication: If a nonempty set of messages was delivered then they were indeed diffused or injected in the past.
+val Auth = f_dif_s.log.forall(log_entry1 => {
+    match log_entry1.msg {
+        | FetchResponse(p) => { 
+            (p.data != Set()) implies p.data.forall(data => {
+                f_dif_s.log.exists(log_entry2 => {
+                    match log_entry2.msg {
+                        | DiffuseRequest(q) => q.m == data
+                        | InjectRequest(q) => and {
+                            q.m == data,
+                            q.Q == p.cfg.party
+                        }
+                        | _ => false
+                    }
+                })
+            })
+        }
+        | _ => true
+    }
+})
 
+// ========== DIFFUSION-SPECIFIC PROPERTIES ==========
+
+
+
+// Diffused messages have the same data for all recipients
+val DiffusionConsistency = sids.forall(sid => {
+    val sid_state = f_dif_s.state.get(sid)
+    sid_state.L.keys().forall(k1 => {
+        sid_state.L.keys().forall(k2 => {
+            (k1.ctr == k2.ctr) implies {
+                sid_state.L.get(k1).data == sid_state.L.get(k2).data
+            }
+        })
+    })
+})
+
+
+// Only corrupted parties can inject
+val InjectAccessControl = f_dif_s.log.forall(log_entry => {
+    match log_entry.msg {
+        | InjectRequest(p) => {
+            p.cfg.party.in(f_dif_s.params.C)
+        }
+        | _ => true
+    }
+})
+
+// ========== BASIC SYSTEM PROPERTIES ==========
+
+// Handles are properly managed (no orphaned holds)
+val NoOrphanedHolds = f_dif_s.handles.forall(h => {
+    match h {
+        | SIMDiffuseHold(_) => true
+        | SIMFetchHold(_) => true
+        | ClockRequestWait(_) => true
+        | OKRequestWait(_) => true
+        | _ => false
+    }
+})
+
+// Input buffer has at most one message (as per design)
+val InputBound = f_dif_s.input.size() <= 1
+
+// Messages in L have valid counters
+val ValidCounters = sids.forall(sid => {
+    val sid_state = f_dif_s.state.get(sid)
+    sid_state.L.keys().forall(k => {
+        k.ctr > 0 and k.ctr <= sid_state.ctr
+    })
+})
+
+
+
+
+
+
+
+
+// Liveness: system is never stuck
+temporal NeverStuck = {
+  // WF is required because TLA+ semantics treat stuttering as a valid step even if not explicitly modeled
+  step.weakFair(Set(f_dif_s)).implies ({
+    step.weakFair(Set(g_clock_s)).implies ({
+        not (eventually(
+                always(
+                    or {
+                        f_dif_s.input != Set(),
+                        g_clock_s.input != Set()
+                    }
+                )
+        ))
+    })
+  })
+}
+
+// ========== COMBINED PROPERTIES ==========
+
+val AllBasicProps = and {
+    NoOrphanedHolds,
+    InputBound,
+    ValidCounters,
+}
+
+val AllAccessProps = and {
+    InjectAccessControl,
+}
+
+val AllDiffusionProps = and {
+    DiffusionConsistency,
+}
+
+val AllSecurityProps = and {
+    Auth,
+    DDL,
+    NoDuplication,
+}
+
+val AllProps = and {
+    AllBasicProps,
+    AllAccessProps,
+    AllDiffusionProps,
+    AllSecurityProps,
+}
+
+    
 }
