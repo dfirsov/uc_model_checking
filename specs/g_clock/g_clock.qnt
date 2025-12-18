@@ -106,7 +106,10 @@ module g_clock{
     }   
 
     action gc_step : bool =  { 
-        gc_step_with(gc_main_listener)
+        //nondet iT: Set[{ x: int, y: bool }] = apalache::generate(20)
+        all {
+            gc_step_with(gc_main_listener)
+        }
     }
 
     action gc_init(C: Set[Party], time : int, Reg: Set[PartySID]): bool = {

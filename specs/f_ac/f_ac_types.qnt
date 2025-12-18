@@ -64,7 +64,7 @@ module f_ac_types {
         effects: Set[FAC_Effect]
     }    
 
-    def fac_apply_effect(sys: FAC_System, clock: GC_System, eff: FAC_Effect): FAC_System = {
+    pure def fac_apply_effect(sys: FAC_System, clock: GC_System, eff: FAC_Effect): FAC_System = {
         match eff {
         | FAC_LogMessage(msg) => 
             {...sys, 

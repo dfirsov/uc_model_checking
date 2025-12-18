@@ -20,7 +20,7 @@ val P4 = f_ac_s.log.map(x => x.msg).fac_get_fetch_response_messages().size() <= 
 val P5 = f_ac_s.log.map(x => x.msg).fac_get_send_response_messages().size() <= 5
 val P6 = g_clock_s.input.size() == 0
 val P7 = g_clock_s.log.map(x => x.msg).gc_get_all_response_messages().size() == 0
-val P8 = g_clock_s.state.TIME <= 4
+val P8 = g_clock_s.state.TIME <= 5
 val P9 = f_ac_s.log.map(x => x.msg).fac_get_fetch_response_messages().forall(m => m.data.size() == 0)
 val P10 = f_ac_s.handles.fac_get_sim_send_hold_messages().size() <= 2
 

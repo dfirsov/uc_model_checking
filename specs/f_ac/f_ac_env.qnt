@@ -46,7 +46,7 @@ module f_ac_env{
             env_fac_fetch_reqs(cfg),
             env_ok_reqs(cfg),
             env_fac_sim_reqs,
-            env_gc_sim_reqs,
+            //env_gc_sim_reqs,
         }
         
     }

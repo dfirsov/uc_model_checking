@@ -45,5 +45,26 @@ module common {
       }
   }
 
+  pure def setToList(__set: Set[a]): List[a] = {
+      __set.fold(List(), (__l, __e) => __l.append(__e))
+  }
+
+  pure def listSamplingSpace(n : int, vals: Set[a]) : Set[List[a]] = {
+      if (n <= 0) {
+          Set(List())
+      } else {
+          // Build up from empty lists by iteratively adding each possible value
+          // Start with a set containing one empty list, then for each position (1 to n),
+          // expand each existing list by appending each possible value
+          range(0, n).foldl(Set(List()), (currentLists, _) => {
+              vals.fold(Set(), (newLists, v) => {
+                  currentLists.fold(newLists, (acc, lst) => {
+                      acc.union(Set(lst.append(v)))
+                  })
+              })
+          })
+      }
+  }
+
 
 }
