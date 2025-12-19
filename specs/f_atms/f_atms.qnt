@@ -67,9 +67,9 @@ module f_atms{
     pure def clean_vk(vk: Option[ATMS_VK], sid_state: ATMS_StateVars) : bool = { 
         and {
             vk != None,
+            not (vk.unwrap().in(sid_state.CVK.union(sid_state.VK.map(x => x.vk)))),
             or {
                 not (sid_state.VER.exists(x => x.vk == vk.unwrap())),
-                not (vk.unwrap().in(sid_state.CVK)),
                 sid_state.VER.exists(x => x.vk == vk.unwrap() and x.b == false)
             }
         }
@@ -577,7 +577,6 @@ module f_atms{
         if(tau != None){
             or {
                 not (sid_state.AVER.exists(x => and {
-                    true,
                     x.m == m,
                     x.sig == tau.unwrap(),
                     x.avk == avk
@@ -803,7 +802,7 @@ module f_atms{
 
                     Set({
                         post_state: atms.state.set(sid, {...sid_state,
-                            AVK: new_AVK,
+                            AVK: new_AVK, // BUG: problem with duplication
                             VKs: new_VKs,
                             CVK: new_CVK,
                             AVER: sid_state.AVER.setAdd({avk: p.avk, m: p.m, sig: p.sig, b: b_final})

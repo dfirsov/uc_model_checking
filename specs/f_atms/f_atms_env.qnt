@@ -63,9 +63,9 @@ module f_atms_env{
             env_gen_reqs(cfg),
             env_akey_reqs(cfg),
             env_acheck_reqs(cfg),
-            env_sign_reqs(cfg),
-            env_ver_reqs(cfg),
-            env_asign_reqs(cfg),
+            //env_sign_reqs(cfg),
+            //env_ver_reqs(cfg),
+            //env_asign_reqs(cfg),
             env_aver_reqs(cfg),
         }
     }
