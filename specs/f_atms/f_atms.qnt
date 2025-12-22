@@ -9,15 +9,15 @@ module f_atms{
     var f_atms_s : ATMS_System
 
     // SIM gives control back to the environment
-    pure def atms_sim_loses_ctrl(atms: ATMS_System) : Set[ATMS_Transition] = {
-        atms.input.atms_get_sim_control_messages().map(c =>  // sim must have control
-            {   
-                post_state : atms.state,
-                effects : Set( 
-                    ATMS_UpdateInput(Set())
-                )  
-            })
-    }    
+    // pure def atms_sim_loses_ctrl(atms: ATMS_System) : Set[ATMS_Transition] = {
+    //     atms.input.atms_get_sim_control_messages().map(c =>  // sim must have control
+    //         {   
+    //             post_state : atms.state,
+    //             effects : Set( 
+    //                 ATMS_UpdateInput(Set())
+    //             )  
+    //         })
+    // }    
 
 
     pure def atms_gen_1(atms: ATMS_System) : Set[ATMS_Transition] = {
@@ -112,7 +112,12 @@ module f_atms{
                         )
                     })
                 }else{
-                    Set() // run out of VKS, raise error?
+                    Set({
+                        post_state: atms.state,
+                        effects: Set(
+                            ATMS_UpdateInput(Set()),
+                        )
+                    }) // run out of VKS, raise error?
                 }
             }
         }).flatten()
@@ -174,7 +179,7 @@ module f_atms{
         }else{
             vks.indices().exists(i => {
                 sid_state.VK.forall(x => {
-                    not (x.vk != vks[i] and not (C.contains(x.party)))
+                    not (C.contains(x.party)) implies (x.vk != vks[i])
                 })
             })
         }
@@ -233,7 +238,12 @@ module f_atms{
                         )
                     })
                 }else{
-                    Set() // run out of AVKS, raise error?
+                    Set({
+                        post_state: atms.state,
+                        effects: Set(
+                            ATMS_UpdateInput(Set()),
+                        )
+                    }) // run out of VKS, raise error?
                 }
             }
         }).flatten()
@@ -301,7 +311,12 @@ module f_atms{
 
                 val san_sim_avk_maybe = san_avk(p.sim_avk, p.vks, atms, p.cfg.sid)
                 if(not (clean_avk(san_sim_avk_maybe, p.vks, sid_state, atms.params.C))){
-                    Set() // run out of AVKS, raise error?
+                    Set({
+                        post_state: atms.state,
+                        effects: Set(
+                            ATMS_UpdateInput(Set()),
+                        )
+                    }) // run out of VKS, raise error?
                 }else{
                     val new_AVK = sid_state.AVK.setAdd({vks: p.vks, avk: san_sim_avk_maybe})
 
@@ -437,7 +452,12 @@ module f_atms{
                     )
                 })
             }else{
-                Set() // run out of sigs
+                    Set({
+                        post_state: atms.state,
+                        effects: Set(
+                            ATMS_UpdateInput(Set()),
+                        )
+                    }) // run out of sigs, raise error?
             }
             
         }).flatten()
@@ -622,7 +642,12 @@ module f_atms{
             val avk = san_avk(avk_dirty, p.vks, atms, p.cfg.sid)
 
             if(not (clean_avk(avk, p.vks, sid_state, atms.params.C))){
-                Set() 
+                    Set({
+                        post_state: atms.state,
+                        effects: Set(
+                            ATMS_UpdateInput(Set()),
+                        )
+                    }) // run out of VKS, raise error?
             }else{
 
                 if(or {
@@ -691,7 +716,12 @@ module f_atms{
                                 )
                             })
                         }else{
-                            Set()
+                            Set({
+                                post_state: atms.state,
+                                effects: Set(
+                                    ATMS_UpdateInput(Set()),
+                                )
+                            }) // run out of VKS, raise error?
                         }   
                     }
                 }
