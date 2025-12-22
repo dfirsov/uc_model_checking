@@ -89,7 +89,7 @@ module f_atms{
             val P = p.cfg.party
             val sid = p.cfg.sid
             val sid_state = atms.state.get(sid)
-            val maybe_vk = sid_state.VK.find(x => x.party == P)
+            val maybe_vk = sid_state.VK.find(x => x.party == P) // TODO: make sure that VK is functional
 
             if(maybe_vk != None){
                 Set({
@@ -102,7 +102,7 @@ module f_atms{
 
                 val maybe_new_vk = san_vk(p.sim_vk, atms, sid)
 
-                if(clean_vk(maybe_new_vk, sid_state)){ // implies that maybe_new_vk != None
+                if(maybe_new_vk != None and clean_vk(maybe_new_vk, sid_state)){
                     Set({
                         post_state: atms.state.set(sid, {...sid_state,
                             VK: sid_state.VK.setAdd({party: P, vk: maybe_new_vk.unwrap()})
@@ -140,7 +140,7 @@ module f_atms{
         }).flatten()
     }    
 
-    action atms_akey_2_act = all {
+    action atms_akey_2_act : bool = all {
         f_atms_s.input.atms_get_sim_control_messages().size() > 0,
         f_atms_s.handles.atms_get_sim_akey_hold_messages().size() > 0,
         nondet sim_avk = f_atms_s.params.ALL_AVKS.oneOf()
@@ -162,7 +162,7 @@ module f_atms{
         }).flatten()
     }
 
-    pure def clean_avk(avk: Option[ATMS_AVK], sid_state: ATMS_StateVars, C: Set[Party]) : bool = {
+    pure def clean_avk(avk: Option[ATMS_AVK], vks: List[ATMS_VK], sid_state: ATMS_StateVars, C: Set[Party]) : bool = {
         if(avk != None){
             and {
                 not (sid_state.AVK.exists(x => x.avk == avk)),
@@ -172,17 +172,21 @@ module f_atms{
                 }                
             }
         }else{
-           not (sid_state.VK.exists(x => x.vk.in(C)))
+            vks.indices().exists(i => {
+                sid_state.VK.forall(x => {
+                    not (x.vk != vks[i] and not (C.contains(x.party)))
+                })
+            })
         }
     }
 
-    pure def san_avk(avk: Option[ATMS_AVK], atms: ATMS_System, sid: SID) : Option[ATMS_AVK] = {
+    pure def san_avk(avk: Option[ATMS_AVK], vks: List[ATMS_VK], atms: ATMS_System, sid: SID) : Option[ATMS_AVK] = {
         val sid_state = atms.state.get(sid)
 
-        if(clean_avk(avk, sid_state, atms.params.C)){
+        if(clean_avk(avk, vks, sid_state, atms.params.C)){
             avk
         }else{ // TODO: add None here for checking?
-            atms.params.ALL_AVKS.find(avk => clean_avk(Some(avk), sid_state, atms.params.C))
+            atms.params.ALL_AVKS.find(avk => clean_avk(Some(avk), vks, sid_state, atms.params.C))
         }
     }
 
@@ -191,7 +195,7 @@ module f_atms{
             val P = p.cfg.party
             val sid = p.cfg.sid
             val sid_state = atms.state.get(sid)
-            val maybe_avk = sid_state.AVK.find(x => x.vks == p.vks)
+            val maybe_avk = sid_state.AVK.find(x => x.vks == p.vks) // TODO: make sure that AVK is functional
             if(maybe_avk != None){
                 Set({
                     post_state: atms.state,
@@ -200,8 +204,10 @@ module f_atms{
                     )
                 })
             }else{
-                val maybe_new_avk = san_avk(p.sim_avk, atms, p.cfg.sid)
-                if (clean_avk(maybe_new_avk, sid_state, atms.params.C)){ 
+                val maybe_new_avk = san_avk(p.sim_avk, p.vks, atms, p.cfg.sid)
+
+                if (clean_avk(maybe_new_avk, p.vks, sid_state, atms.params.C)){ 
+                    val new_AVK = sid_state.AVK.setAdd({vks: p.vks, avk: maybe_new_avk})
 
                     val new_VKs = if(maybe_new_avk != None) {
                         sid_state.VKs.setAdd({avk: maybe_new_avk.unwrap(), vks: p.vks})
@@ -218,7 +224,7 @@ module f_atms{
 
                     Set({
                         post_state: atms.state.set(sid, {...sid_state,
-                            AVK: sid_state.AVK.setAdd({vks: p.vks, avk: maybe_new_avk}),
+                            AVK: new_AVK,
                             VKs: new_VKs,
                             CVK: new_CVK
                         }),
@@ -280,7 +286,7 @@ module f_atms{
     pure def atms_acheck_3(atms: ATMS_System): Set[ATMS_Transition] = {
         atms.input.atms_get_sim_acheck_release_messages().map(p => {
             val sid_state = atms.state.get(p.cfg.sid)
-            val maybe_avk_record = sid_state.AVK.find(x => x.vks == p.vks)
+            val maybe_avk_record = sid_state.AVK.find(x => x.vks == p.vks) // TODO: AVK must be functional
 
             if(maybe_avk_record != None){
                 val avk = maybe_avk_record.unwrap().avk
@@ -293,9 +299,8 @@ module f_atms{
                 })
             }else{
 
-                val san_sim_avk_maybe = san_avk(p.sim_avk, atms, p.cfg.sid)
-                    
-                if(not (clean_avk(san_sim_avk_maybe, sid_state, atms.params.C))){
+                val san_sim_avk_maybe = san_avk(p.sim_avk, p.vks, atms, p.cfg.sid)
+                if(not (clean_avk(san_sim_avk_maybe, p.vks, sid_state, atms.params.C))){
                     Set() // run out of AVKS, raise error?
                 }else{
                     val new_AVK = sid_state.AVK.setAdd({vks: p.vks, avk: san_sim_avk_maybe})
@@ -432,7 +437,7 @@ module f_atms{
                     )
                 })
             }else{
-                Set()
+                Set() // run out of sigs
             }
             
         }).flatten()
@@ -507,6 +512,8 @@ module f_atms{
                     p.sim_b
                 }
 
+                val new_VER = sid_state.VER.setAdd({vk: p.vk, m: p.m, sig: p.sig, b: new_b})
+
                 val new_CVK = if(sid_state.VK.exists(x => x.vk == p.vk)){
                     sid_state.CVK
                 }else{
@@ -515,7 +522,7 @@ module f_atms{
 
                 Set({
                     post_state: atms.state.set(p.cfg.sid, {...sid_state,
-                        VER: sid_state.VER.setAdd({vk: p.vk, m: p.m, sig: p.sig, b: new_b}),
+                        VER: new_VER,
                         CVK: new_CVK
 
                     }),
@@ -554,7 +561,8 @@ module f_atms{
         f_atms_s.handles.atms_get_sim_asign_hold_messages().size() > 0,
         nondet sim_avk = f_atms_s.params.ALL_AVKS.oneOf()
         nondet sim_tau = f_atms_s.params.ALL_ASIGS.oneOf()
-        val sim_bs = List(true, false, true) // TODO: generate this thing somehow
+        //val sim_bs = List(true, false, true) // TODO: generate this thing somehow
+        nondet sim_bs = listSamplingSpace(5, Set(true,false)).oneOf()
         nondet t = atms_asign_2(f_atms_s, Some(sim_avk), Some(sim_tau), sim_bs).oneOf()
         f_atms_s' = atms_process_transitions(f_atms_s, t) 
     }         
@@ -574,7 +582,8 @@ module f_atms{
     }
 
     pure def clean_asig(tau: Option[ATMS_ASignature], avk: ATMS_AVK, m: ATMS_Document, sid_state: ATMS_StateVars) : bool = {
-        if(tau != None){
+        and {
+            tau != None,
             or {
                 not (sid_state.AVER.exists(x => and {
                     x.m == m,
@@ -588,8 +597,6 @@ module f_atms{
                     x.b == true
                 })
             }
-        }else{
-            true
         }
     }
 
@@ -612,81 +619,85 @@ module f_atms{
             }else{
                 p.sim_avk
             }
-            val avk = san_avk(avk_dirty, atms, p.cfg.sid)
-            // no need to check for clean avk as it is captured by avk == None in the next condition
+            val avk = san_avk(avk_dirty, p.vks, atms, p.cfg.sid)
 
-            if(or {
-                avk == None,
-                not (p.S.indices().forall(i => {
-                    (p.vks.indices().filter(j => p.vks[j] == p.S[i].vk)).size() == 1
-                })),                
-            }){
-                Set({
-                    post_state: atms.state,
-                    effects: Set( 
-                        ATMS_UpdateInput(Set(ASignResponse({cfg: p.cfg, m: p.m, vks: p.vks, S: p.S, avk: avk, bs : p.sim_bs, tau: None}))),
-                    )
-                })
+            if(not (clean_avk(avk, p.vks, sid_state, atms.params.C))){
+                Set() 
             }else{
 
-                val X = range(0,p.S.length()).foldl({ver:sid_state.VER, bs: p.sim_bs, cvk: sid_state.CVK}, (Z,i) => {
-                    val vk = p.S[i].vk
-                    val sig = p.S[i].sig
-
-                    val new_bs = if(Z.ver.exists(x => x.vk == vk and x.m == p.m and x.sig == sig)) {
-                        Z.bs.replaceAt(i, Z.ver.find(x => x.vk == vk and x.m == p.m and x.sig == sig).unwrap().b)
-                    } else {
-                        if(atms.params.P.exclude(atms.params.C).exists(Pp => {
-                            sid_state.VK.exists(x => x.party == Pp and x.vk == vk)
-                        }) ){
-                            Z.bs.replaceAt(i, false)
-                        }else{
-                            Z.bs
-                        }
-                    }
-
-                    val new_ver = Z.ver.setAdd({vk: vk, m: p.m, sig: sig, b: new_bs[i]})
-
-                    val new_cvk = if(sid_state.VK.exists(x => x.vk == vk)){
-                        Z.cvk
-                    }else{
-                        Z.cvk.setAdd(vk)
-                    }
-
-                    {ver:new_ver, bs:new_bs, cvk: new_cvk}
-                })
-
-                if(p.S.indices().filter(i => X.bs[i]).size() <= atms.params.t){
+                if(or {
+                    avk == None,
+                    not (p.S.indices().forall(i => {
+                        (p.vks.indices().filter(j => p.vks[j] == p.S[i].vk)).size() == 1
+                    })),                
+                }){
                     Set({
-                        post_state: atms.state.set(p.cfg.sid, {...sid_state,
-                            VER: X.ver,
-                            CVK: X.cvk
-                        }),
+                        post_state: atms.state,
                         effects: Set( 
-                            ATMS_UpdateInput(Set(ASignResponse({cfg: p.cfg, m: p.m, vks: p.vks, S: p.S, avk: avk, bs : X.bs, tau: None}))),
+                            ATMS_UpdateInput(Set(ASignResponse({cfg: p.cfg, m: p.m, vks: p.vks, S: p.S, avk: avk, bs : p.sim_bs, tau: None}))),
                         )
                     })
                 }else{
-                    val maybe_new_tau = san_asig(p.sim_tau, avk.unwrap(), p.m, atms, p.cfg.sid)
-                    if(maybe_new_tau != None){
-                        val new_tau = maybe_new_tau.unwrap()
+
+                    val X = range(0,p.S.length()).foldl({ver:sid_state.VER, bs: p.sim_bs, cvk: sid_state.CVK}, (Z,i) => {
+                        val vk = p.S[i].vk
+                        val sig = p.S[i].sig
+
+                        val new_bs = if(Z.ver.exists(x => x.vk == vk and x.m == p.m and x.sig == sig)) {
+                            Z.bs.replaceAt(i, Z.ver.find(x => x.vk == vk and x.m == p.m and x.sig == sig).unwrap().b)
+                        } else {
+                            if(atms.params.P.exclude(atms.params.C).exists(Pp => {
+                                sid_state.VK.exists(x => x.party == Pp and x.vk == vk)
+                            }) ){
+                                Z.bs.replaceAt(i, false)
+                            }else{
+                                Z.bs
+                            }
+                        }
+
+                        val new_ver = Z.ver.setAdd({vk: vk, m: p.m, sig: sig, b: new_bs[i]})
+
+                        val new_cvk = if(sid_state.VK.exists(x => x.vk == vk)){
+                            Z.cvk
+                        }else{
+                            Z.cvk.setAdd(vk)
+                        }
+
+                        {ver:new_ver, bs:new_bs, cvk: new_cvk}
+                    })
+
+                    if(p.S.indices().filter(i => X.bs[i]).size() <= atms.params.t){
                         Set({
                             post_state: atms.state.set(p.cfg.sid, {...sid_state,
-                                AVER: sid_state.AVER.setAdd({avk: avk.unwrap(), m: p.m, sig: new_tau, b: true}),
                                 VER: X.ver,
                                 CVK: X.cvk
                             }),
-                            effects: Set(
-                                ATMS_UpdateInput(Set(ASignResponse({cfg: p.cfg, m: p.m, vks: p.vks, S: p.S, avk: avk, bs : X.bs, tau: maybe_new_tau}))),
+                            effects: Set( 
+                                ATMS_UpdateInput(Set(ASignResponse({cfg: p.cfg, m: p.m, vks: p.vks, S: p.S, avk: avk, bs : X.bs, tau: None}))),
                             )
                         })
                     }else{
-                        Set()
-                    }   
+                        val maybe_new_tau = san_asig(p.sim_tau, avk.unwrap(), p.m, atms, p.cfg.sid)
+                        if(clean_asig(maybe_new_tau, avk.unwrap(), p.m, sid_state) and maybe_new_tau != None){
+                            val new_tau = maybe_new_tau.unwrap()
+                            Set({
+                                post_state: atms.state.set(p.cfg.sid, {...sid_state,
+                                    AVER: sid_state.AVER.setAdd({avk: avk.unwrap(), m: p.m, sig: new_tau, b: true}),
+                                    VER: X.ver,
+                                    CVK: X.cvk
+                                }),
+                                effects: Set(
+                                    ATMS_UpdateInput(Set(ASignResponse({cfg: p.cfg, m: p.m, vks: p.vks, S: p.S, avk: avk, bs : X.bs, tau: maybe_new_tau}))),
+                                )
+                            })
+                        }else{
+                            Set()
+                        }   
+                    }
                 }
             }
-        }).flatten()
-
+            }).flatten()
+    
     }
 
     pure def atms_aver_1(atms: ATMS_System) : Set[ATMS_Transition] = {
@@ -715,21 +726,22 @@ module f_atms{
         f_atms_s.input.atms_get_sim_control_messages().size() > 0,
         f_atms_s.handles.atms_get_sim_averify_hold_messages().size() > 0,
         nondet sim_vks_set = f_atms_s.params.ALL_VKS.powerset().oneOf()
-        nondet t = atms_aver_2(f_atms_s, Some(sim_vks_set.setToList())).oneOf()
+        nondet sim_b = Set(true,false).oneOf()
+        nondet t = atms_aver_2(f_atms_s, Some(sim_vks_set.setToList()), sim_b).oneOf()
         f_atms_s' = atms_process_transitions(f_atms_s, t) 
     }             
 
-    pure def atms_aver_2(atms: ATMS_System, sim_vks: Option[List[ATMS_VK]]) : Set[ATMS_Transition] = {
+    pure def atms_aver_2(atms: ATMS_System, sim_vks: Option[List[ATMS_VK]], sim_b: bool) : Set[ATMS_Transition] = {
         atms.input.atms_get_sim_control_messages().map(_ => {
             atms.handles.atms_get_sim_averify_hold_messages().map(p => {
-                Set(true,false).map(b => {
+                {
                         post_state: atms.state,
                         effects: Set(
-                            ATMS_UpdateInput(Set(SIMAVerifyRelease({cfg: p.cfg, avk: p.avk, m: p.m, sig: p.sig, sim_b: b, sim_vks: sim_vks}))),
+                            ATMS_UpdateInput(Set(SIMAVerifyRelease({cfg: p.cfg, avk: p.avk, m: p.m, sig: p.sig, sim_b: sim_b, sim_vks: sim_vks}))),
                             ATMS_RemoveHandle(SIMAVerifyHold(p))
                         )
-                })
-            }).flatten()
+                }
+            })
         }).flatten()
     }
 
@@ -738,7 +750,7 @@ module f_atms{
             val sid = p.cfg.sid
             val sid_state = atms.state.get(sid)
 
-            val maybe_aver_entry = sid_state.AVER.find(x => and {
+            val maybe_aver_entry = sid_state.AVER.find(x => and { // TODO: AVER must be functional
                 x.avk == p.avk,
                 x.m == p.m,
                 x.sig == p.sig,
@@ -754,13 +766,17 @@ module f_atms{
                 })
             }else{
 
-                val vk_star = if(sid_state.VKs.exists(x => x.avk == p.avk)){
+                val maybe_vk_star = if(sid_state.VKs.exists(x => x.avk == p.avk)){
                     Some(sid_state.VKs.find(x => x.avk == p.avk).unwrap().vks)
                 }else{
                     p.sim_vks
                 }
 
-                if(vk_star == None){
+                if(or {
+                    maybe_vk_star == None,
+                    not (sid_state.AVK.exists(x => x.avk == Some(p.avk))),
+                    // TODO: check AVK
+                    }){
                     Set({
                         post_state: atms.state.set(sid, {...sid_state,
                             AVER: sid_state.AVER.setAdd({avk: p.avk, m: p.m, sig: p.sig, b: false})
@@ -770,45 +786,46 @@ module f_atms{
                         )
                     })
                 }else{
-                    val new_AVK = sid_state.AVK.setAdd({vks: vk_star.unwrap(), avk: Some(p.avk)})
-                    val new_VKs = sid_state.VKs.setAdd({avk: p.avk, vks: vk_star.unwrap()})
-                    val new_CVK = vk_star.unwrap().foldl(sid_state.CVK, (cvk, key) => {
+                    val vk_star = maybe_vk_star.unwrap()
+                    val new_AVK = sid_state.AVK.setAdd({vks: maybe_vk_star.unwrap(), avk: Some(p.avk)})
+                    val new_VKs = sid_state.VKs.setAdd({avk: p.avk, vks: maybe_vk_star.unwrap()})
+                    val new_CVK = maybe_vk_star.unwrap().foldl(sid_state.CVK, (cvk, key) => {
                         if(sid_state.VK.exists(x => x.vk == key)){
                             cvk
                         }else{
                             cvk.setAdd(key)
                         }
                     })
+                    
 
-                    val vks_cor = sid_state.VK.filter(vk_record => {
+                    val VKS_C = sid_state.VK.filter(vk_record => {
                         vk_record.party.in(atms.params.C)                             
                     }).map(vk_record => vk_record.vk)
 
-                    val vks_sig = sid_state.Signers.filter(s => s.m == p.m).map(s => s.vk)
+                    val Z = vk_star.indices().fold({q_ctr : 0}, (acc, i) => {
+                        val vk = vk_star[i]
+                        if(or {
+                            not (sid_state.VK.exists(x => x.vk == vk)),
+                            vk.in(VKS_C.union(sid_state.Signers.filter(x => x.m == p.m).map(x => x.vk)))
+                        }){
+                            {q_ctr: acc.q_ctr + 1}
+                        }else{
+                            acc
+                        }
+                    })
 
-                    val vk_star_set = vk_star.unwrap().indices().map(i => vk_star.unwrap()[i])
-                    val vks_new = vk_star_set.exclude(
-                        sid_state.VK.filter(vk_record => {
-                            vk_record.party.in(atms.params.P.exclude(atms.params.C))                             
-                        }).map(vk_record => vk_record.vk)
-                    )
-                        
-                    val b_final = if (vks_cor.union(vks_sig).union(vks_new).intersect(vk_star_set).size()
-                             <= atms.params.t){
-                        false
-                    }else{
-                        p.sim_b
-                    }
+                    val new_b = if(Z.q_ctr <= atms.params.t) false else true
+
 
                     Set({
                         post_state: atms.state.set(sid, {...sid_state,
                             AVK: new_AVK, // BUG: problem with duplication
                             VKs: new_VKs,
                             CVK: new_CVK,
-                            AVER: sid_state.AVER.setAdd({avk: p.avk, m: p.m, sig: p.sig, b: b_final})
+                            AVER: sid_state.AVER.setAdd({avk: p.avk, m: p.m, sig: p.sig, b: new_b})
                         }),
                         effects: Set(
-                            ATMS_UpdateInput(Set(AVerifyResponse({cfg: p.cfg, avk: p.avk, m: p.m, sig: p.sig, b: b_final}))),
+                            ATMS_UpdateInput(Set(AVerifyResponse({cfg: p.cfg, avk: p.avk, m: p.m, sig: p.sig, b: new_b}))),
                         )
                     })
                 }
