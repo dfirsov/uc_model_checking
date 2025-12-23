@@ -83,7 +83,8 @@ module f_atms_env{
     action env_akey_reqs(cfg: MsgConfig) : bool = all {
         // Precondition: input must be empty
         f_atms_s.input.size() == 0,
-        nondet vks = listSamplingSpace(list_length, ALL_VK).oneOf()
+        nondet vks = allUpToListSamplingSpace(list_length, ALL_VK).oneOf() 
+        //listSamplingSpace(list_length, ALL_VK).oneOf()
 
         f_atms_s' = {...f_atms_s, 
             input: Set(AKeyRequest({cfg: cfg, vks: vks})),

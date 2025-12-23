@@ -66,5 +66,11 @@ module common {
       }
   }
 
+  // all possible lists of length up to n consisting of values from vals
+  pure def allUpToListSamplingSpace(n : int, vals: Set[a]) : Set[List[a]] = {
+    0.to(n).fold(Set(), (acc, i) => {
+      acc.union(listSamplingSpace(i, vals))
+    })
+  }
 
 }

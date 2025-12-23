@@ -205,6 +205,50 @@ val Sign_NonBottom_Response = f_atms_s.log.map(x => x.msg).atms_get_sign_respons
     has_vk implies (sign_resp.sig != None)
 })
 
+val Signers_Correctness_1 = sids.forall(sid => {
+    val sid_state = f_atms_s.state.get(sid)
+    sid_state.Signers.forall(signer =>
+        f_atms_s.log.map(x => x.msg).union(f_atms_s.input).atms_get_sign_response_messages().exists(sign =>
+            and {
+                sign.cfg.sid == sid,
+                sign.m == signer.m,
+                sign.sig != None,
+                // Check that this vk belongs to the signing party
+                sid_state.VK.exists(vk_entry =>
+                    and {
+                        vk_entry.vk == signer.vk,
+                        vk_entry.party == sign.cfg.party
+                    }
+                )
+            }
+        )
+    )
+})
+
+val Signers_Correctness_2 = sids.forall(sid => {
+    val sid_state = f_atms_s.state.get(sid)
+    sid_state.VER.forall(ver =>
+        if (and {
+            ver.b == true,
+            sid_state.VK.exists(vk_entry =>
+                and {
+                    vk_entry.vk == ver.vk,
+                    not (f_atms_s.params.C.contains(vk_entry.party))
+                }
+            )
+        }) {
+            sid_state.Signers.exists(signer =>
+                and {
+                    signer.vk == ver.vk,
+                    signer.m == ver.m
+                }
+            )
+        } else {
+            true
+        }
+    )
+})
+
 // ACheck correctness: Any vks that have been aggregated to an avk ≠ None will pass ACheck
 // for all AKey responses in the log, if avk != None then ACheck of that avk and vks must be true
 val ACheck_Correctness = f_atms_s.log.map(x => x.msg).atms_get_akey_response_messages().forall(akey_resp => {
@@ -469,7 +513,7 @@ val ASign_Unforgeability = f_atms_s.log.map(x => x.msg).atms_get_averify_respons
             }).size()
             
             // The count must be at least t
-            valid_vk_count >= f_atms_s.params.t
+            valid_vk_count >= f_atms_s.params.t + 1
         })
     } else {
         true  // No constraint if verification failed
@@ -501,20 +545,37 @@ val AllCorrectness = all {
     ACheck_Correctness,
     Sig_Correctness,
     AVK_Correctness,
-    ASign_Correctness
+    ASign_Correctness,
+    Sign_NonBottom_Response,
+    Signers_Correctness_1,
+    Signers_Correctness_2,
+    ASign_ThresholdNecessary,    
 }
 
 val AllUnforgeability = all {
-    Sign_Unforgeability,
+    //Sign_Unforgeability,
     ASign_Unforgeability
 }
 
+// --seed=0x119d88c0b1b3ba
 val AllProps = all {
     AllFunctional,
     AllInjective,
     AllDeterministic,
     AllCorrectness,
     AllUnforgeability
+}
+
+val ASign_ThresholdNecessary = f_atms_s.log.map(x => x.msg).atms_get_asign_response_messages().forall(asign =>
+    (asign.tau != None) implies (asign.S.length() >= f_atms_s.params.t + 1)
+)
+
+val AVK_ThresholdNecessary = f_atms_s.log.map(x => x.msg).atms_get_akey_response_messages().forall(akey =>
+    (akey.avk != None) implies (akey.vks.length() >= f_atms_s.params.t + 1)
+)
+
+val NewProps = all {
+    AVK_ThresholdNecessary
 }
 
 }

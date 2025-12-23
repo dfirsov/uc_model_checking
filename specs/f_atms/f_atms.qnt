@@ -633,13 +633,30 @@ module f_atms{
     pure def atms_asign_3(atms: ATMS_System): Set[ATMS_Transition] = {
         atms.input.atms_get_sim_asign_release_messages().map(p => {
             val sid_state = atms.state.get(p.cfg.sid)
-            
-            val avk_dirty = if(sid_state.AVK.exists(x => x.vks == p.vks)){
-                sid_state.AVK.find(x => x.vks == p.vks).unwrap().avk
+
+            val Y = if(sid_state.AVK.exists(x => x.vks == p.vks)){
+                sid_state
             }else{
-                p.sim_avk
+                val avk = san_avk(p.sim_avk, p.vks, atms, p.cfg.sid)
+                val new_AVK = sid_state.AVK.setAdd({vks: p.vks, avk: avk})
+                val new_VKs = if(avk != None){
+                    sid_state.VKs.setAdd({avk: avk.unwrap(), vks: p.vks})
+                }else{
+                    sid_state.VKs
+                } 
+                val new_CVK = p.vks.foldl(sid_state.CVK, (cvk, key) => {
+                        if(sid_state.VK.exists(x => x.vk == key)){
+                            cvk
+                        }else{
+                            cvk.setAdd(key)
+                        }
+                    })
+                {...sid_state, CVK: new_CVK, AVK: new_AVK, VKs: new_VKs}
             }
-            val avk = san_avk(avk_dirty, p.vks, atms, p.cfg.sid)
+            val sid_state = Y
+
+
+            val avk = sid_state.AVK.find(x => x.vks == p.vks).unwrap().avk
 
             if(not (clean_avk(avk, p.vks, sid_state, atms.params.C))){
                     Set({
@@ -657,7 +674,7 @@ module f_atms{
                     })),                
                 }){
                     Set({
-                        post_state: atms.state,
+                        post_state: atms.state.set(p.cfg.sid, sid_state),  // TODO: update the state here?
                         effects: Set( 
                             ATMS_UpdateInput(Set(ASignResponse({cfg: p.cfg, m: p.m, vks: p.vks, S: p.S, avk: avk, bs : p.sim_bs, tau: None}))),
                         )
@@ -670,6 +687,7 @@ module f_atms{
 
                         val new_bs = if(Z.ver.exists(x => x.vk == vk and x.m == p.m and x.sig == sig)) {
                             Z.bs.replaceAt(i, Z.ver.find(x => x.vk == vk and x.m == p.m and x.sig == sig).unwrap().b)
+                            
                         } else {
                             if(atms.params.P.exclude(atms.params.C).exists(Pp => {
                                 sid_state.VK.exists(x => x.party == Pp and x.vk == vk)
@@ -690,6 +708,7 @@ module f_atms{
 
                         {ver:new_ver, bs:new_bs, cvk: new_cvk}
                     })
+
 
                     if(p.S.indices().filter(i => X.bs[i]).size() <= atms.params.t){
                         Set({
@@ -804,8 +823,13 @@ module f_atms{
 
                 if(or {
                     maybe_vk_star == None,
-                    not (sid_state.AVK.exists(x => x.avk == Some(p.avk))),
-                    // TODO: check AVK
+                    and {
+                        maybe_vk_star != None,
+                        (sid_state.AVK.exists(x => maybe_vk_star.unwrap() == x.vks)),
+                        not (sid_state.AVK.exists(x => x.avk == Some(p.avk)))
+                    }
+                    ,
+                    clean_avk(Some(p.avk), maybe_vk_star.unwrap(), sid_state, atms.params.C)
                     }){
                     Set({
                         post_state: atms.state.set(sid, {...sid_state,
@@ -834,7 +858,7 @@ module f_atms{
 
                     val Z = vk_star.indices().fold({q_ctr : 0}, (acc, i) => {
                         val vk = vk_star[i]
-                        if(or {
+                        if(or { 
                             not (sid_state.VK.exists(x => x.vk == vk)),
                             vk.in(VKS_C.union(sid_state.Signers.filter(x => x.m == p.m).map(x => x.vk)))
                         }){
