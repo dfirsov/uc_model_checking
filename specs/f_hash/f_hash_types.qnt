@@ -1,0 +1,135 @@
+module f_hash_types {
+
+    import basicSpells.* from "../../spells/basicSpells"
+    import common.* from "../common"
+
+    // define types of the system  
+    type Hash_Output = int
+    type Hash_Input = int
+
+    type HASH_Message =
+        | HashRequest({cfg: MsgConfig, x: Hash_Input}) 
+        | SIMHashRequestHold({cfg: MsgConfig, x: Hash_Input})
+        | SIMHashRequestRelease({cfg: MsgConfig, x: Hash_Input, sim_h: Hash_Output})     
+        | HashResponse({cfg: MsgConfig, x: Hash_Input, h: Hash_Output})
+
+        | SIMControl  
+
+
+    pure def crs_get_all_response_messages(messages: Set[HASH_Message]): Set[HASH_Message] = {
+        messages.filterMap(m => {
+        match m {
+            | HashResponse(p) => Some(HashResponse(p))
+            | _ => None
+        }
+        })
+    }      
+
+    type HASH_SystemParams = {
+        P : Set[Party], // parties who can use the functionality
+        SIDs: Set[SID], // TODO: is this correct?
+
+        ALL_HASHES : Set[Hash_Output],
+    }
+
+    type HASH_StateVars = 
+        {
+            hash_map : Hash_Input -> Hash_Output
+        }
+
+    type HASH_System = {
+        params : HASH_SystemParams,
+        state : SID -> HASH_StateVars,
+        input : Set[HASH_Message], // always not more than 1 message in the system
+        nonce : Nonce,        // to be able to match requests and responses in the trace
+        log : Set[{idx: int, msg: HASH_Message, }], // state: HASH_StateVars
+        handles : Set[HASH_Message],
+    }  
+
+    type HASH_Effect = 
+      | HASH_LogMessage(HASH_Message)
+      | HASH_UpdateInput(Set[HASH_Message])
+      | HASH_AppendHandle(HASH_Message)
+      | HASH_RemoveHandle(HASH_Message)      
+
+
+    type HASH_Transition = {
+        post_state: SID -> HASH_StateVars,
+        effects: Set[HASH_Effect]
+    }
+
+   pure def hash_get_all_response_messages(messages: Set[HASH_Message]): Set[HASH_Message] = {
+        messages.filterMap(m => {
+        match m {
+            | HashResponse(p) => Some(HashResponse(p))
+            | _ => None
+        }
+        })
+    }        
+
+    pure def hash_get_hash_request_messages(messages: Set[HASH_Message]): Set[{cfg: MsgConfig, x: Hash_Input}] = {
+        messages.filterMap(m => {
+            match m {
+                | HashRequest(p) => Some(p)
+                | _ => None
+            }
+        })
+    }
+    pure def hash_get_sim_request_hold_messages(messages: Set[HASH_Message]): Set[{cfg: MsgConfig, x: Hash_Input}] = {
+        messages.filterMap(m => {
+            match m {
+                | SIMHashRequestHold(p) => Some(p)
+                | _ => None
+            }
+        })
+    }
+
+    pure def hash_get_sim_request_release_messages(messages: Set[HASH_Message]): Set[{cfg: MsgConfig, x: Hash_Input, sim_h: Hash_Output}] = {
+        messages.filterMap(m => {
+            match m {
+                | SIMHashRequestRelease(p) => Some(p)
+                | _ => None
+            }
+        })
+    }
+
+    pure def hash_get_response_messages(messages: Set[HASH_Message]): Set[{cfg: MsgConfig, x: Hash_Input, h: Hash_Output}] = {
+        messages.filterMap(m => {
+            match m {
+                | HashResponse(p) => Some(p)
+                | _ => None
+            }
+        })
+    }
+
+    pure def hash_get_sim_control_messages(messages: Set[HASH_Message]): Set[HASH_Message] = {
+        messages.filterMap(m => {
+            match m {
+                | SIMControl => Some(SIMControl)
+                | _ => None
+            }
+        })
+    }
+
+    pure def hash_apply_effect(sys: HASH_System, eff: HASH_Effect): HASH_System = {
+        match eff {
+        | HASH_LogMessage(msg) => 
+            {...sys, 
+                log: sys.log.setAdd({idx: sys.log.size(), msg: msg,})
+            }
+        | HASH_UpdateInput(msgs) => 
+            {...sys, 
+                input: msgs
+            }
+        | HASH_AppendHandle(msg) => 
+            {...sys,
+                handles: sys.handles.union(Set(msg)),
+            }
+        | HASH_RemoveHandle(handle_to_remove) =>
+            {...sys,
+                handles: sys.handles.exclude(Set(handle_to_remove))
+            }
+        }
+    }        
+
+}
