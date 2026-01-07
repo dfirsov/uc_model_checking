@@ -330,7 +330,7 @@ module g_ledger{
     pure def led_valid(vallidator: LED_ValidatorState, log: LED_Log, tx: TX): {val_state: LED_ValidatorState, valid: bool} = {
         {val_state: vallidator, valid: log.indices().forall(i => log[i].tx != tx)} 
     }
-        
+
 
    def led_main_listener(led: LED_System, clock: GC_System) : (Set[(LED_Transition, GC_Transition)]) = {
         Set(
@@ -344,10 +344,11 @@ module g_ledger{
             //led_read_2(led, clock), // a direct action instead
             led_read_3(led, clock),
             led_read_4(led, clock),
-            led_sim_loses_ctrl(led, clock) 
+
+            //led_sim_loses_ctrl(led, clock) // wrong place
         ).flatten()
     }    
-
+ 
 
     def led_apply_effect(sys: LED_System, eff: LED_Effect): LED_System = {
         match eff {
@@ -391,10 +392,10 @@ module g_ledger{
 
     action led_step : bool =  any {
         led_gc_step_with(led_main_listener),
-        led_read_2_act
+        led_read_2_act,
     }    
 
-    pure def led_initial(P: Set[Party], C: Set[Party], SIDs: Set[SID], delta_latency: Time, delta_slack: Time, Val: LED_ValidatorState) : LED_System = {
+    pure def led_initial(P: Set[Party], C: Set[Party], SIDs: Set[SID], delta_latency: Time, delta_slack: Time, delta_apl: Time, Val: LED_ValidatorState, comsel_a: int, comsel_b: int, comsel_c: int) : LED_System = {
         {
             params : {
                 P : P,
@@ -402,6 +403,11 @@ module g_ledger{
                 SIDs: SIDs,
                 delta_latency: delta_latency,
                 delta_slack: delta_slack,
+                delta_apl: delta_apl,
+
+                comsel_a: comsel_a,
+                comsel_b: comsel_b,
+                comsel_c: comsel_c,  
             },
             state : 
                 {
@@ -409,7 +415,10 @@ module g_ledger{
                     eID : 0,
                     log: List(),
                     ptr: Map(),
-                    Val: Val 
+                    Val: Val,
+                    Com: Map(),
+                    APL: Map(),
+                    genesis: 0,
                 },
             input : Set(),
             nonce : 0,      
@@ -418,8 +427,8 @@ module g_ledger{
         }        
     }
 
-    action led_init(P: Set[Party], C: Set[Party], SIDs: Set[SID], delta_latency: Time, delta_slack: Time, Val: LED_ValidatorState) : bool =  all {
-        g_ledger_s' = led_initial(P, C, SIDs, delta_latency, delta_slack, Val)
-    }          
+    action led_init(P: Set[Party], C: Set[Party], SIDs: Set[SID], delta_latency: Time, delta_slack: Time, delta_apl: Time, Val: LED_ValidatorState, comsel_a: int, comsel_b: int, comsel_c: int) : bool =  all {
+        g_ledger_s' = led_initial(P, C, SIDs, delta_latency, delta_slack, delta_apl, Val, comsel_a, comsel_b, comsel_c)
+    }
 
 }

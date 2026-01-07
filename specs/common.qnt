@@ -73,4 +73,8 @@ module common {
     })
   }
 
+  pure def setMin (a: Set[int], max: int): int = {
+      a.fold(max, (r, x) => if (x < r) x else r)
+  }
+
 }

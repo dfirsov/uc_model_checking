@@ -8,6 +8,9 @@ module g_ledger_types{
     type TX = int
     type LED_ValidatorState = bool // (List[Party], TX) => bool
     type LED_Log = List[{tx:TX, time: Time}] // mentally this is a list of (tx, time) pairs indexed by Pointer
+    type CommitteeMember = int
+    type Committee = List[CommitteeMember]
+    type LED_Block = int
 
     type LED_Message =
 
@@ -27,6 +30,22 @@ module g_ledger_types{
         | ReadTimeRequestHold({cfg: MsgConfig, I : List[Pointer], ptr_prim : Pointer })
         | ReadResponse({cfg: MsgConfig, result: List[TX]})
 
+        // EXTENSIONS
+        | ComSelRequest({cfg: MsgConfig})
+        | ComSelSIMHold({cfg: MsgConfig, r: Time})
+        | ComSelSIMRelease({cfg: MsgConfig, r: Time, sim_com: List[CommitteeMember]})
+        | ComSelResponse({cfg: MsgConfig, r: Time, com: List[CommitteeMember]})
+
+        | APLRequest({cfg: MsgConfig})
+        | APLSIMHold({cfg: MsgConfig, r: Time})
+        | APLSIMRelease({cfg: MsgConfig, r: Time, sim_p: Pointer})
+        | APLResponse({cfg: MsgConfig, r: Time, p: Pointer})
+
+        | GenesisRequest({cfg: MsgConfig})
+        | GenesisSIMHold({cfg: MsgConfig})
+        | GenesisSIMRelease({cfg: MsgConfig})
+        | GenesisResponse({cfg: MsgConfig, genesis: LED_Block})
+
         | SIMControl      
     
 
@@ -34,8 +53,14 @@ module g_ledger_types{
         P : Set[Party], 
         C : Set[Party], 
         SIDs: Set[SID], 
+
         delta_latency: Time,
         delta_slack: Time,
+        delta_apl: Time,
+
+        comsel_a: int,
+        comsel_b: int,
+        comsel_c: int,  
     }    
 
 
@@ -45,6 +70,9 @@ module g_ledger_types{
         log: LED_Log,
         ptr: Party -> Pointer,
         Val: LED_ValidatorState,
+        Com: Time -> Committee,  // ComSel state
+        APL: Time -> Pointer,  // APL state
+        genesis: LED_Block
     }
 
 
@@ -81,11 +109,85 @@ module g_ledger_types{
             | SubmitResponse(p) => Some(SubmitResponse(p))
             | OKResponse(p) => Some(OKResponse(p))
             | ReadResponse(p) => Some(ReadResponse(p))  
+            | ComSelResponse(p) => Some(ComSelResponse(p))
+            | APLResponse(p) => Some(APLResponse(p))
+            | GenesisResponse(p) => Some(GenesisResponse(p))
             | _ => None
         }
         })
     }    
 
+
+    pure def led_get_genesis_request_messages(messages: Set[LED_Message]): Set[{cfg: MsgConfig}] = {
+        messages.filterMap(m => {
+        match m {
+            | GenesisRequest(p) => Some(p)
+            | _ => None
+        }
+        })
+    }
+
+    pure def led_get_genesis_sim_hold_messages(messages: Set[LED_Message]): Set[{cfg: MsgConfig}] = {
+        messages.filterMap(m => {
+        match m {
+            | GenesisSIMHold(p) => Some(p)
+            | _ => None
+        }
+        })
+    }
+
+    pure def led_get_genesis_sim_release_messages(messages: Set[LED_Message]): Set[{cfg: MsgConfig}] = {
+        messages.filterMap(m => {
+        match m {
+            | GenesisSIMRelease(p) => Some(p)
+            | _ => None
+        }
+        })
+    }
+
+    pure def led_get_genesis_response_messages(messages: Set[LED_Message]): Set[{cfg: MsgConfig, genesis: LED_Block}] = {
+        messages.filterMap(m => {
+        match m {
+            | GenesisResponse(p) => Some(p)
+            | _ => None
+        }
+        })
+    }
+    pure def led_get_apl_request_messages(messages: Set[LED_Message]): Set[{cfg: MsgConfig}] = {
+        messages.filterMap(m => {
+        match m {
+            | APLRequest(p) => Some(p)
+            | _ => None
+        }
+        })
+    }
+
+    pure def led_get_apl_sim_hold_messages(messages: Set[LED_Message]): Set[{cfg: MsgConfig, r: Time}] = {
+        messages.filterMap(m => {
+        match m {
+            | APLSIMHold(p) => Some(p)
+            | _ => None
+        }
+        })
+    }
+
+    pure def led_get_apl_sim_release_messages(messages: Set[LED_Message]): Set[{cfg: MsgConfig, r: Time, sim_p: Pointer}] = {
+        messages.filterMap(m => {
+        match m {
+            | APLSIMRelease(p) => Some(p)
+            | _ => None
+        }
+        })
+    }
+
+    pure def led_get_apl_response_messages(messages: Set[LED_Message]): Set[{cfg: MsgConfig, r: Time, p: Pointer}] = {
+        messages.filterMap(m => {
+        match m {
+            | APLResponse(p) => Some(p)
+            | _ => None
+        }
+        })
+    }
 
     pure def led_get_submit_request_messages(messages: Set[LED_Message]): Set[{cfg: MsgConfig, tx: TX}] = {
         messages.filterMap(m => {
@@ -95,6 +197,43 @@ module g_ledger_types{
         }
         })
     }
+
+    pure def led_get_comsel_request_messages(messages: Set[LED_Message]): Set[{cfg: MsgConfig}] = {
+        messages.filterMap(m => {
+        match m {
+            | ComSelRequest(p) => Some(p)
+            | _ => None
+        }
+        })
+    }
+
+    pure def led_get_comsel_sim_hold_messages(messages: Set[LED_Message]): Set[{cfg: MsgConfig, r: Time}] = {
+        messages.filterMap(m => {
+        match m {
+            | ComSelSIMHold(p) => Some(p)
+            | _ => None
+        }
+        })
+    }
+
+    pure def led_get_comsel_sim_release_messages(messages: Set[LED_Message]): Set[{cfg: MsgConfig, r: Time, sim_com: List[CommitteeMember]}] = {
+        messages.filterMap(m => {
+        match m {
+            | ComSelSIMRelease(p) => Some(p)
+            | _ => None
+        }
+        })
+    }
+
+    pure def led_get_comsel_response_messages(messages: Set[LED_Message]): Set[{cfg: MsgConfig, r: Time, com: List[CommitteeMember]}] = {
+        messages.filterMap(m => {
+        match m {
+            | ComSelResponse(p) => Some(p)
+            | _ => None
+        }
+        })
+    }
+
 
     pure def led_get_submit_time_request_hold_messages(messages: Set[LED_Message]): Set[{cfg: MsgConfig, tx:TX}] = {
         messages.filterMap(m => {

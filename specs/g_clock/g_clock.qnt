@@ -62,7 +62,12 @@ module g_clock{
                     )
                 })
             } else {
-                Set()
+                Set({
+                    post_state : clock.state,
+                    effects : Set(
+                        GC_UpdateInput(Set()),
+                    )
+                })
             }
         }).flatten()
     }

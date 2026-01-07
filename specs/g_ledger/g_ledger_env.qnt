@@ -3,21 +3,28 @@ module g_ledger_env {
     import basicSpells.* from "../../spells/basicSpells"
     import g_ledger_types.* from "./g_ledger_types"
     import g_ledger.* from "./g_ledger"
+    import g_ledger_comsel.* from "./g_ledger_comsel" 
+    import g_ledger_apl.* from "./g_ledger_apl" 
+    import g_ledger_genesis.* from "./g_ledger_genesis" 
     import g_clock_types.* from "../g_clock/g_clock_types"
     import g_clock.* from "../g_clock/g_clock"
     import common.* from "../common"    
 
-   val ALL_TXS = 1.to(20)
+   val ALL_TXS = 1.to(5)
    val Parties = Set(1,2)
    val C = Set()
    val sids = Set(1)
    val delta_latency = 1
    val delta_slack = 1
+   val delta_apl = 1
    //pure def Val : LED_ValidatorState = (parties, tx) => true
 
 
     action step : bool = any {
         led_step,  
+        led_step_comsel,
+        led_step_apl,
+        led_step_genesis,
         gc_step_led_wait,
         env_led_send_all_reqs,
         env_consume_responses,
@@ -55,7 +62,7 @@ module g_ledger_env {
    }        
   
     action init = all {
-        led_init(Parties, C, sids, delta_latency, delta_slack, true),
+        led_init(Parties, C, sids, delta_latency, delta_slack, delta_apl, true,1,1,2),
         gc_init(C,0,Set({party: 1, sid: 1}, {party:2, sid:1})),
     }
 
@@ -67,13 +74,11 @@ module g_ledger_env {
         any {
             env_led_submit_reqs(from, sid, tx), 
             env_led_read_reqs(from, sid),
-            // bias toward ok requests
             env_ok_reqs(from, sid),
             env_ok_reqs(from, sid),
-            //env_ok_reqs(from, sid),
-            //env_ok_reqs(from, sid),
-            env_led_sim_reqs,
-            env_gc_sim_reqs,
+            //env_led_apl_reqs(from, sid),
+            env_led_genesis_reqs(from, sid),
+            //env_led_comsel_reqs(from, sid)
         }
     }
 
@@ -92,6 +97,46 @@ module g_ledger_env {
         },
         gc_stutter
     }
+
+    // Environment interaction: non-deterministically add requests when input is empty
+    action env_led_comsel_reqs(from:Party, sid: SID) : bool = all {
+        // Precondition: input must be empty
+        g_clock_s.input.size() == 0 and g_ledger_s.input.size() == 0,
+        
+        // Non-deterministically choose a party and SID
+        val cfg = {party: from, sid: sid, nonce: g_ledger_s.nonce}
+        g_ledger_s' = {...g_ledger_s, 
+            input: Set(ComSelRequest({cfg: cfg})),
+            nonce: g_ledger_s.nonce + 1
+        },
+        gc_stutter
+    }    
+
+    action env_led_apl_reqs(from:Party, sid: SID) : bool = all {
+        // Precondition: input must be empty
+        g_clock_s.input.size() == 0 and g_ledger_s.input.size() == 0,
+        
+        // Non-deterministically choose a party and SID
+        val cfg = {party: from, sid: sid, nonce: g_ledger_s.nonce}
+        g_ledger_s' = {...g_ledger_s, 
+            input: Set(APLRequest({cfg: cfg})),
+            nonce: g_ledger_s.nonce + 1
+        },
+        gc_stutter
+    }        
+
+    action env_led_genesis_reqs(from:Party, sid: SID) : bool = all {
+        // Precondition: input must be empty
+        g_clock_s.input.size() == 0 and g_ledger_s.input.size() == 0,
+        
+        // Non-deterministically choose a party and SID
+        val cfg = {party: from, sid: sid, nonce: g_ledger_s.nonce}
+        g_ledger_s' = {...g_ledger_s, 
+            input: Set(GenesisRequest({cfg: cfg})),
+            nonce: g_ledger_s.nonce + 1
+        },
+        gc_stutter
+    }            
 
     action env_led_read_reqs(from:Party, sid: SID) : bool = all {
         // Precondition: input must be empty
@@ -125,22 +170,22 @@ module g_ledger_env {
         gc_stutter     
     }
 
-    action env_led_sim_reqs : bool = all {
-        g_clock_s.input.size() == 0 and g_ledger_s.input.size() == 0,
-        g_ledger_s' = {...g_ledger_s, 
-            input: Set(SIMControl),
-            nonce: g_ledger_s.nonce + 1
-        },
-        gc_stutter
-    }
+    // action env_led_sim_reqs : bool = all {
+    //     g_clock_s.input.size() == 0 and g_ledger_s.input.size() == 0,
+    //     g_ledger_s' = {...g_ledger_s, 
+    //         input: Set(SIMControl),
+    //         nonce: g_ledger_s.nonce + 1
+    //     },
+    //     gc_stutter
+    // }
 
-    action env_gc_sim_reqs : bool = all {
-        g_clock_s.input.size() == 0 and g_ledger_s.input.size() == 0,
-        g_clock_s' = {...g_clock_s, 
-            input: Set(GC_SIMControl),
-            nonce: g_clock_s.nonce + 1
-        },
-        g_ledger_s' = g_ledger_s,
-    }
+    // action env_gc_sim_reqs : bool = all {
+    //     g_clock_s.input.size() == 0 and g_ledger_s.input.size() == 0,
+    //     g_clock_s' = {...g_clock_s, 
+    //         input: Set(GC_SIMControl),
+    //         nonce: g_clock_s.nonce + 1
+    //     },
+    //     g_ledger_s' = g_ledger_s,
+    // }
        
 }
