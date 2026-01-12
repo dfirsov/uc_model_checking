@@ -4,6 +4,12 @@ module g_ledger_types{
     import common.* from "../common"
 
     // define types of the system  
+    type LED_Msg = {h : int, avk: int}
+    type LED_Tx = 
+        | Normal({tx: int, b: bool})
+        | Install({cID: int, code: int})
+        | Update({msg: LED_Msg, sigma: int})
+
     type Pointer = int
     type TX = int
     type LED_ValidatorState = bool // (List[Party], TX) => bool
@@ -11,6 +17,7 @@ module g_ledger_types{
     type CommitteeMember = int
     type Committee = List[CommitteeMember]
     type LED_Block = int
+    type LED_Buffer = Pointer -> {tx: TX, time: Time}
 
     type LED_Message =
 
@@ -28,6 +35,7 @@ module g_ledger_types{
         | ReadSIMHold({cfg: MsgConfig})
         | ReadSIMRelease({cfg: MsgConfig, I : List[Pointer], ptr_prim : Pointer})        
         | ReadTimeRequestHold({cfg: MsgConfig, I : List[Pointer], ptr_prim : Pointer })
+        | ReadLoopComputation({cfg: MsgConfig, I : List[Pointer], buffer: LED_Buffer, log: LED_Log, t: Time})
         | ReadResponse({cfg: MsgConfig, result: List[TX]})
 
         // EXTENSIONS
@@ -46,7 +54,11 @@ module g_ledger_types{
         | GenesisSIMRelease({cfg: MsgConfig})
         | GenesisResponse({cfg: MsgConfig, genesis: LED_Block})
 
-        | SIMControl      
+        | EvalRequest({cfg: MsgConfig, log: List[LED_Tx], tx: LED_Tx})
+        | EvalAverWait({cfg: MsgConfig, log: List[LED_Tx], tx: LED_Tx, cID : int, avk: int, msg: LED_Msg})
+        | EvalResponse({cfg: MsgConfig, log: List[LED_Tx], tx: LED_Tx, b: bool})
+
+        | LED_SIMControl      
     
 
     type LED_SystemParams = {
@@ -65,14 +77,15 @@ module g_ledger_types{
 
 
     type LED_StateVars = {
-        buffer: Pointer -> {tx: TX, time: Time},
+        buffer: LED_Buffer,
         eID: Pointer,
         log: LED_Log,
         ptr: Party -> Pointer,
         Val: LED_ValidatorState,
         Com: Time -> Committee,  // ComSel state
         APL: Time -> Pointer,  // APL state
-        genesis: LED_Block
+        genesis: LED_Block,     // genesis state
+        mem: int -> {hs: List[int], avk: Option[int]} // eval state Hash_Output -> {hs: List[Hash_Out], avk: option ATMS_AVK}        
     }
 
 
@@ -116,6 +129,52 @@ module g_ledger_types{
         }
         })
     }    
+    pure def led_get_normal_tx(tx: LED_Tx): Set[{tx: int, b: bool}] = {
+        match tx {
+            | Normal(p) => Set(p)
+            | _ => Set()
+        }
+    }
+
+    pure def led_get_install_tx(tx: LED_Tx): Set[{cID: int, code: int}] = {
+        match tx {
+            | Install(p) => Set(p)
+            | _ => Set()
+        }
+    }
+
+    pure def led_get_update_tx(tx: LED_Tx): Set[{msg: LED_Msg, sigma: int}] = {
+        match tx {
+            | Update(p) => Set(p)
+            | _ => Set()
+        }
+    }
+    pure def led_get_eval_request_messages(messages: Set[LED_Message]): Set[{cfg: MsgConfig, log: List[LED_Tx], tx: LED_Tx}] = {
+        messages.filterMap(m => {
+        match m {
+            | EvalRequest(p) => Some(p)
+            | _ => None
+        }
+        })
+    }
+
+    pure def led_get_eval_aver_wait_messages(messages: Set[LED_Message]): Set[{cfg: MsgConfig, log: List[LED_Tx], tx: LED_Tx, cID : int, avk: int, msg: LED_Msg}] = {
+        messages.filterMap(m => {
+        match m {
+            | EvalAverWait(p) => Some(p)
+            | _ => None
+        }
+        })
+    }
+
+    pure def led_get_eval_response_messages(messages: Set[LED_Message]): Set[{cfg: MsgConfig, log: List[LED_Tx], tx: LED_Tx, b: bool}] = {
+        messages.filterMap(m => {
+        match m {
+            | EvalResponse(p) => Some(p)
+            | _ => None
+        }
+        })
+    }
 
 
     pure def led_get_genesis_request_messages(messages: Set[LED_Message]): Set[{cfg: MsgConfig}] = {
@@ -348,7 +407,7 @@ module g_ledger_types{
     pure def led_get_sim_control_messages(messages: Set[LED_Message]): Set[LED_Message] = {
         messages.filter(m => {
         match m {
-            | SIMControl => true
+            | LED_SIMControl => true
             | _ => false
         }
         })

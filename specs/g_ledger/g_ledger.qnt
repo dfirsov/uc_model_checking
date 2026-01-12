@@ -56,7 +56,7 @@ module g_ledger{
                     effects: Set(
                         LED_RemoveHandle(SubmitTimeRequestHold(p)),
                         LED_AppendHandle(SubmitSIMHold({cfg: p.cfg, tx: p.tx, t: t, eID: eID})),
-                        LED_UpdateInput(Set(SIMControl))
+                        LED_UpdateInput(Set(LED_SIMControl))
                     )
                 }
 
@@ -149,7 +149,7 @@ module g_ledger{
             {
                 post_state: led.state,
                 effects: Set(
-                    LED_UpdateInput(Set(SIMControl)),
+                    LED_UpdateInput(Set(LED_SIMControl)),
                     LED_AppendHandle(ReadSIMHold(p)),
                     LED_LogMessage(ReadRequest(p))
                 )
@@ -419,6 +419,7 @@ module g_ledger{
                     Com: Map(),
                     APL: Map(),
                     genesis: 0,
+                    mem : Map(),
                 },
             input : Set(),
             nonce : 0,      

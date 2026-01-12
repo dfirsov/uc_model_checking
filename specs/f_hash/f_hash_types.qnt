@@ -16,14 +16,14 @@ module f_hash_types {
         | SIMControl  
 
 
-    pure def crs_get_all_response_messages(messages: Set[HASH_Message]): Set[HASH_Message] = {
-        messages.filterMap(m => {
-        match m {
-            | HashResponse(p) => Some(HashResponse(p))
-            | _ => None
-        }
-        })
-    }      
+    // pure def hash_get_all_response_messages(messages: Set[HASH_Message]): Set[HASH_Message] = {
+    //     messages.filterMap(m => {
+    //     match m {
+    //         | HashResponse(p) => Some(HashResponse(p))
+    //         | _ => None
+    //     }
+    //     })
+    // }      
 
     type HASH_SystemParams = {
         P : Set[Party], // parties who can use the functionality

@@ -15,7 +15,7 @@ module g_ledger_genesis {
                 {
                     post_state: led.state,
                     effects: Set(
-                        LED_UpdateInput(Set(SIMControl)),
+                        LED_UpdateInput(Set(LED_SIMControl)),
                         LED_AppendHandle(GenesisSIMHold({cfg: p.cfg})),
                         LED_LogMessage(GenesisRequest(p))
                     )

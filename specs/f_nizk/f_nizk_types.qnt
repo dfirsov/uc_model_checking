@@ -21,6 +21,8 @@ module f_nizk_types{
         | SIMVerifyRelease({cfg: MsgConfig, x: NIZK_Statement, pi: NIZK_Proof, w: NIZK_Witness}) 
         | VerifyResponse({cfg: MsgConfig, x: NIZK_Statement, pi: NIZK_Proof, b: bool})
 
+        
+
         | SIMControl
   
 
