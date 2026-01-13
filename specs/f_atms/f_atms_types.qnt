@@ -6,7 +6,7 @@ module f_atms_types {
     // define types of the system  
     type ATMS_VK = int
     type ATMS_AVK = int
-    type ATMS_Document = str 
+    type ATMS_Document = {h: int, avk: int } 
     type ATMS_Signature = int
     type ATMS_ASignature = int
 

@@ -23,7 +23,7 @@ module f_atms{
         post_state : atms.state,
         effects : Set(),
     }    
-
+ 
 
     pure def atms_gen_1(atms: ATMS_System) : Set[ATMS_Transition] = {
         atms.input.atms_get_gen_request_messages().map(p =>{

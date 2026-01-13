@@ -13,11 +13,11 @@ module f_atms_env{
     val ALL_VK = 1.to(2)
     val ALL_AVK = 1.to(2)
     val ALL_DOC = Set(
-         "Document 1",
-         "Document 2",
-         "Document 3",
-         "Document 4",
-         "Document 5",
+         {h:1, avk:1},
+         {h:1, avk:2},
+         {h:3, avk:3},
+         {h:4, avk:4},
+         {h:5, avk:5},
     )
     val ALL_SIG = 1.to(2)
 
@@ -79,7 +79,7 @@ module f_atms_env{
             nonce: f_atms_s.nonce + 1
         }
     }
-
+ 
     action env_akey_reqs(cfg: MsgConfig) : bool = all {
         // Precondition: input must be empty
         f_atms_s.input.size() == 0,

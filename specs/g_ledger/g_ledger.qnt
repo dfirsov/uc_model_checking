@@ -340,10 +340,10 @@ module g_ledger{
             led_submit_2(led, clock),
             led_submit_3(led, clock),
             led_submit_4(led, clock),
-            led_read_1(led, clock),
+            //led_read_1(led, clock),
             //led_read_2(led, clock), // a direct action instead
-            led_read_3(led, clock),
-            led_read_4(led, clock),
+            //led_read_3(led, clock),
+            //led_read_4(led, clock),
 
             //led_sim_loses_ctrl(led, clock) // wrong place
         ).flatten()
@@ -392,7 +392,7 @@ module g_ledger{
 
     action led_step : bool =  any {
         led_gc_step_with(led_main_listener),
-        led_read_2_act,
+        //led_read_2_act,
     }    
 
     pure def led_initial(P: Set[Party], C: Set[Party], SIDs: Set[SID], delta_latency: Time, delta_slack: Time, delta_apl: Time, Val: LED_ValidatorState, comsel_a: int, comsel_b: int, comsel_c: int) : LED_System = {

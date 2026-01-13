@@ -22,7 +22,7 @@ module g_ledger_ival {
                             LED_UpdateInput(Set(EvalResponse({cfg: p.cfg, log: p.log, tx: p.tx, b: false}))),
                             LED_LogMessage(EvalRequest(p))
                         )
-                    }, atms_id_trans(atms))) 
+                    }, atms.atms_id_trans())) 
                 }else{
                     match p.tx {
                         | Normal(q) => {
@@ -87,8 +87,7 @@ module g_ledger_ival {
                                 }, {
                                     post_state: atms.state,
                                     effects: Set(
-                                        // TODO: fix the message
-                                        ATMS_UpdateInput(Set(AVerifyRequest({cfg: p.cfg, avk: avk, m: "fix me", sig: q.sigma})))
+                                        ATMS_UpdateInput(Set(AVerifyRequest({cfg: p.cfg, avk: avk, m: q.msg, sig: q.sigma})))
                                     ),
                                 }))
                             }else{
@@ -167,7 +166,7 @@ module g_ledger_ival {
     }
  
     pure def led_iread_2(led : LED_System, clock: GC_System, simI : List[Pointer], simPtr_prim:Pointer) : Set[(LED_Transition, GC_Transition)] = {
-        led.input.led_get_sim_control_messages().map(q => {  
+        led.input.led_get_sim_control_messages().map(_ => {  
             led.handles.led_get_read_sim_hold_messages().map(p => {
                 {
                     post_state: led.state,
@@ -251,7 +250,7 @@ module g_ledger_ival {
         }).flatten()
     }
 
-    pure def led_iread_5(led: LED_System, clock: GC_System) : Set[LED_Transition] = {
+    pure def led_iread_5(led: LED_System, clock: GC_System) : Set[(LED_Transition, GC_Transition)] = {
         led.input.led_get_read_loop_computation_messages().map(p => {
 
             if(p.I == List()){
@@ -281,30 +280,33 @@ module g_ledger_ival {
                     }
                 }
             }
-        })
+        }).map(t => (t, gc_id_trans(clock)))
     }
 
-    pure def led_iread_6(led: LED_System, clock: GC_System) : Set[LED_Transition] = {
+    pure def led_iread_6(led: LED_System, clock: GC_System) : Set[(LED_Transition, GC_Transition)] = {
         led.input.led_get_eval_response_messages().map(p => {
             led.handles.led_get_read_loop_computation_messages().filter(h => p.cfg == h.cfg).map(q => {
 
                 val tx_t : {tx:LED_Tx, time: Time} = q.buffer.get(q.I.head())
-                val new_log = if(p.b) q.log else q.log.append(tx_t)
+                val new_log = if(p.b) q.log.append(tx_t) else q.log
                 val new_buffer =  q.buffer.mapRemove(q.I.head())
                 val new_I = q.I.tail()
 
                 {
-                    post_state: led.state,
+                    post_state: {...led.state,
+                        log: new_log,
+                        buffer: new_buffer,
+                    },
                     effects: Set(
                         LED_UpdateInput(Set(ReadLoopComputation({cfg: p.cfg, ptr_prim: q.ptr_prim, t: q.t, I: new_I, buffer: new_buffer, log: new_log}))),
                         LED_RemoveHandle(ReadLoopComputation(q))
                     )
                 }
             })
-        }).flatten()
+        }).flatten().map(t => (t, gc_id_trans(clock)))
     }
 
-    pure def led_iread_7(led: LED_System, clock: GC_System) : Set[LED_Transition] = {
+    pure def led_iread_7(led: LED_System, clock: GC_System) : Set[(LED_Transition, GC_Transition)] = {
         led.input.led_get_read_loop_computation_finish_messages().map(p => {
 
                 val log = p.log
@@ -345,8 +347,47 @@ module g_ledger_ival {
 
                 led_transition
 
-        })
+        }).map(t => (t, gc_id_trans(clock)))
     }
+
+   def led_main_listener_ival(led: LED_System, clock: GC_System, atms: ATMS_System) : (Set[(LED_Transition, GC_Transition, ATMS_Transition)]) = {
+        Set(
+            led_eval_1(led, atms),
+            led_eval_2(led, atms),
+        ).flatten().map(t => (t._1, gc_id_trans(clock), t._2))
+        .union(
+            Set(led_iread_7(led, clock),
+                led_iread_6(led, clock),
+                led_iread_5(led, clock),
+                led_iread_4(led, clock),
+                led_iread_3(led, clock),
+            // led_iread_2 is modelled as an action
+                led_iread_1(led, clock),
+            ).flatten().map(t => (t._1, t._2, atms.atms_id_trans()))
+        )
+    }
+
+    action led_gc_atms_step_with(q: (LED_System, GC_System, ATMS_System) => Set[(LED_Transition, GC_Transition, ATMS_Transition)]): bool = {
+        all{
+            val ts = q(g_ledger_s, g_clock_s, f_atms_s)
+            all {
+                nondet transition = ts.oneOf()
+                all {
+                    g_ledger_s' = led_process_transitions(g_ledger_s, transition._1),
+                    g_clock_s' = gc_process_transitions(g_clock_s, transition._2),
+                    f_atms_s' = atms_process_transitions(f_atms_s, transition._3)
+                }
+            }
+        }
+    }     
+
+    action led_step_ival : bool =  any {
+        led_gc_atms_step_with(led_main_listener_ival),
+        all{
+            led_iread_2_act,
+            f_atms_s' = f_atms_s,
+        }
+    }            
 
     
 
