@@ -2,7 +2,7 @@ module g_ledger_ival {
     
     import basicSpells.* from "../../spells/basicSpells"
     import rareSpells.* from "../../spells/rareSpells"
-    import common.* from "../common"
+    import common.* from "../common" 
     import f_atms.* from "../f_atms/f_atms"
     import f_atms_types.* from "../f_atms/f_atms_types"    
 
@@ -52,7 +52,7 @@ module g_ledger_ival {
                                         LED_LogMessage(EvalRequest(p)),                                        
                                         LED_UpdateInput(Set(EvalResponse({cfg: p.cfg, log: p.log, tx: p.tx, b: true}))),
                                     )
-                                }, atms_id_trans(atms)))                                
+                                }, atms.atms_id_trans()))                                
                             }else{
                                 Set(({
                                     post_state: led.state,
@@ -60,7 +60,7 @@ module g_ledger_ival {
                                         LED_LogMessage(EvalRequest(p)), 
                                         LED_UpdateInput(Set(EvalResponse({cfg: p.cfg, log: p.log, tx: p.tx, b: false}))),
                                     )
-                                }, atms_id_trans(atms)))                                
+                                }, atms.atms_id_trans()))                                
                             }
                         }
 
@@ -103,7 +103,7 @@ module g_ledger_ival {
                     effects: Set(
                         LED_UpdateInput(Set()),
                     )
-                }, atms_id_trans(atms)))             
+                }, atms.atms_id_trans()))             
             }
         }).flatten()
     }  
@@ -163,7 +163,7 @@ module g_ledger_ival {
                     LED_LogMessage(ReadRequest(p))
                 )
             }
-        }).map(t => (t, gc_id_trans(clock)))
+        }).map(t => (t, clock.gc_id_trans()))
     }
  
     pure def led_iread_2(led : LED_System, clock: GC_System, simI : List[Pointer], simPtr_prim:Pointer) : Set[(LED_Transition, GC_Transition)] = {
@@ -197,6 +197,7 @@ module g_ledger_ival {
         }
     }
 
+    // maybe refactor that for the direct response
     pure def led_iread_3(led: LED_System, clock: GC_System) : Set[(LED_Transition, GC_Transition)] = {
         led.input.led_get_read_sim_release_messages().map(p => {
 
@@ -219,24 +220,22 @@ module g_ledger_ival {
         })
     }
 
-    pure def led_iread_4(led: LED_System, clock: GC_System) : Set[(LED_Transition,GC_Transition)] = {
+    pure def led_iread_4(led: LED_System, clock: GC_System) : Set[(LED_Transition, GC_Transition)] = {
         clock.input.get_time_response_messages().map(q => {
             led.handles.led_get_read_time_request_hold_messages().filter(p => p.cfg.nonce == q.cfg.nonce).map(p => {
 
                 val t = q.time
                 val P = p.cfg.party
                 val I = p.I    // simulators chosen I
-                val ptr_prim = p.ptr_prim // simulator chosen ptr_prim
                 
                 val X = led_san_I(led, I, t)
-                val I = X            
  
                 val led_transition = {
-                            post_state: led.state, 
-                            effects: Set(
-                                LED_RemoveHandle(ReadTimeRequestHold(p)), 
-                                LED_UpdateInput(Set(ReadLoopComputation({cfg: p.cfg, t: t, I: I, buffer: led.state.buffer, log: led.state.log})))
-                            )
+                    post_state: led.state, 
+                    effects: Set(
+                        LED_RemoveHandle(ReadTimeRequestHold(p)), 
+                        LED_UpdateInput(Set(ReadLoopComputation({cfg: p.cfg, ptr_prim: p.ptr_prim, t: t, I: X, buffer: led.state.buffer, log: led.state.log})))
+                    )
                 }
 
                 val gc_transition = {
@@ -244,11 +243,111 @@ module g_ledger_ival {
                     effects: Set(
                         GC_UpdateInput(Set())
                     )
-                }
+                }     
 
                 (led_transition, gc_transition)
+
           })
         }).flatten()
     }
+
+    pure def led_iread_5(led: LED_System, clock: GC_System) : Set[LED_Transition] = {
+        led.input.led_get_read_loop_computation_messages().map(p => {
+
+            if(p.I == List()){
+                {
+                    post_state: led.state,
+                    effects: Set(
+                        LED_UpdateInput(Set(ReadLoopComputationFinish({cfg: p.cfg, ptr_prim: p.ptr_prim, buffer: p.buffer, log: p.log, t: p.t}))),
+                    )
+                }
+            }else{
+                val i = p.I.head()
+                if(p.buffer.has(i)){
+                    val tx = p.buffer.get(i).tx
+                    {
+                        post_state: led.state,
+                        effects: Set(
+                            LED_UpdateInput(Set(EvalRequest({cfg: p.cfg, tx: tx, log: p.log.listMap(b => b.tx)}))),
+                            LED_AppendHandle(ReadLoopComputation(p))
+                        )
+                    }
+                }else{
+                    {
+                        post_state: led.state,
+                        effects: Set(
+                            LED_UpdateInput(Set(ReadLoopComputation({...p, I: p.I.tail()}))),
+                        )
+                    }
+                }
+            }
+        })
+    }
+
+    pure def led_iread_6(led: LED_System, clock: GC_System) : Set[LED_Transition] = {
+        led.input.led_get_eval_response_messages().map(p => {
+            led.handles.led_get_read_loop_computation_messages().filter(h => p.cfg == h.cfg).map(q => {
+
+                val tx_t : {tx:LED_Tx, time: Time} = q.buffer.get(q.I.head())
+                val new_log = if(p.b) q.log else q.log.append(tx_t)
+                val new_buffer =  q.buffer.mapRemove(q.I.head())
+                val new_I = q.I.tail()
+
+                {
+                    post_state: led.state,
+                    effects: Set(
+                        LED_UpdateInput(Set(ReadLoopComputation({cfg: p.cfg, ptr_prim: q.ptr_prim, t: q.t, I: new_I, buffer: new_buffer, log: new_log}))),
+                        LED_RemoveHandle(ReadLoopComputation(q))
+                    )
+                }
+            })
+        }).flatten()
+    }
+
+    pure def led_iread_7(led: LED_System, clock: GC_System) : Set[LED_Transition] = {
+        led.input.led_get_read_loop_computation_finish_messages().map(p => {
+
+                val log = p.log
+                val buffer = p.buffer
+                val P = p.cfg.party
+                val t = p.t
+                val ptr_prim = p.ptr_prim
+ 
+                val ptrP = led_san_ptr(ptr_prim, P, led.params.delta_slack, log, led.state.ptr, t)
+ 
+                val led_transition = {
+                    if(log == List() or ptrP == None){
+                        {
+                            post_state: {...led.state, // ptr unchanged
+                                buffer: buffer,
+                                log: log,
+                            },
+                            effects: Set(
+                                LED_UpdateInput(Set(ReadResponse({cfg: p.cfg, result: List()})))
+                            )
+                        }
+                    }else{
+                        val ptr = led.state.ptr.put(P, ptrP.unwrap())
+                        val result = log.mySlice(0,ptr.get(P)+1).listMap(b => b.tx) // TODO: check off-by-one
+
+                        {
+                            post_state: {...led.state, 
+                                buffer: buffer,
+                                log: log,
+                                ptr: ptr
+                            },
+                            effects: Set(
+                                LED_UpdateInput(Set(ReadResponse({cfg: p.cfg, result: result})))
+                            )
+                        }
+                    }
+                }
+
+                led_transition
+
+        })
+    }
+
+    
 
 }

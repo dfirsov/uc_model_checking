@@ -3,7 +3,7 @@ module g_ledger{
     import basicSpells.* from "../../spells/basicSpells"
     import rareSpells.* from "../../spells/rareSpells"
     import common.* from "../common"
-    import g_clock.* from "../g_clock/g_clock"
+    import g_clock.* from "../g_clock/g_clock" 
     import g_clock_types.* from "../g_clock/g_clock_types"    
     import g_ledger_types.* from "./g_ledger_types"
     
@@ -327,7 +327,7 @@ module g_ledger{
     }
     
     // None: instantiated to a particular function
-    pure def led_valid(vallidator: LED_ValidatorState, log: LED_Log, tx: TX): {val_state: LED_ValidatorState, valid: bool} = {
+    pure def led_valid(vallidator: LED_ValidatorState, log: LED_Log, tx: LED_Tx): {val_state: LED_ValidatorState, valid: bool} = {
         {val_state: vallidator, valid: log.indices().forall(i => log[i].tx != tx)} 
     }
 
