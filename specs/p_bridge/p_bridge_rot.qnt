@@ -135,7 +135,7 @@ module p_bridge_rot{
                 }else{
                     val brd_trans = {
                         post_state: {...sys.brd.state, 
-                            rot: sys.brd.state.rot.put(p.cfg.party, p.avk.unwrap()), // TODO: TALK TO POOYA
+                            rot: sys.brd.state.rot.put(p.cfg.party, p.avk.unwrap()),
                             aux: sys.brd.state.aux.put(p.cfg.party, {bvks: q.bvks, com: q.com})
                         },
                         effects: Set(
