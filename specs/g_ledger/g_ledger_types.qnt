@@ -111,6 +111,11 @@ module g_ledger_types{
         effects: Set[LED_Effect]
     }    
 
+    pure def led_id_trans(led : LED_System) : LED_Transition = {
+        post_state : led.state,
+        effects : Set(),
+    } 
+
     pure def led_access_check(cfg: MsgConfig, params: LED_SystemParams): bool = {
             cfg.party.in(params.P) and cfg.sid.in(params.SIDs)
     }    

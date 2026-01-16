@@ -9,6 +9,17 @@ module g_ledger{
     
  
     var g_ledger_s : LED_System
+    const instance : int
+
+
+    pure def led_skip_trans(led: LED_System) : LED_Transition = {
+        {
+            post_state: led.state,
+            effects : Set(
+                LED_UpdateInput(Set())
+            )
+        }
+    }    
 
     // SIM gives control back to the environment
     pure def led_sim_loses_ctrl(led: LED_System, clock: GC_System) : Set[(LED_Transition, GC_Transition)] = {
@@ -183,10 +194,9 @@ module g_ledger{
 
             val ts = led_read_2(g_ledger_s, g_clock_s, simI, simPtr_prim)
             all {
-                ts.size() > 0,
                 nondet transition = ts.oneOf()
                 all {
-                    g_ledger_s' = led_process_transitions(g_ledger_s, transition._1),
+                    g_ledger_s' = led_process_transitions(g_ledger_s, g_clock_s, transition._1),
                     g_clock_s' = gc_process_transitions(g_clock_s, transition._2)
                 }
             }
@@ -350,11 +360,11 @@ module g_ledger{
     }    
  
 
-    def led_apply_effect(sys: LED_System, eff: LED_Effect): LED_System = {
+    pure def led_apply_effect(sys: LED_System, clock: GC_System, eff: LED_Effect): LED_System = {
         match eff {
         | LED_LogMessage(msg) => 
             {...sys, 
-                log: sys.log.setAdd({idx: sys.log.size(), msg: msg,  time: g_clock_s.state.TIME, state: sys.state}) 
+                log: sys.log.setAdd({idx: sys.log.size(), msg: msg,  time: clock.state.TIME, state: sys.state}) 
             }
         | LED_UpdateInput(msgs) => 
             {...sys, 
@@ -371,9 +381,9 @@ module g_ledger{
         }
     }
 
-    def led_process_transitions(sys: LED_System, transition: LED_Transition) : LED_System = {
+    pure def led_process_transitions(sys: LED_System, clock: GC_System, transition: LED_Transition) : LED_System = {
         val new_sys = {...sys, state: transition.post_state}
-        transition.effects.fold(new_sys, ((a1,a2) => led_apply_effect(a1,a2)))
+        transition.effects.fold(new_sys, ((a1,a2) => led_apply_effect(a1, clock, a2)))
     }     
 
     action led_gc_step_with(q: (LED_System, GC_System) => Set[(LED_Transition, GC_Transition)]): bool = {
@@ -383,7 +393,7 @@ module g_ledger{
                 ts.size() > 0,
                 nondet transition = ts.oneOf()
                 all {
-                    g_ledger_s' = led_process_transitions(g_ledger_s, transition._1),
+                    g_ledger_s' = led_process_transitions(g_ledger_s, g_clock_s, transition._1),
                     g_clock_s' = gc_process_transitions(g_clock_s, transition._2)
                 }
             }

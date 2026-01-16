@@ -6,23 +6,27 @@ module f_pki_types {
     // define types of the system  
     type Certificate = int
     type VK = int
-    
+
     type PKI_Message =
 
-        | RegisterRequest({cfg: MsgConfig, vk: VK}) 
-        | SIMRegisterRequestHold({cfg: MsgConfig, vk: VK})
-        | SIMRegisterRequestRelease({cfg: MsgConfig, vk: VK, cert: Certificate})     
-        | RegisterResponse({cfg: MsgConfig, vk: VK, cert: Option[Certificate]})
+        | PKI_RegisterRequest({cfg: MsgConfig, vk: VK}) 
+        | PKI_SIMRegisterRequestHold({cfg: MsgConfig, vk: VK})
+        | PKI_SIMRegisterRequestRelease({cfg: MsgConfig, vk: VK, cert: Certificate})     
+        | PKI_RegisterResponse({cfg: MsgConfig, vk: VK, cert: Option[Certificate]})
 
-        | RetrieveRequest({cfg: MsgConfig, Q: Party}) 
-        | SIMRetrieveRequestHold({cfg: MsgConfig, Q: Party})
-        | SIMRetrieveRequestRelease({cfg: MsgConfig, Q: Party})     
-        | RetrieveResponse({cfg: MsgConfig, Q: Party, vk: Option[VK]})
+        | PKI_RetrieveRequest({cfg: MsgConfig, Q: Party}) 
+        | PKI_SIMRetrieveRequestHold({cfg: MsgConfig, Q: Party})
+        | PKI_SIMRetrieveRequestRelease({cfg: MsgConfig, Q: Party})     
+        | PKI_RetrieveResponse({cfg: MsgConfig, Q: Party, vk: Option[VK]})
 
-        | CertVerifyRequest({cfg: MsgConfig, Q: Party, vk: VK, cert: Certificate})
-        | CertVerifyResponse({cfg: MsgConfig, Q: Party, vk: VK, cert: Certificate, result: bool})
+        | PKI_CertVerifyRequest({cfg: MsgConfig, Q: Party, vk: VK, cert: Certificate})
+        | PKI_CertVerifyResponse({cfg: MsgConfig, Q: Party, vk: VK, cert: Certificate, result: bool})
 
-        | SIMControl      
+        | PKI_GetAllRequest({cfg: MsgConfig}) 
+        | PKI_SIMGetAllRequestWait({cfg: MsgConfig})
+        | PKI_GetAllResponse({cfg: MsgConfig, vks: List[VK]})
+
+        | PKI_SIMControl      
 
     type PKI_SystemParams = {
         P : Set[Party], // parties who can use the functionality
@@ -57,13 +61,44 @@ module f_pki_types {
         effects: Set[PKI_Effect]
     }    
 
+    pure def pki_get_get_all_request_messages(messages: Set[PKI_Message]): Set[{cfg: MsgConfig}] = {
+            messages.filterMap(m => {
+            match m {
+                | PKI_GetAllRequest(p) => Some(p)
+                | _ => None
+            }
+            })
+        }
+
+    pure def pki_get_sim_get_all_request_wait_messages(messages: Set[PKI_Message]): Set[{cfg: MsgConfig}] = {
+        messages.filterMap(m => {
+        match m {
+            | PKI_SIMGetAllRequestWait(p) => Some(p)
+            | _ => None
+        }
+        })
+    }
+
+    pure def pki_get_get_all_response_messages(messages: Set[PKI_Message]): Set[{cfg: MsgConfig, vks: List[VK]}] = {
+        messages.filterMap(m => {
+        match m {
+            | PKI_GetAllResponse(p) => Some(p)
+            | _ => None
+        }
+        })
+    }    
+
+    pure def pki_id_trans(pki : PKI_System) : PKI_Transition = {
+        post_state : pki.state,
+        effects : Set(),
+    } 
 
     pure def pki_get_all_response_messages(messages: Set[PKI_Message]): Set[PKI_Message] = {
         messages.filterMap(m => {
         match m {
-            | RegisterResponse(p) => Some(RegisterResponse(p))
-            | RetrieveResponse(p) => Some(RetrieveResponse(p))
-            | CertVerifyResponse(p) => Some(CertVerifyResponse(p))
+            | PKI_RegisterResponse(p) => Some(PKI_RegisterResponse(p))
+            | PKI_RetrieveResponse(p) => Some(PKI_RetrieveResponse(p))
+            | PKI_CertVerifyResponse(p) => Some(PKI_CertVerifyResponse(p))
             | _ => None
         }
         })
@@ -72,7 +107,7 @@ module f_pki_types {
     pure def pki_get_register_request_messages(messages: Set[PKI_Message]): Set[{cfg: MsgConfig, vk: VK}] = {
         messages.filterMap(m => {
         match m {
-            | RegisterRequest(p) => Some(p)
+            | PKI_RegisterRequest(p) => Some(p)
             | _ => None
         }
         })
@@ -81,7 +116,7 @@ module f_pki_types {
     pure def pki_get_sim_register_request_hold_messages(messages: Set[PKI_Message]): Set[{cfg: MsgConfig, vk: VK}] = {
         messages.filterMap(m => {
         match m {
-            | SIMRegisterRequestHold(p) => Some(p)
+            | PKI_SIMRegisterRequestHold(p) => Some(p)
             | _ => None
         }
         })
@@ -90,7 +125,7 @@ module f_pki_types {
     pure def pki_get_sim_register_request_release_messages(messages: Set[PKI_Message]): Set[{cfg: MsgConfig, vk: VK, cert: Certificate}] = {
         messages.filterMap(m => {
         match m {
-            | SIMRegisterRequestRelease(p) => Some(p)
+            | PKI_SIMRegisterRequestRelease(p) => Some(p)
             | _ => None
         }
         })
@@ -99,7 +134,7 @@ module f_pki_types {
     pure def pki_get_register_response_messages(messages: Set[PKI_Message]): Set[{cfg: MsgConfig, vk: VK, cert: Option[Certificate]}] = {
         messages.filterMap(m => {
         match m {
-            | RegisterResponse(p) => Some(p)
+            | PKI_RegisterResponse(p) => Some(p)
             | _ => None
         }
         })
@@ -108,7 +143,7 @@ module f_pki_types {
     pure def pki_get_retrieve_request_messages(messages: Set[PKI_Message]): Set[{cfg: MsgConfig, Q: Party}] = {
         messages.filterMap(m => {
         match m {
-            | RetrieveRequest(p) => Some(p)
+            | PKI_RetrieveRequest(p) => Some(p)
             | _ => None
         }
         })
@@ -117,7 +152,7 @@ module f_pki_types {
     pure def pki_get_sim_retrieve_request_hold_messages(messages: Set[PKI_Message]): Set[{cfg: MsgConfig, Q: Party}] = {
         messages.filterMap(m => {
         match m {
-            | SIMRetrieveRequestHold(p) => Some(p)
+            | PKI_SIMRetrieveRequestHold(p) => Some(p)
             | _ => None
         }
         })
@@ -126,7 +161,7 @@ module f_pki_types {
     pure def pki_get_sim_retrieve_request_release_messages(messages: Set[PKI_Message]): Set[{cfg: MsgConfig, Q: Party}] = {
         messages.filterMap(m => {
         match m {
-            | SIMRetrieveRequestRelease(p) => Some(p)
+            | PKI_SIMRetrieveRequestRelease(p) => Some(p)
             | _ => None
         }
         })
@@ -135,7 +170,7 @@ module f_pki_types {
     pure def pki_get_retrieve_response_messages(messages: Set[PKI_Message]): Set[{cfg: MsgConfig, Q: Party, vk: Option[VK]}] = {
         messages.filterMap(m => {
         match m {
-            | RetrieveResponse(p) => Some(p)
+            | PKI_RetrieveResponse(p) => Some(p)
             | _ => None
         }
         })
@@ -144,7 +179,7 @@ module f_pki_types {
     pure def pki_get_cert_verify_request_messages(messages: Set[PKI_Message]): Set[{cfg: MsgConfig, Q: Party, vk: VK, cert: Certificate}] = {
         messages.filterMap(m => {
         match m {
-            | CertVerifyRequest(p) => Some(p)
+            | PKI_CertVerifyRequest(p) => Some(p)
             | _ => None
         }
         })
@@ -153,7 +188,7 @@ module f_pki_types {
     pure def pki_get_cert_verify_response_messages(messages: Set[PKI_Message]): Set[{cfg: MsgConfig, Q: Party, vk: VK, cert: Certificate, result: bool}] = {
         messages.filterMap(m => {
         match m {
-            | CertVerifyResponse(p) => Some(p)
+            | PKI_CertVerifyResponse(p) => Some(p)
             | _ => None
         }
         })
@@ -162,11 +197,10 @@ module f_pki_types {
     pure def pki_get_sim_control_messages(messages: Set[PKI_Message]): Set[PKI_Message] = {
         messages.filter(m => {
         match m {
-            | SIMControl => true
+            | PKI_SIMControl => true
             | _ => false
         }
         })
     }
-
-    
+   
 }

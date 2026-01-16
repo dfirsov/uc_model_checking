@@ -8,14 +8,24 @@ module f_pki {
 
     var pki_s : PKI_System
 
+
+    pure def pki_skip_trans(pki: PKI_System) : PKI_Transition = {
+        {
+            post_state: pki.state,
+            effects : Set(
+                PKI_UpdateInput(Set())
+            )
+        }
+    }
+
     pure def pki_register_1(pki: PKI_System) : Set[PKI_Transition] = {      
         pki.input.pki_get_register_request_messages().map(p => {
             {
                 post_state: pki.state,
                 effects: Set(
-                    PKI_LogMessage(RegisterRequest(p)),
-                    PKI_AppendHandle(SIMRegisterRequestHold(p)),
-                    PKI_UpdateInput(Set(SIMControl))
+                    PKI_LogMessage(PKI_RegisterRequest(p)),
+                    PKI_AppendHandle(PKI_SIMRegisterRequestHold(p)),
+                    PKI_UpdateInput(Set(PKI_SIMControl))
                     )
              }            
         })
@@ -29,8 +39,8 @@ module f_pki {
                     {
                         post_state: pki.state,
                         effects: Set(
-                            PKI_RemoveHandle(SIMRegisterRequestHold(p)),
-                            PKI_UpdateInput(Set(SIMRegisterRequestRelease({cfg: p.cfg, vk: p.vk, cert: cert})))
+                            PKI_RemoveHandle(PKI_SIMRegisterRequestHold(p)),
+                            PKI_UpdateInput(Set(PKI_SIMRegisterRequestRelease({cfg: p.cfg, vk: p.vk, cert: cert})))
                         )
                     }
                 })
@@ -49,7 +59,7 @@ module f_pki {
                 Set({
                     post_state: pki.state,
                     effects: Set(
-                        PKI_UpdateInput(Set(RegisterResponse({cfg: p.cfg, vk: p.vk, cert: None}))),
+                        PKI_UpdateInput(Set(PKI_RegisterResponse({cfg: p.cfg, vk: p.vk, cert: None}))),
                     )
                 })   
             }else{
@@ -60,21 +70,53 @@ module f_pki {
                          Ver: sid_state.Ver.union(Set({party: party, vk: p.vk, cert: p.cert}))
                      }),
                     effects: Set( 
-                        PKI_UpdateInput(Set(RegisterResponse({cfg: p.cfg, vk: p.vk, cert: Some(p.cert)}))),
+                        PKI_UpdateInput(Set(PKI_RegisterResponse({cfg: p.cfg, vk: p.vk, cert: Some(p.cert)}))),
                     )                    
                 })
             }
         }).flatten()
     }
 
+
+    pure def pki_get_all_1(pki: PKI_System) : Set[PKI_Transition] = {      
+        pki.input.pki_get_get_all_request_messages().map(p => {
+            {
+                post_state: pki.state,
+                effects: Set(
+                    PKI_LogMessage(PKI_GetAllRequest(p)),
+                    PKI_AppendHandle(PKI_SIMGetAllRequestWait(p)),
+                    PKI_UpdateInput(Set(PKI_SIMControl))
+                    )
+             }            
+        })
+    }        
+
+    pure def pki_get_all_2(pki: PKI_System) : Set[PKI_Transition] = {      
+        pki.input.pki_get_sim_control_messages().map(m => {
+            pki.SIM_handles.pki_get_sim_get_all_request_wait_messages().map(p => {
+                {
+                        post_state: pki.state,
+                        effects: Set(
+                            PKI_RemoveHandle(PKI_SIMGetAllRequestWait(p)),
+                            PKI_UpdateInput(Set(PKI_GetAllResponse({
+                                cfg: p.cfg,
+                                vks: pki.state.get(p.cfg.sid).Reg.map(r => r.vk).setToList()
+                            })))
+                        )
+                }
+            })
+        }).flatten()
+    }    
+
+
     pure def pki_retrieve_1(pki: PKI_System) : Set[PKI_Transition] = {      
         pki.input.pki_get_retrieve_request_messages().map(p => {
             {
                 post_state: pki.state,
                 effects: Set(
-                    PKI_LogMessage(RetrieveRequest(p)),
-                    PKI_AppendHandle(SIMRetrieveRequestHold(p)),
-                    PKI_UpdateInput(Set(SIMControl))
+                    PKI_LogMessage(PKI_RetrieveRequest(p)),
+                    PKI_AppendHandle(PKI_SIMRetrieveRequestHold(p)),
+                    PKI_UpdateInput(Set(PKI_SIMControl))
                     )
              }            
         })
@@ -86,13 +128,15 @@ module f_pki {
                 {
                         post_state: pki.state,
                         effects: Set(
-                            PKI_RemoveHandle(SIMRetrieveRequestHold(p)),
-                            PKI_UpdateInput(Set(SIMRetrieveRequestRelease(p)))
+                            PKI_RemoveHandle(PKI_SIMRetrieveRequestHold(p)),
+                            PKI_UpdateInput(Set(PKI_SIMRetrieveRequestRelease(p)))
                         )
                 }
             })
         }).flatten()
-    }
+    }    
+
+
 
     pure def pki_retrieve_3(pki: PKI_System) : Set[PKI_Transition] = {
         pki.input.pki_get_sim_retrieve_request_release_messages().map(p => {
@@ -113,7 +157,7 @@ module f_pki {
             Set({
                 post_state: pki.state,
                 effects: Set( 
-                    PKI_UpdateInput(Set(RetrieveResponse({cfg: p.cfg, Q: p.Q, vk: vk_res})))
+                    PKI_UpdateInput(Set(PKI_RetrieveResponse({cfg: p.cfg, Q: p.Q, vk: vk_res})))
                 )
             })
         }).flatten()
@@ -131,8 +175,8 @@ module f_pki {
             Set({
                 post_state: pki.state,
                 effects: Set(
-                    PKI_LogMessage(CertVerifyRequest(p)),                   
-                    PKI_UpdateInput(Set(CertVerifyResponse({
+                    PKI_LogMessage(PKI_CertVerifyRequest(p)),                   
+                    PKI_UpdateInput(Set(PKI_CertVerifyResponse({
                         cfg: p.cfg,
                         Q: p.Q,
                         vk: p.vk,
@@ -145,29 +189,32 @@ module f_pki {
     }
 
     // sim might want to give control back to the environment
-    pure def pki_sim_loses_ctrl(crs: PKI_System) : Set[PKI_Transition] = {
-        crs.input.pki_get_sim_control_messages().map(c =>  // sim must have control
+    pure def pki_sim_loses_ctrl(pki: PKI_System) : Set[PKI_Transition] = {
+        pki.input.pki_get_sim_control_messages().map(c =>  // sim must have control
             {
-                post_state : crs.state,
+                post_state : pki.state,
                 effects : Set(
                     PKI_UpdateInput(Set()),
                     )
             })
     }
 
-    def pki_main_listener(crs: PKI_System) : Set[(PKI_Transition)] = {
+    def pki_main_listener(pki: PKI_System) : Set[(PKI_Transition)] = {
         Set(
-            pki_register_1(crs),
-            pki_register_2(crs),
-            pki_register_3(crs),
+            pki_register_1(pki),
+            pki_register_2(pki),
+            pki_register_3(pki),
 
-            pki_retrieve_1(crs),
-            pki_retrieve_2(crs),
-            pki_retrieve_3(crs),
+            // pki_retrieve_1(pki),
+            // pki_retrieve_2(pki),
+            // pki_retrieve_3(pki),
 
-            pki_cert_verify_1(crs),                
+            pki_cert_verify_1(pki),   
 
-            pki_sim_loses_ctrl(crs)
+            pki_get_all_1(pki),
+            pki_get_all_2(pki),             
+
+            //pki_sim_loses_ctrl(pki)
         ).flatten()
     }
 

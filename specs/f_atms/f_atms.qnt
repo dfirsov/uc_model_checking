@@ -23,6 +23,15 @@ module f_atms{
         post_state : atms.state,
         effects : Set(),
     }    
+    
+    pure def atms_skip_trans(atms: ATMS_System) : ATMS_Transition = {
+        {
+            post_state: atms.state,
+            effects : Set(
+                ATMS_UpdateInput(Set())
+            )
+        }
+    }    
  
 
     pure def atms_gen_1(atms: ATMS_System) : Set[ATMS_Transition] = {

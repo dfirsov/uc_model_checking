@@ -15,7 +15,7 @@ module g_ledger_comsel{
                 {
                     post_state: led.state,
                     effects: Set(
-                        LED_UpdateInput(Set(SIMControl)),
+                        LED_UpdateInput(Set(LED_SIMControl)),
                         LED_AppendHandle(ComSelSIMHold({cfg: p.cfg, r: clock.state.TIME})),
                         LED_LogMessage(ComSelRequest(p))
                     )
@@ -31,14 +31,14 @@ module g_ledger_comsel{
         }).map(t => (t, gc_id_trans(clock)))        
     }
 
-    action led_comsel_2_act(led: LED_System, clock: GC_System) : bool = {
+    action led_comsel_2_act : bool = {
         all {
-            nondet sim_com = listSamplingSpace(led.params.comsel_c, led.params.P).oneOf()
-            val ts = led_comsel_2(led, clock, sim_com)
+            nondet sim_com = listSamplingSpace(g_ledger_s.params.comsel_c, g_ledger_s.params.P).oneOf()
+            val ts = led_comsel_2(g_ledger_s, g_clock_s, sim_com)
             all {
                 nondet transition = ts.oneOf()
                 all {
-                    g_ledger_s' = led_process_transitions(g_ledger_s, transition._1),
+                    g_ledger_s' = led_process_transitions(g_ledger_s, g_clock_s, transition._1),
                     g_clock_s' = gc_process_transitions(g_clock_s, transition._2)
                 }
             }
@@ -128,6 +128,6 @@ module g_ledger_comsel{
     
     action led_step_comsel : bool =  any {
         led_gc_step_with(led_main_listener_comsel),
-        led_comsel_2_act(g_ledger_s, g_clock_s)
+        led_comsel_2_act
     }        
 }

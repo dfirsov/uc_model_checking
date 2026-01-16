@@ -13,6 +13,16 @@ module g_clock{
         effects : Set(),
     }
 
+
+    pure def gc_skip_trans(clock: GC_System) : GC_Transition = {
+        {
+            post_state: clock.state,
+            effects : Set(
+                GC_UpdateInput(Set())
+            )
+        }
+    }    
+
     pure def gc_register(clock: GC_System) :  Set[GC_Transition] = { 
         clock.input.get_register_request_messages().map(msg => 
         {
