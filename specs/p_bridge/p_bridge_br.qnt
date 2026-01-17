@@ -148,9 +148,9 @@ module p_bridge_br{
             val r0 = sys.brd.params.r0
             val R = sys.brd.params.R
             val delta = sys.brd.params.delta
-
+            val bstP = sys.brd.state.bst.get(p.cfg.party)
             if(r == r0 + 2){
-                brd_br_5_case1(sys, p)
+                brd_br_5_case1(sys, p, bstP)
             }else if(r0 + 3 <= r and r <= r0 + 3 + (R - ((r0 + 3) % R)) - 1){
                 Set()
             }else if(r % R == 0){
@@ -167,8 +167,8 @@ module p_bridge_br{
         }).flatten()
     }    
 
-    pure def brd_br_5_case1(sys : BRD_CSystem, p: {cfg: MsgConfig, args: BRD_BR_Args}) : Set[BRD_CTransition] = {
-        val rot = sys.brd.state.rot.get(p.cfg.party)
+    pure def brd_br_5_case1(sys : BRD_CSystem, p: {cfg: MsgConfig, args: BRD_BR_Args}, bst: BRD_BST_Entry) : Set[BRD_CTransition] = {
+        val rot = bst.rot.unwrap() // can it be None here?
         val code = rot
         val cID = rot
         val btx2 = Install({cID: cID, code: code})
@@ -183,9 +183,9 @@ module p_bridge_br{
                         btx1: None,
                         btx2: Some(btx2),
                         m: None,
-                        bst: None // TODO: FIX
+                        bst: Some({...bst, cID: Some(cID)})
                     })})))
-            )            
+            )
         }
 
         Set({...sys.brd_id_ctrans(),

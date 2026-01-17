@@ -16,16 +16,20 @@ module p_bridge_types {
     type BRD_ROT = ATMS_AVK 
     type BRD_AUX = {bvks: List[BRD_BVK], com: Committee}  
     type BRD_BR_Args = {r: Time, ms: Set[{party: Party, avk: ATMS_AVK, sig: SIG_Signature}], L1: List[LED_Tx], L2: List[LED_Tx]}
-    type BRD_BR_Resp = {
-            btx1: Option[LED_Tx], 
-            btx2: Option[LED_Tx], 
-            m: Option[{party: Party, avk: ATMS_AVK, sig: SIG_Signature}], 
-            bst: Option[{
+    type BRD_BST_Entry = {
+                bvk: Option[BRD_BVK],
+                rot: Option[BRD_ROT],
                 cID: Option[int],
                 m: Option[{party: Party, avk: ATMS_AVK, sig: SIG_Signature}],
                 aux_prim: Option[(List[BRD_BVK], Committee)],
                 aux: Option[(List[BRD_BVK], Committee)],
-                }] }
+    }
+
+    type BRD_BR_Resp = {
+            btx1: Option[LED_Tx], 
+            btx2: Option[LED_Tx], 
+            m: Option[{party: Party, avk: ATMS_AVK, sig: SIG_Signature}], 
+            bst: Option[BRD_BST_Entry] }
 
     type BRD_Message =
         | BKGenRequest({cfg: MsgConfig}) 
@@ -93,9 +97,10 @@ module p_bridge_types {
     }
 
     type BRD_StateVars = {
-        bvk: Party -> BRD_BVK,
-        rot: Party -> BRD_ROT,
-        aux: Party -> BRD_AUX,
+        //bvk: Party -> BRD_BVK,
+        //rot: Party -> BRD_ROT,
+        //aux: Party -> BRD_AUX,
+        bst: Party -> BRD_BST_Entry,
 
         bkgen_flag: Set[Party],
         rot_flag: Set[Party],
