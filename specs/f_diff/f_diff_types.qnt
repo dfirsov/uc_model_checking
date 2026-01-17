@@ -6,32 +6,32 @@ module f_diff_types {
     import g_clock_types.* from "../g_clock/g_clock_types"
 
     // define types of the system  
-    type DIF_Data = int
+    type DIF_Data = {party: int, avk: int, sig: int}
     type DIF_Index = int
     
     type DIF_Message =
 
-        | DiffuseRequest({cfg: MsgConfig, m:DIF_Data}) 
-        | SIMDiffuseHold({cfg: MsgConfig, ctr:Counter, t:Time, m:DIF_Data})
-        | SIMDiffuseRelease({cfg: MsgConfig, ctr: Counter, t:Time, m : DIF_Data})
-        | ClockRequest({cfg: MsgConfig, ctr:Counter, t: Time, m: DIF_Data})
-        | ClockRequestWait({cfg: MsgConfig, ctr:Counter, t: Time, m: DIF_Data})
-        | ClockResponse({cfg: MsgConfig, ctr:Counter, t: Time, m: DIF_Data})        
-        | DiffuseResponse({cfg: MsgConfig, ctr:Counter, t: Time, m: DIF_Data})
+        | DIF_DiffuseRequest({cfg: MsgConfig, m:DIF_Data}) 
+        | DIF_SIMDiffuseHold({cfg: MsgConfig, ctr:Counter, t:Time, m:DIF_Data})
+        | DIF_SIMDiffuseRelease({cfg: MsgConfig, ctr: Counter, t:Time, m : DIF_Data})
+        | DIF_ClockRequest({cfg: MsgConfig, ctr:Counter, t: Time, m: DIF_Data})
+        | DIF_ClockRequestWait({cfg: MsgConfig, ctr:Counter, t: Time, m: DIF_Data})
+        | DIF_ClockResponse({cfg: MsgConfig, ctr:Counter, t: Time, m: DIF_Data})        
+        | DIF_DiffuseResponse({cfg: MsgConfig, ctr:Counter, t: Time, m: DIF_Data})
 
-        | FetchRequest({cfg: MsgConfig})
-        | SIMFetchHold({cfg: MsgConfig, t_prim: Time, i_late: Set[DIF_Index]})
-        | SIMFetchRelease({cfg: MsgConfig, t_prim: Time, i_late: Set[DIF_Index], i_early: Set[DIF_Index]})
-        | FetchResponse({cfg: MsgConfig, t_prim: Time, data: Set[DIF_Data]})
+        | DIF_FetchRequest({cfg: MsgConfig})
+        | DIF_SIMFetchHold({cfg: MsgConfig, t_prim: Time, i_late: Set[DIF_Index]})
+        | DIF_SIMFetchRelease({cfg: MsgConfig, t_prim: Time, i_late: Set[DIF_Index], i_early: Set[DIF_Index]})
+        | DIF_FetchResponse({cfg: MsgConfig, t_prim: Time, data: Set[DIF_Data]})
 
-        | OKRequest({cfg: MsgConfig})
-        | OKRequestWait({cfg: MsgConfig})
-        | OKResponse({cfg: MsgConfig})
+        | DIF_OKRequest({cfg: MsgConfig})
+        | DIF_OKRequestWait({cfg: MsgConfig})
+        | DIF_OKResponse({cfg: MsgConfig})
 
-        | InjectRequest( {cfg: MsgConfig, Q:Party, m: DIF_Data})
-        | InjectResponse({cfg: MsgConfig, Q:Party, m: DIF_Data})
+        | DIF_InjectRequest( {cfg: MsgConfig, Q:Party, m: DIF_Data})
+        | DIF_InjectResponse({cfg: MsgConfig, Q:Party, m: DIF_Data})
 
-        | SIMControl  
+        | DIF_SIMControl  
 
 
 
@@ -96,20 +96,36 @@ module f_diff_types {
     pure def dif_get_all_response_messages(messages: Set[DIF_Message]): Set[DIF_Message] = {
         messages.filterMap(m => {
         match m {
-            | DiffuseResponse(p) => Some(DiffuseResponse(p))
-            | FetchResponse(p) => Some(FetchResponse(p))
-            | InjectResponse(p) => Some(InjectResponse(p))  
-            | OKResponse(p) => Some(OKResponse(p))
+            | DIF_DiffuseResponse(p) => Some(DIF_DiffuseResponse(p))
+            | DIF_FetchResponse(p) => Some(DIF_FetchResponse(p))
+            | DIF_InjectResponse(p) => Some(DIF_InjectResponse(p))  
+            | DIF_OKResponse(p) => Some(DIF_OKResponse(p))
             | _ => None
         }
         })
     }      
 
+    pure def dif_skip_trans(dif: DIF_System) : DIF_Transition = {
+        {
+            post_state: dif.state,
+            effects : Set(
+                DIF_UpdateInput(Set())
+            )
+        }
+    }
+
+    pure def dif_id_trans(dif: DIF_System) : DIF_Transition = {
+        {
+            post_state: dif.state,
+            effects : Set()
+        }
+    }     
+
 
     pure def dif_get_inject_request_messages(messages: Set[DIF_Message]): Set[{cfg: MsgConfig, Q:Party, m:DIF_Data}] = {
         messages.filterMap(m => {
         match m {
-            | InjectRequest(p) => Some(p)
+            | DIF_InjectRequest(p) => Some(p)
             | _ => None
         }
         })
@@ -118,7 +134,7 @@ module f_diff_types {
     pure def dif_get_inject_response_messages(messages: Set[DIF_Message]): Set[{cfg: MsgConfig, Q:Party, m:DIF_Data}] = {
         messages.filterMap(m => {
         match m {
-            | InjectResponse(p) => Some(p)
+            | DIF_InjectResponse(p) => Some(p)
             | _ => None
         }
         })
@@ -127,7 +143,7 @@ module f_diff_types {
     pure def dif_get_diffuse_request_messages(messages: Set[DIF_Message]): Set[{cfg: MsgConfig, m: DIF_Data}] = {
         messages.filterMap(m => {
         match m {
-            | DiffuseRequest(p) => Some(p)
+            | DIF_DiffuseRequest(p) => Some(p)
             | _ => None
         }
         })
@@ -136,7 +152,7 @@ module f_diff_types {
     pure def dif_get_sim_diffuse_hold_messages(messages: Set[DIF_Message]): Set[{cfg: MsgConfig, ctr: Counter, t: Time, m: DIF_Data}] = {
         messages.filterMap(m => {
         match m {
-            | SIMDiffuseHold(p) => Some(p)
+            | DIF_SIMDiffuseHold(p) => Some(p)
             | _ => None
         }
         })
@@ -145,7 +161,7 @@ module f_diff_types {
     pure def dif_get_sim_diffuse_release_messages(messages: Set[DIF_Message]): Set[{cfg: MsgConfig, ctr: Counter, t: Time, m: DIF_Data}] = {
         messages.filterMap(m => {
         match m {
-            | SIMDiffuseRelease(p) => Some(p)
+            | DIF_SIMDiffuseRelease(p) => Some(p)
             | _ => None
         }
         })
@@ -154,7 +170,7 @@ module f_diff_types {
     pure def dif_get_clock_request_messages(messages: Set[DIF_Message]): Set[{cfg: MsgConfig, ctr: Counter, t: Time, m: DIF_Data}] = {
         messages.filterMap(m => {
         match m {
-            | ClockRequest(p) => Some(p)
+            | DIF_ClockRequest(p) => Some(p)
             | _ => None
         }
         })
@@ -163,7 +179,7 @@ module f_diff_types {
     pure def dif_get_clock_request_wait_messages(messages: Set[DIF_Message]): Set[{cfg: MsgConfig, ctr: Counter, t: Time, m: DIF_Data}] = {
         messages.filterMap(m => {
         match m {
-            | ClockRequestWait(p) => Some(p)
+            | DIF_ClockRequestWait(p) => Some(p)
             | _ => None
         }
         })
@@ -172,7 +188,7 @@ module f_diff_types {
     pure def dif_get_clock_response_messages(messages: Set[DIF_Message]): Set[{cfg: MsgConfig, ctr: Counter, t: Time, m: DIF_Data}] = {
         messages.filterMap(m => {
         match m {
-            | ClockResponse(p) => Some(p)
+            | DIF_ClockResponse(p) => Some(p)
             | _ => None
         }
         })
@@ -181,7 +197,7 @@ module f_diff_types {
     pure def dif_get_diffuse_response_messages(messages: Set[DIF_Message]): Set[{cfg: MsgConfig, ctr: Counter, t: Time, m: DIF_Data}] = {
         messages.filterMap(m => {
         match m {
-            | DiffuseResponse(p) => Some(p)
+            | DIF_DiffuseResponse(p) => Some(p)
             | _ => None
         }
         })
@@ -190,7 +206,7 @@ module f_diff_types {
     pure def dif_get_fetch_request_messages(messages: Set[DIF_Message]): Set[{cfg: MsgConfig}] = {
         messages.filterMap(m => {
         match m {
-            | FetchRequest(p) => Some(p)
+            | DIF_FetchRequest(p) => Some(p)
             | _ => None
         }
         })
@@ -199,7 +215,7 @@ module f_diff_types {
     pure def dif_get_sim_fetch_hold_messages(messages: Set[DIF_Message]): Set[{cfg: MsgConfig, t_prim: Time, i_late: Set[DIF_Index]}] = {
         messages.filterMap(m => {
         match m {
-            | SIMFetchHold(p) => Some(p)
+            | DIF_SIMFetchHold(p) => Some(p)
             | _ => None
         }
         })
@@ -208,7 +224,7 @@ module f_diff_types {
     pure def dif_get_sim_fetch_release_messages(messages: Set[DIF_Message]): Set[{cfg: MsgConfig, t_prim: Time, i_late: Set[DIF_Index], i_early: Set[DIF_Index]}] = {
         messages.filterMap(m => {
         match m {
-            | SIMFetchRelease(p) => Some(p)
+            | DIF_SIMFetchRelease(p) => Some(p)
             | _ => None
         }
         })
@@ -217,7 +233,7 @@ module f_diff_types {
     pure def dif_get_fetch_response_messages(messages: Set[DIF_Message]): Set[{cfg: MsgConfig, t_prim: Time, data: Set[DIF_Data]}] = {
         messages.filterMap(m => {
         match m {
-            | FetchResponse(p) => Some(p)
+            | DIF_FetchResponse(p) => Some(p)
             | _ => None
         }
         })
@@ -226,7 +242,7 @@ module f_diff_types {
     pure def dif_get_ok_request_messages(messages: Set[DIF_Message]): Set[{cfg: MsgConfig}] = {
         messages.filterMap(m => {
         match m {
-            | OKRequest(p) => Some(p)
+            | DIF_OKRequest(p) => Some(p)
             | _ => None
         }
         })
@@ -235,7 +251,7 @@ module f_diff_types {
     pure def dif_get_ok_request_wait_messages(messages: Set[DIF_Message]): Set[{cfg: MsgConfig}] = {
         messages.filterMap(m => {
         match m {
-            | OKRequestWait(p) => Some(p)
+            | DIF_OKRequestWait(p) => Some(p)
             | _ => None
         }
         })
@@ -244,7 +260,7 @@ module f_diff_types {
     pure def dif_get_ok_response_messages(messages: Set[DIF_Message]): Set[{cfg: MsgConfig}] = {
         messages.filterMap(m => {
         match m {
-            | OKResponse(p) => Some(p)
+            | DIF_OKResponse(p) => Some(p)
             | _ => None
         }
         })
@@ -253,7 +269,7 @@ module f_diff_types {
     pure def dif_get_sim_control_messages(messages: Set[DIF_Message]): Set[DIF_Message] = {
         messages.filterMap(m => {
         match m {
-            | SIMControl => Some(SIMControl)
+            | DIF_SIMControl => Some(DIF_SIMControl)
             | _ => None
         }
         })

@@ -43,9 +43,9 @@ module f_diff{
                             D_flag: new_D_flag,
                         }),
                         effects : Set(
-                            DIF_LogMessage(DiffuseRequest(msg)),
-                            DIF_UpdateInput(Set(SIMControl)),
-                            DIF_AppendHandle(SIMDiffuseHold({ 
+                            DIF_LogMessage(DIF_DiffuseRequest(msg)),
+                            DIF_UpdateInput(Set(DIF_SIMControl)),
+                            DIF_AppendHandle(DIF_SIMDiffuseHold({ 
                                 cfg: msg.cfg,
                                 ctr: new_ctr,
                                 t: t,
@@ -81,8 +81,8 @@ module f_diff{
                 {
                     post_state : sys.state,
                     effects : Set(
-                        DIF_UpdateInput(Set(SIMDiffuseRelease(msg))),
-                        DIF_RemoveHandle(SIMDiffuseHold(msg)),
+                        DIF_UpdateInput(Set(DIF_SIMDiffuseRelease(msg))),
+                        DIF_RemoveHandle(DIF_SIMDiffuseHold(msg)),
                     )
                 }
             })
@@ -104,7 +104,7 @@ module f_diff{
                 post_state: dif.state,
                 effects: Set(
                     DIF_UpdateInput(Set()),
-                    DIF_AppendHandle(ClockRequestWait(msg))
+                    DIF_AppendHandle(DIF_ClockRequestWait(msg))
                 )
             }
 
@@ -126,8 +126,8 @@ module f_diff{
                     val dif_transition = {
                         post_state: dif.state,
                         effects: Set(
-                            DIF_UpdateInput(Set(DiffuseResponse(msg2))),
-                            DIF_RemoveHandle(ClockRequestWait(msg2))
+                            DIF_UpdateInput(Set(DIF_DiffuseResponse(msg2))),
+                            DIF_RemoveHandle(DIF_ClockRequestWait(msg2))
                         )
                     }
 
@@ -160,8 +160,8 @@ module f_diff{
                         L: sid_state.L.put({to:Q, ctr: sid_state.ctr + 1}, {data: p.m, time: t})
                     }),
                     effects: Set(
-                        DIF_UpdateInput(Set(InjectResponse(p))),
-                        DIF_LogMessage(InjectRequest(p))
+                        DIF_UpdateInput(Set(DIF_InjectResponse(p))),
+                        DIF_LogMessage(DIF_InjectRequest(p))
                     )
                 }
             }else{
@@ -209,9 +209,9 @@ module f_diff{
                             F_flag: sid_state.F_flag.union(Set((P, tp))) // adding to F_flag
                         }),
                         effects : Set(
-                            DIF_LogMessage(FetchRequest(msg)),
-                            DIF_UpdateInput(Set(SIMControl)),
-                            DIF_AppendHandle(SIMFetchHold({
+                            DIF_LogMessage(DIF_FetchRequest(msg)),
+                            DIF_UpdateInput(Set(DIF_SIMControl)),
+                            DIF_AppendHandle(DIF_SIMFetchHold({
                                 cfg: msg.cfg,
                                 t_prim: tp,
                                 i_late: i_late,
@@ -240,8 +240,8 @@ module f_diff{
                     {   
                         post_state : dif.state,
                         effects : Set( 
-                            DIF_RemoveHandle(SIMFetchHold(msg)),
-                            DIF_UpdateInput(Set(SIMFetchRelease({
+                            DIF_RemoveHandle(DIF_SIMFetchHold(msg)),
+                            DIF_UpdateInput(Set(DIF_SIMFetchRelease({
                                 cfg: msg.cfg,
                                 t_prim: msg.t_prim,
                                 i_late: msg.i_late,
@@ -286,7 +286,7 @@ module f_diff{
                                 L: new_L
                             }),
                 effects: Set(
-                    DIF_UpdateInput(Set(FetchResponse({cfg:msg.cfg, t_prim: msg.t_prim, data: msgs})))
+                    DIF_UpdateInput(Set(DIF_FetchResponse({cfg:msg.cfg, t_prim: msg.t_prim, data: msgs})))
                 )
             }
         )
@@ -303,8 +303,8 @@ module f_diff{
                 post_state: dif.state,
                 effects: Set(
                     DIF_UpdateInput(Set()),
-                    DIF_LogMessage(OKRequest(msg)),
-                    DIF_AppendHandle(OKRequestWait(msg))
+                    DIF_LogMessage(DIF_OKRequest(msg)),
+                    DIF_AppendHandle(DIF_OKRequestWait(msg))
                 )
             }
 
@@ -327,8 +327,8 @@ module f_diff{
                     val dif_transition = {
                         post_state: dif.state,
                         effects: Set(
-                            DIF_UpdateInput(Set(OKResponse(msg))),
-                            DIF_RemoveHandle(OKRequestWait(msg))
+                            DIF_UpdateInput(Set(DIF_OKResponse(msg))),
+                            DIF_RemoveHandle(DIF_OKRequestWait(msg))
                         )
                     }
 
@@ -378,7 +378,7 @@ module f_diff{
         )
     }
 
-    def dif_process_transitions(sys: DIF_System, clock: GC_System, transition: DIF_Transition) : DIF_System = {
+    pure def dif_process_transitions(sys: DIF_System, clock: GC_System, transition: DIF_Transition) : DIF_System = {
         val new_sys = {...sys, state: transition.post_state}
         transition.effects.fold(new_sys, ((a1,a2) => dif_apply_effect(a1, clock, a2)))
     } 

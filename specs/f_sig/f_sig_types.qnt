@@ -1,4 +1,4 @@
-  module f_sig_types {
+module f_sig_types {
 
     import basicSpells.* from "../../spells/basicSpells"
     import rareSpells.* from "../../spells/rareSpells"
@@ -10,22 +10,22 @@
     type SIG_VK = int
 
     type SIG_Message =
-        | GenRequest({cfg: MsgConfig}) 
-        | SIMGenHold({cfg: MsgConfig}) 
-        | SIMGenRelease({cfg: MsgConfig, vk: SIG_VK})
-        | GenResponse({cfg: MsgConfig, vk: SIG_VK}) 
+        | SIG_GenRequest({cfg: MsgConfig}) 
+        | SIG_SIMGenHold({cfg: MsgConfig}) 
+        | SIG_SIMGenRelease({cfg: MsgConfig, vk: SIG_VK})
+        | SIG_GenResponse({cfg: MsgConfig, vk: SIG_VK}) 
 
-        | SignRequest({cfg: MsgConfig, m: SIG_Document}) 
-        | SIMSignHold({cfg: MsgConfig, m: SIG_Document,})  
-        | SIMSignRelease({cfg: MsgConfig, m: SIG_Document, sig: SIG_Signature}) // output of SIM
-        | SignResponse({cfg: MsgConfig, m: SIG_Document, sig: Option[SIG_Signature]})
+        | SIG_SignRequest({cfg: MsgConfig, m: SIG_Document}) 
+        | SIG_SIMSignHold({cfg: MsgConfig, m: SIG_Document,})  
+        | SIG_SIMSignRelease({cfg: MsgConfig, m: SIG_Document, sig: SIG_Signature}) // output of SIM
+        | SIG_SignResponse({cfg: MsgConfig, m: SIG_Document, sig: Option[SIG_Signature]})
 
-        | VerifyRequest({cfg: MsgConfig, vk: SIG_VK, m: SIG_Document, sig: SIG_Signature}) // input to FSig
-        | SIMVerifyHold({cfg: MsgConfig, vk: SIG_VK, m: SIG_Document, sig: SIG_Signature}) // input to SIM
-        | SIMReleaseVerify({cfg: MsgConfig, vk: SIG_VK, m: SIG_Document, sig: SIG_Signature, b: bool}) // output of SIM
-        | VerifyResponse({cfg: MsgConfig, vk: SIG_VK, m: SIG_Document, sig: SIG_Signature, b: bool})
+        | SIG_VerifyRequest({cfg: MsgConfig, vk: SIG_VK, m: SIG_Document, sig: SIG_Signature}) // input to FSig
+        | SIG_SIMVerifyHold({cfg: MsgConfig, vk: SIG_VK, m: SIG_Document, sig: SIG_Signature}) // input to SIM
+        | SIG_SIMReleaseVerify({cfg: MsgConfig, vk: SIG_VK, m: SIG_Document, sig: SIG_Signature, b: bool}) // output of SIM
+        | SIG_VerifyResponse({cfg: MsgConfig, vk: SIG_VK, m: SIG_Document, sig: SIG_Signature, b: bool})
 
-        | SIMControl
+        | SIG_SIMControl
   
 
     type SIG_SystemParams = {
@@ -77,9 +77,9 @@
    pure def sig_get_all_response_messages(messages: Set[SIG_Message]): Set[SIG_Message] = {
         messages.filterMap(m => {
         match m {
-            | GenResponse(p) => Some(GenResponse(p))
-            | SignResponse(p) => Some(SignResponse(p))
-            | VerifyResponse(p) => Some(VerifyResponse(p))  
+            | SIG_GenResponse(p) => Some(SIG_GenResponse(p))
+            | SIG_SignResponse(p) => Some(SIG_SignResponse(p))
+            | SIG_VerifyResponse(p) => Some(SIG_VerifyResponse(p))  
             | _ => None
         }
         })
@@ -89,7 +89,7 @@
         pure def sig_get_gen_request_messages(messages: Set[SIG_Message]): Set[{cfg: MsgConfig}] = {
             messages.filterMap(m => {
             match m {
-                | GenRequest(p) => Some(p)
+                | SIG_GenRequest(p) => Some(p)
                 | _ => None
             }
             })
@@ -98,7 +98,7 @@
         pure def sig_get_sim_gen_hold_messages(messages: Set[SIG_Message]): Set[{cfg: MsgConfig}] = {
             messages.filterMap(m => {
             match m {
-                | SIMGenHold(p) => Some(p)
+                | SIG_SIMGenHold(p) => Some(p)
                 | _ => None
             }
             })
@@ -107,7 +107,7 @@
         pure def sig_get_sim_gen_release_messages(messages: Set[SIG_Message]): Set[{cfg: MsgConfig, vk: SIG_VK}] = {
             messages.filterMap(m => {
             match m {
-                | SIMGenRelease(p) => Some(p)
+                | SIG_SIMGenRelease(p) => Some(p)
                 | _ => None
             }
             })
@@ -116,7 +116,7 @@
         pure def sig_get_gen_response_messages(messages: Set[SIG_Message]): Set[{cfg: MsgConfig, vk: SIG_VK}] = {
             messages.filterMap(m => {
             match m {
-                | GenResponse(p) => Some(p)
+                | SIG_GenResponse(p) => Some(p)
                 | _ => None
             }
             })
@@ -125,7 +125,7 @@
         pure def sig_get_sign_request_messages(messages: Set[SIG_Message]): Set[{cfg: MsgConfig, m: SIG_Document}] = {
             messages.filterMap(m => {
             match m {
-                | SignRequest(p) => Some(p)
+                | SIG_SignRequest(p) => Some(p)
                 | _ => None
             }
             })
@@ -134,7 +134,7 @@
         pure def sig_get_sim_sign_hold_messages(messages: Set[SIG_Message]): Set[{cfg: MsgConfig, m: SIG_Document}] = {
             messages.filterMap(m => {
             match m {
-                | SIMSignHold(p) => Some(p)
+                | SIG_SIMSignHold(p) => Some(p)
                 | _ => None
             }
             })
@@ -143,7 +143,7 @@
         pure def sig_get_sim_sign_release_messages(messages: Set[SIG_Message]): Set[{cfg: MsgConfig, m: SIG_Document, sig: SIG_Signature}] = {
             messages.filterMap(m => {
             match m {
-                | SIMSignRelease(p) => Some(p)
+                | SIG_SIMSignRelease(p) => Some(p)
                 | _ => None
             }
             })
@@ -152,7 +152,7 @@
         pure def sig_get_sign_response_messages(messages: Set[SIG_Message]): Set[{cfg: MsgConfig, m: SIG_Document, sig: Option[SIG_Signature]}] = {
             messages.filterMap(m => {
             match m {
-                | SignResponse(p) => Some(p)
+                | SIG_SignResponse(p) => Some(p)
                 | _ => None
             }
             })
@@ -161,7 +161,7 @@
         pure def sig_get_verify_request_messages(messages: Set[SIG_Message]): Set[{cfg: MsgConfig, vk: SIG_VK, m: SIG_Document, sig: SIG_Signature}] = {
             messages.filterMap(m => {
             match m {
-                | VerifyRequest(p) => Some(p)
+                | SIG_VerifyRequest(p) => Some(p)
                 | _ => None
             }
             })
@@ -170,7 +170,7 @@
         pure def sig_get_sim_verify_hold_messages(messages: Set[SIG_Message]): Set[{cfg: MsgConfig, vk: SIG_VK, m: SIG_Document, sig: SIG_Signature}] = {
             messages.filterMap(m => {
             match m {
-                | SIMVerifyHold(p) => Some(p)
+                | SIG_SIMVerifyHold(p) => Some(p)
                 | _ => None
             }
             })
@@ -179,7 +179,7 @@
         pure def sig_get_sim_release_verify_messages(messages: Set[SIG_Message]): Set[{cfg: MsgConfig, vk: SIG_VK, m: SIG_Document, sig: SIG_Signature, b: bool}] = {
             messages.filterMap(m => {
             match m {
-                | SIMReleaseVerify(p) => Some(p)
+                | SIG_SIMReleaseVerify(p) => Some(p)
                 | _ => None
             }
             })
@@ -188,7 +188,7 @@
         pure def sig_get_verify_response_messages(messages: Set[SIG_Message]): Set[{cfg: MsgConfig, vk: SIG_VK, m: SIG_Document, sig: SIG_Signature, b: bool}] = {
             messages.filterMap(m => {
             match m {
-                | VerifyResponse(p) => Some(p)
+                | SIG_VerifyResponse(p) => Some(p)
                 | _ => None
             }
             })
@@ -197,7 +197,7 @@
         pure def sig_get_sim_control_messages(messages: Set[SIG_Message]): Set[SIG_Message] = {
             messages.filter(m => {
             match m {
-                | SIMControl => true
+                | SIG_SIMControl => true
                 | _ => false
             }
             })

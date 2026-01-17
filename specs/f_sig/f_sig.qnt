@@ -24,9 +24,9 @@ module f_sig{
                 {
                     post_state: sig.state,
                     effects: Set(
-                        SIG_LogMessage(GenRequest(p)),
-                        SIG_UpdateInput(Set(SIMControl)),
-                        SIG_AppendHandle(SIMGenHold({cfg: p.cfg}))
+                        SIG_LogMessage(SIG_GenRequest(p)),
+                        SIG_UpdateInput(Set(SIG_SIMControl)),
+                        SIG_AppendHandle(SIG_SIMGenHold({cfg: p.cfg}))
                     )
                 }
             }else{
@@ -46,8 +46,8 @@ module f_sig{
                 {
                     post_state: sig.state,
                     effects: Set(
-                        SIG_UpdateInput(Set(SIMGenRelease({cfg: p.cfg, vk: sim_vk}))),
-                        SIG_RemoveHandle(SIMGenHold(p))
+                        SIG_UpdateInput(Set(SIG_SIMGenRelease({cfg: p.cfg, vk: sim_vk}))),
+                        SIG_RemoveHandle(SIG_SIMGenHold(p))
                     )
                 }     
             })
@@ -74,7 +74,7 @@ module f_sig{
                {
                     post_state: sig.state,
                     effects: Set(
-                        SIG_UpdateInput(Set(GenResponse({cfg:p.cfg, vk: maybe_vk.unwrap().vk})))
+                        SIG_UpdateInput(Set(SIG_GenResponse({cfg:p.cfg, vk: maybe_vk.unwrap().vk})))
                     )
                 }                                    
             }else{
@@ -104,7 +104,7 @@ module f_sig{
                     {
                         post_state: sig.state.set(sid, {...sid_state, VK: sid_state.VK.setAdd({party: party, vk: new_vk})}),
                         effects: Set(
-                            SIG_UpdateInput(Set(GenResponse({cfg:p.cfg, vk: new_vk}))),
+                            SIG_UpdateInput(Set(SIG_GenResponse({cfg:p.cfg, vk: new_vk}))),
                         )
                     }
                 }
@@ -125,17 +125,17 @@ module f_sig{
                     {
                         post_state: sig.state,
                         effects: Set(
-                            SIG_LogMessage(SignRequest(p)),
-                            SIG_UpdateInput(Set(SignResponse({cfg:p.cfg, m: p.m, sig: None})))
+                            SIG_LogMessage(SIG_SignRequest(p)),
+                            SIG_UpdateInput(Set(SIG_SignResponse({cfg:p.cfg, m: p.m, sig: None})))
                         )
                     }
                 }else{
                     {
                         post_state: sig.state,
                         effects: Set(
-                            SIG_LogMessage(SignRequest(p)),
-                            SIG_UpdateInput(Set(SIMControl)),
-                            SIG_AppendHandle(SIMSignHold({cfg: p.cfg, m: p.m}))
+                            SIG_LogMessage(SIG_SignRequest(p)),
+                            SIG_UpdateInput(Set(SIG_SIMControl)),
+                            SIG_AppendHandle(SIG_SIMSignHold({cfg: p.cfg, m: p.m}))
                         )
                     }
                 }
@@ -156,8 +156,8 @@ module f_sig{
                 {
                     post_state: sig.state,
                     effects: Set(
-                        SIG_UpdateInput(Set(SIMSignRelease({cfg: p.cfg, m: p.m, sig: sim_sig}))),
-                        SIG_RemoveHandle(SIMSignHold(p))
+                        SIG_UpdateInput(Set(SIG_SIMSignRelease({cfg: p.cfg, m: p.m, sig: sim_sig}))),
+                        SIG_RemoveHandle(SIG_SIMSignHold(p))
                     )
                 }     
             })
@@ -213,7 +213,7 @@ module f_sig{
                 {
                     post_state: sig.state.set(sid, {...sid_state, Ver: sid_state.Ver.setAdd({vk: vk, m: q.m, sig: new_sig, b: true})}),
                     effects: Set(
-                        SIG_UpdateInput(Set(SignResponse({cfg: q.cfg, m: q.m, sig: Some(new_sig)}))),
+                        SIG_UpdateInput(Set(SIG_SignResponse({cfg: q.cfg, m: q.m, sig: Some(new_sig)}))),
                     )
                 }
             }
@@ -226,9 +226,9 @@ module f_sig{
                 {
                     post_state: sig.state,
                     effects: Set(
-                        SIG_LogMessage(VerifyRequest(p)),
-                        SIG_UpdateInput(Set(SIMControl)),
-                        SIG_AppendHandle(SIMVerifyHold(p))
+                        SIG_LogMessage(SIG_VerifyRequest(p)),
+                        SIG_UpdateInput(Set(SIG_SIMControl)),
+                        SIG_AppendHandle(SIG_SIMVerifyHold(p))
                     )
                 }
             }else{
@@ -248,8 +248,8 @@ module f_sig{
                     {
                         post_state: sig.state,
                         effects: Set(
-                            SIG_UpdateInput(Set(SIMReleaseVerify({cfg: q.cfg, vk:q.vk, m:q.m, sig:q.sig, b: sim_b}))),
-                            SIG_RemoveHandle(SIMVerifyHold(q))
+                            SIG_UpdateInput(Set(SIG_SIMReleaseVerify({cfg: q.cfg, vk:q.vk, m:q.m, sig:q.sig, b: sim_b}))),
+                            SIG_RemoveHandle(SIG_SIMVerifyHold(q))
                         )
                     }
             })
@@ -277,7 +277,7 @@ module f_sig{
                 {
                     post_state: sig.state,
                     effects: Set(
-                        SIG_UpdateInput(Set(VerifyResponse({...p, b: b}))),
+                        SIG_UpdateInput(Set(SIG_VerifyResponse({...p, b: b}))),
                     )
                 }
             }else{
@@ -290,7 +290,7 @@ module f_sig{
                 {
                     post_state: sig.state.set(sid, {...sid_state, Ver: sid_state.Ver.setAdd({vk: p.vk, m: p.m, sig: p.sig, b: new_b})}),
                     effects: Set(
-                        SIG_UpdateInput(Set(VerifyResponse({...p, b: new_b}))),
+                        SIG_UpdateInput(Set(SIG_VerifyResponse({...p, b: new_b}))),
                     )
                 }
             }

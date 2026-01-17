@@ -3,17 +3,22 @@ module p_bridge {
     import basicSpells.* from "../../spells/basicSpells"
     import common.* from "../common"
 
+    import p_bridge_types.* from "./p_bridge_types"    
+
     import f_pki_types.* from "../f_pki/f_pki_types"    
     import f_pki.* from "../f_pki/f_pki"    
+
     import f_atms_types.* from "../f_atms/f_atms_types"    
     import f_atms.* from "../f_atms/f_atms"    
     
     import g_clock_types.* from "../g_clock/g_clock_types"    
     import g_clock.* from "../g_clock/g_clock"
-    import p_bridge_types.* from "./p_bridge_types"    
 
     import g_ledger_types.* from "../g_ledger/g_ledger_types"
     import g_ledger.* from "../g_ledger/g_ledger"
+
+    import f_diff_types.* from "../f_diff/f_diff_types"
+    import f_diff.* from "../f_diff/f_diff"    
     
     
     var p_bridge_s : BRD_System
@@ -67,7 +72,9 @@ module p_bridge {
             clock: sys.clock.gc_process_transitions(transition.clock),
             atms: sys.atms.atms_process_transitions(transition.atms),
             pki: sys.pki.pki_process_transitions(transition.pki), 
-            ledger1: led_process_transitions(sys.ledger1, sys.clock, transition.ledger1),
+            ledger1: sys.ledger1.led_process_transitions(sys.clock, transition.ledger1),
+            ledger2: sys.ledger2.led_process_transitions(sys.clock, transition.ledger2),
+            dif: sys.dif.dif_process_transitions(sys.clock, transition.dif),
         }
     } 
 
