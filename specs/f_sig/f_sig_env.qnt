@@ -3,7 +3,7 @@ module f_sig_env{
 
     import basicSpells.* from "../../spells/basicSpells"
     import f_sig_types.* from "./f_sig_types"
-    import f_sig.* from "./f_sig"
+    import f_sig_flipfloppy.* from "./f_sig_flipfloppy"
     import common.* from "../common"    
 
    
@@ -46,7 +46,7 @@ module f_sig_env{
         f_sig_s.input.size() == 0,
 
         f_sig_s' = {...f_sig_s, 
-            input: Set(SIMControl),
+            input: Set(SIG_SIMControl),
         }
     }
 
@@ -82,7 +82,7 @@ module f_sig_env{
         f_sig_s.input.size() == 0,
 
         f_sig_s' = {...f_sig_s, 
-            input: Set(GenRequest({cfg: cfg})),
+            input: Set(SIG_GenRequest({cfg: cfg})),
             nonce: f_sig_s.nonce + 1
 
         }
@@ -99,7 +99,7 @@ module f_sig_env{
     action env_sign_reqs_msg(cfg: MsgConfig, msg: SIG_Document) : bool = all {
         // Precondition: input must be empty
         f_sig_s' = {...f_sig_s, 
-            input: Set(SignRequest({cfg: cfg, m: msg})),
+            input: Set(SIG_SignRequest({cfg: cfg, m: msg})),
             nonce: f_sig_s.nonce + 1
         }
     }
@@ -117,7 +117,7 @@ module f_sig_env{
 
     action env_verify_reqs_args(cfg: MsgConfig, vk: SIG_VK, m: SIG_Document, sig: SIG_Signature) : bool = all {
         f_sig_s' = {...f_sig_s, 
-            input: Set(VerifyRequest({cfg: cfg, vk: vk, m: m, sig: sig}) ),
+            input: Set(SIG_VerifyRequest({cfg: cfg, vk: vk, m: m, sig: sig}) ),
             nonce: f_sig_s.nonce + 1
         }
     }
@@ -125,7 +125,7 @@ module f_sig_env{
     action env_sim_reqs: bool = all{
         f_sig_s.input.size() == 0,
         f_sig_s' = {...f_sig_s,
-           input: Set(SIMControl),
+           input: Set(SIG_SIMControl),
         }
     }
 

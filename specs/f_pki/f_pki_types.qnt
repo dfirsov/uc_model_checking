@@ -24,7 +24,7 @@ module f_pki_types {
 
         | PKI_GetAllRequest({cfg: MsgConfig}) 
         | PKI_SIMGetAllRequestWait({cfg: MsgConfig})
-        | PKI_GetAllResponse({cfg: MsgConfig, vks: List[VK]})
+        | PKI_GetAllResponse({cfg: MsgConfig, vks: Party -> VK})
 
         | PKI_SIMControl      
 
@@ -79,7 +79,7 @@ module f_pki_types {
         })
     }
 
-    pure def pki_get_get_all_response_messages(messages: Set[PKI_Message]): Set[{cfg: MsgConfig, vks: List[VK]}] = {
+    pure def pki_get_get_all_response_messages(messages: Set[PKI_Message]): Set[{cfg: MsgConfig, vks: Party -> VK}] = {
         messages.filterMap(m => {
         match m {
             | PKI_GetAllResponse(p) => Some(p)

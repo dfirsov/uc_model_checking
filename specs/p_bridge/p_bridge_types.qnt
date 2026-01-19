@@ -20,9 +20,11 @@ module p_bridge_types {
                 bvk: Option[BRD_BVK],
                 rot: Option[BRD_ROT],
                 cID: Option[int],
-                m: Option[{party: Party, avk: ATMS_AVK, sig: SIG_Signature}],
-                aux_prim: Option[(List[BRD_BVK], Committee)],
-                aux: Option[(List[BRD_BVK], Committee)],
+                m: Set[{party: Party, avk: ATMS_AVK, sig: SIG_Signature}],
+                aux_prim: Option[{bvks: Party -> BRD_BVK, com: Committee}],
+                aux: Option[{bvks: Party -> BRD_BVK, com: Committee}],
+                avk_prim: Option[ATMS_AVK],
+                h: Option[int],
     }
 
     type BRD_BR_Resp = {
@@ -40,10 +42,10 @@ module p_bridge_types {
 
         | RoTRequest({cfg: MsgConfig})
         | RoTPKIGetAllWait({cfg: MsgConfig})
-        | RoTComSelWait({cfg: MsgConfig, bvks: List[BRD_BVK]})
-        | RoTAKeyWait({cfg: MsgConfig, bvks: List[BRD_BVK], com: Committee})
-        | RoTOKWait({cfg: MsgConfig, bvks: List[BRD_BVK], com: Committee, avk: BRD_ROT})
-        | RoTResponse({cfg: MsgConfig, bvks: List[BRD_BVK], com: Committee, avk: BRD_ROT})
+        | RoTComSelWait({cfg: MsgConfig, bvks: Party -> BRD_BVK})
+        | RoTAKeyWait({cfg: MsgConfig, bvks: Party -> BRD_BVK, com: Committee})
+        | RoTOKWait({cfg: MsgConfig, bvks: Party -> BRD_BVK, com: Committee, avk: BRD_ROT})
+        | RoTResponse({cfg: MsgConfig, bvks: Party -> BRD_BVK, com: Committee, avk: BRD_ROT})
 
         | BridgeRequest({cfg: MsgConfig})
         | BridgeFetchWait({cfg: MsgConfig, r: Time})
@@ -57,7 +59,7 @@ module p_bridge_types {
         | BridgeAPLWait({cfg: MsgConfig})
         | BridgeHashWait({cfg: MsgConfig})
         | BridgeSigWait({cfg: MsgConfig})
-        | BridgeASigWait({cfg: MsgConfig})
+        | BridgeASigWait({cfg: MsgConfig, args: BRD_BR_Args, bst: BRD_BST_Entry, msg: {h: int, avk: ATMS_AVK}, cID: int})
         | BridgeDiffuseWait({cfg: MsgConfig})
         | BridgeL1SubmitWait({cfg: MsgConfig})
         | BridgeL2SubmitWait({cfg: MsgConfig})
@@ -256,7 +258,7 @@ module p_bridge_types {
         })
     }
 
-    pure def brd_get_bridge_asig_wait_messages(messages: Set[BRD_Message]): Set[{cfg: MsgConfig}] = {
+    pure def brd_get_bridge_asig_wait_messages(messages: Set[BRD_Message]): Set[{cfg: MsgConfig, args: BRD_BR_Args, bst: BRD_BST_Entry, msg: {h: int, avk: ATMS_AVK}, cID: int}] = {
         messages.filterMap(m => {
             match m {
                 | BridgeASigWait(p) => Some(p)
@@ -345,7 +347,7 @@ module p_bridge_types {
         })
     }
 
-    pure def brd_get_rot_com_sel_wait_messages(messages: Set[BRD_Message]): Set[{cfg: MsgConfig, bvks: List[BRD_BVK]}] = {
+    pure def brd_get_rot_com_sel_wait_messages(messages: Set[BRD_Message]): Set[{cfg: MsgConfig, bvks: Party -> BRD_BVK}] = {
         messages.filterMap(m => {
             match m {
                 | RoTComSelWait(p) => Some(p)
@@ -354,7 +356,7 @@ module p_bridge_types {
         })
     }
 
-    pure def brd_get_rot_akey_wait_messages(messages: Set[BRD_Message]): Set[{cfg: MsgConfig, bvks: List[BRD_BVK], com: Committee}] = {
+    pure def brd_get_rot_akey_wait_messages(messages: Set[BRD_Message]): Set[{cfg: MsgConfig, bvks: Party -> BRD_BVK, com: Committee}] = {
         messages.filterMap(m => {
             match m {
                 | RoTAKeyWait(p) => Some(p)
@@ -363,7 +365,7 @@ module p_bridge_types {
         })
     }
 
-    pure def brd_get_rot_ok_wait_messages(messages: Set[BRD_Message]): Set[{cfg: MsgConfig, bvks: List[BRD_BVK], com: Committee, avk: BRD_ROT}] = {
+    pure def brd_get_rot_ok_wait_messages(messages: Set[BRD_Message]): Set[{cfg: MsgConfig, bvks: Party -> BRD_BVK, com: Committee, avk: BRD_ROT}] = {
         messages.filterMap(m => {
             match m {
                 | RoTOKWait(p) => Some(p)
@@ -447,7 +449,7 @@ module p_bridge_types {
         })
     }
 
-    pure def brd_get_rot_response_messages(messages: Set[BRD_Message]): Set[{cfg: MsgConfig, bvks: List[BRD_BVK], com: Committee, avk: BRD_ROT}] = {
+    pure def brd_get_rot_response_messages(messages: Set[BRD_Message]): Set[{cfg: MsgConfig, bvks: Party -> BRD_BVK, com: Committee, avk: BRD_ROT}] = {
         messages.filterMap(m => {
             match m {
                 | RoTResponse(p) => Some(p)

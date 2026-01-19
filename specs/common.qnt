@@ -1,5 +1,8 @@
 
 module common {
+
+    import basicSpells.* from "../spells/basicSpells"    
+
     type Time = int
     type Nonce = int
     type Party = int
@@ -76,5 +79,14 @@ module common {
   pure def setMin (a: Set[int], max: int): int = {
       a.fold(max, (r, x) => if (x < r) x else r)
   }
+
+  pure def listFilterMap(s: List[a], f: (a) => Option[b]): List[b] = {
+    s.foldl(List(), (acc, e) => {
+      match f(e) {
+        | Some(x) => acc.append(x)
+        | None => acc
+      }
+    })
+  }  
 
 }

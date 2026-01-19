@@ -100,7 +100,7 @@ module f_pki {
                             PKI_RemoveHandle(PKI_SIMGetAllRequestWait(p)),
                             PKI_UpdateInput(Set(PKI_GetAllResponse({
                                 cfg: p.cfg,
-                                vks: pki.state.get(p.cfg.sid).Reg.map(r => r.vk).setToList()
+                                vks: pki.state.get(p.cfg.sid).Reg.map(r => (r.party, r.vk)).setToMap()
                             })))
                         )
                 }

@@ -2,7 +2,7 @@ module f_sig_properties {
     
     import basicSpells.* from "../../spells/basicSpells"
     import f_sig_types.* from "./f_sig_types"
-    import f_sig.* from "./f_sig"
+    import f_sig_flipfloppy.* from "./f_sig_flipfloppy"
     import f_sig_env.* from "./f_sig_env"
     import common.* from "../common"    
 
@@ -23,9 +23,9 @@ module f_sig_properties {
     // Handles are properly managed (no orphaned holds)
     val NoOrphanedHolds = f_sig_s.handles.forall(h => {
         match h {
-            | SIMGenHold(_) => true
-            | SIMSignHold(_) => true
-            | SIMVerifyHold(_) => true
+            | SIG_SIMGenHold(_) => true
+            | SIG_SIMSignHold(_) => true
+            | SIG_SIMVerifyHold(_) => true
             | _ => false
         }
     })
@@ -60,10 +60,10 @@ module f_sig_properties {
     // Completeness: If sign response has signature then later it verifies successfully
     val Completeness = f_sig_s.log.forall(log1 => {
         match log1.msg {
-            | SignResponse(p) => {
+            | SIG_SignResponse(p) => {
                 f_sig_s.log.forall(log2 => {
                     match log2.msg {
-                        | VerifyResponse(q) => {
+                        | SIG_VerifyResponse(q) => {
                             and {
                                 log1.idx < log2.idx, // sign response comes before verify response
                                 p.cfg.sid == q.cfg.sid,
@@ -94,7 +94,7 @@ module f_sig_properties {
     // by the party whose VK is used, unless the party is corrupted
     val Unforgeability = f_sig_s.log.forall(log => {
         match log.msg {
-            | VerifyResponse(vr) => {
+            | SIG_VerifyResponse(vr) => {
                 val sid_state = f_sig_s.state.get(vr.cfg.sid)
                 val maybe_owner = sid_state.VK.find(vk_entry => vk_entry.vk == vr.vk)
                 
@@ -106,7 +106,7 @@ module f_sig_properties {
                         // Or there exists a sign response for this message by this party
                         f_sig_s.log.exists(log2 => {
                             match log2.msg {
-                                | SignResponse(sr) => {
+                                | SIG_SignResponse(sr) => {
                                     and {
                                         log2.idx < log.idx,
                                         sr.cfg.party == owner,
@@ -150,11 +150,11 @@ module f_sig_properties {
     // Can only sign if VK has been generated for that party
     val VKBeforeSign = f_sig_s.log.forall(log => {
         match log.msg {
-            | SignResponse(sr) => {
+            | SIG_SignResponse(sr) => {
                 (sr.sig != None) implies {
                     f_sig_s.log.exists(log2 => {
                         match log2.msg {
-                            | GenResponse(gr) => {
+                            | SIG_GenResponse(gr) => {
                                 and {
                                     log2.idx < log.idx,
                                     gr.cfg.party == sr.cfg.party,
