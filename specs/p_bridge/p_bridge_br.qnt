@@ -21,10 +21,13 @@ module p_bridge_br{
 
     import p_bridge_types.* from "./p_bridge_types"    
     import p_bridge.* from "./p_bridge"     
+
+    import f_hash_types.* from "../f_hash/f_hash_types"    
+    import f_hash.* from "../f_hash/f_hash"        
     
 
     pure def brd_br_1(sys: BRD_CSystem) : Set[BRD_CTransition] = {
-        sys.brd.input.brd_get_rot_request_messages().map(p => {
+        sys.brd.input.brd_get_bridge_request_messages().map(p => {
             if(brd_access_check(p.cfg, sys.brd.params)){
                 val r = sys.clock.state.TIME
                 if(r < sys.brd.params.r0 + 2 or sys.brd.state.bridge_flag.contains((p.cfg.party, r))){
@@ -154,7 +157,7 @@ module p_bridge_br{
             }else if(r0 + 3 <= r and r <= r0 + 3 + (R - ((r0 + 3) % R)) - 1){
                 brd_br_5_case2(sys, p, bstP)
             }else if(r % R == 0){
-                Set()
+                brd_br_5_case3(sys, p, bstP)
             }else if(1 <= r % R and r % R <= delta + 1){
                 brd_br_5_case4(sys, p, bstP)
             }else if(r % R == delta + 2){
@@ -258,7 +261,7 @@ module p_bridge_br{
             }
         })
 
-        val vks = com.listFilterMap(party => if (bvks.has(party)) Some(party) else None)
+        val vks = com.listFilterMap(party => if (bvks.has(party) and com.listHas(party)) Some(bvks.get(party)) else None)
 
         val br_trans = {
             post_state: sys.brd.state,
@@ -345,6 +348,496 @@ module p_bridge_br{
         Set({...sys.brd_id_ctrans(),
             brd: brd_trans,
         })
+    }
+
+    pure def brd_br_5_case3(sys : BRD_CSystem, p: {cfg: MsgConfig, args: BRD_BR_Args}, bst : BRD_BST_Entry) : Set[BRD_CTransition] = {
+        
+        val brd_trans = { 
+            post_state: sys.brd.state,
+            effects: Set(
+                BRD_UpdateInput(Set()),
+                BRD_AppendHandle(BridgeComSelWait({cfg: p.cfg, args: p.args, bst: bst}))
+            )
+        }
+
+        val ledger1_trans = {
+            post_state: sys.ledger1.state,
+            effects: Set(
+                LED_UpdateInput(Set(ComSelRequest({cfg: p.cfg})))
+            )
+        }
+
+        Set({...sys.brd_id_ctrans(),
+            brd: brd_trans,
+            ledger1: ledger1_trans,
+        })
+    }
+
+    pure def brd_br_5_case3_2(sys : BRD_CSystem) : Set[BRD_CTransition] = {    
+        sys.ledger1.input.led_get_comsel_response_messages().map(p => {
+            sys.brd.handles.brd_get_bridge_com_sel_wait_messages().filter(q => p.cfg == q.cfg).map(q => {
+                val brd_trans = {
+                    post_state: sys.brd.state,
+                    effects: Set(
+                        BRD_RemoveHandle(BridgeComSelWait(q)),
+                        BRD_AppendHandle(BridgeAKeyWait({cfg: p.cfg, args: q.args, bst: q.bst, com_prim: p.com}))
+                    )
+                }
+
+                val vks = p.com.listFilterMap(party => {
+                    val aux = q.bst.aux.unwrap()
+                    if (aux.bvks.has(party) and p.com.listHas(party)){
+                        Some(aux.bvks.get(party))
+                    }else{
+                        None
+                    }
+                })
+
+                val atms_trans = {
+                    post_state: sys.atms.state,
+                    effects: Set(
+                        ATMS_UpdateInput(Set(AKeyRequest({cfg: p.cfg, vks: vks})))
+                    )
+                }
+
+                Set({...sys.brd_id_ctrans(),
+                    brd: brd_trans,
+                    ledger1: sys.ledger1.led_skip_trans(),
+                    atms: atms_trans,
+                })
+            })
+        }).flatten().flatten()
+    }
+
+    pure def brd_br_5_case3_3(sys : BRD_CSystem) : Set[BRD_CTransition] = {    
+        sys.atms.input.atms_get_akey_response_messages().map(p => {
+            sys.brd.handles.brd_get_bridge_akey_wait_messages().filter(q => p.cfg == q.cfg).map(q => {
+
+                if(p.avk == None){
+                    val brd_trans = {
+                        post_state: sys.brd.state,
+                        effects: Set(
+                            BRD_UpdateInput(Set(BridgeBRAlgorithmResponse({
+                                cfg: q.cfg, 
+                                args: q.args, 
+                                resp: ({
+                                    btx1: None,
+                                    btx2: None,
+                                    m: None,
+                                    bst: None
+                                })})))
+                        )
+                    }
+                    Set({...sys.brd_id_ctrans(),
+                        atms: sys.atms.atms_skip_trans(),
+                        brd: brd_trans
+                    })
+                }else{
+
+                    val brd_trans = {
+                        post_state: sys.brd.state,
+                        effects: Set(
+                            BRD_RemoveHandle(BridgeAKeyWait(q)),
+                            BRD_AppendHandle(BridgeAPLWait({
+                                cfg: q.cfg,
+                                args: q.args,
+                                bst: q.bst,
+                                com_prim: q.com_prim,
+                                avk_prim: p.avk.unwrap()
+                            }))
+                        )
+                    }
+
+                    val ledger1_trans = {
+                        post_state: sys.ledger1.state,
+                        effects: Set(
+                            LED_UpdateInput(Set(APLRequest({
+                                cfg: q.cfg,
+                            })))
+                        )
+                    }
+
+                    Set({...sys.brd_id_ctrans(),
+                        atms: sys.atms.atms_skip_trans(),
+                        brd: brd_trans,
+                        ledger1: ledger1_trans
+                    })
+                }
+            })
+        }).flatten().flatten()
+    }
+
+    pure def brd_br_5_case3_4(sys : BRD_CSystem) : Set[BRD_CTransition] = {  
+        sys.ledger1.input.led_get_apl_response_messages().map(p => {
+            sys.brd.handles.brd_get_bridge_apl_wait_messages().filter(q => p.cfg == q.cfg).map(q => {
+
+                val brd_trans = {
+                    post_state: sys.brd.state,
+                    effects: Set(
+                        BRD_RemoveHandle(BridgeAPLWait(q)),
+                        BRD_AppendHandle(BridgeHashWait({
+                            cfg: q.cfg,
+                            args: q.args,
+                            bst: q.bst,
+                            com_prim: q.com_prim,
+                            avk_prim: q.avk_prim,
+                            apl: p.p
+                        }))
+                    )
+                }
+
+                val L = q.args.L1.slice(0, p.p) // TODO: off by one?
+
+                val hash_trans = {
+                    post_state: sys.hash.state,
+                    effects: Set(
+                        HASH_UpdateInput(Set(HashRequest({
+                            cfg: q.cfg,
+                            x: L
+                        })))
+                    )
+                }
+
+                Set({...sys.brd_id_ctrans(),
+                    brd: brd_trans,
+                    ledger1: sys.ledger1.led_skip_trans(),
+                    hash: hash_trans
+                })
+            }).flatten()
+        }).flatten()
+
+    }
+
+    pure def brd_br_5_case3_5(sys : BRD_CSystem) : Set[BRD_CTransition] = {    
+        sys.hash.input.hash_get_response_messages().map(p => {
+            sys.brd.handles.brd_get_bridge_hash_wait_messages().filter(q => p.cfg == q.cfg).map(q => {
+                    
+                val brd_trans = {
+                    post_state: sys.brd.state,
+                    effects: Set(
+                        BRD_RemoveHandle(BridgeHashWait(q)),
+                        BRD_AppendHandle(BridgeSigWait({
+                            cfg: q.cfg,
+                            args: q.args,
+                            bst: q.bst,
+                            com_prim: q.com_prim,
+                            avk_prim: q.avk_prim,
+                            apl: q.apl,
+                            h: p.h
+                        }))
+                    )
+                }
+
+                val atms_trans = {
+                    post_state: sys.atms.state,
+                    effects: Set(
+                        ATMS_UpdateInput(Set(SignRequest({
+                            cfg: q.cfg,
+                            m: {h: p.h, avk: q.avk_prim}
+                        })))
+                    )
+                }
+
+
+                Set({...sys.brd_id_ctrans(),
+                    brd: brd_trans,
+                    hash: sys.hash.hash_skip_trans(),
+                    atms: atms_trans
+                })
+            })
+        }).flatten().flatten()
+    }
+
+    pure def brd_br_5_case3_6(sys : BRD_CSystem) : Set[BRD_CTransition] = {  
+        sys.atms.input.atms_get_sign_response_messages().map(p => {
+            sys.brd.handles.brd_get_bridge_sig_wait_messages().filter(q => p.cfg == q.cfg).map(q => {
+
+                val bst = {...q.bst, 
+                    aux_prim: Some({bvks: q.bst.aux.unwrap().bvks, com: q.com_prim}),    
+                    h: Some(q.h),
+                    avk_prim: Some(q.avk_prim)
+                }
+
+                if(p.sig == None or q.bst.aux.unwrap().com.listHas(p.cfg.party) == false){
+
+                    val brd_trans = {
+                        post_state: sys.brd.state,
+                        effects: Set(
+                            BRD_UpdateInput(Set(BridgeBRAlgorithmResponse({
+                                cfg: q.cfg, 
+                                args: q.args, 
+                                resp: ({
+                                    btx1: None,
+                                    btx2: None,
+                                    m: None,
+                                    bst: Some(bst) 
+                                })})))
+                        )
+                    }
+
+                    Set({...sys.brd_id_ctrans(),
+                        atms: sys.atms.atms_skip_trans(),
+                        brd: brd_trans,
+                    })
+                }else{
+
+                    val brd_trans = {
+                        post_state: sys.brd.state,
+                        effects: Set(
+                            BRD_UpdateInput(Set(BridgeBRAlgorithmResponse({
+                                cfg: q.cfg, 
+                                args: q.args, 
+                                resp: ({
+                                    btx1: None,
+                                    btx2: None,
+                                    m: Some({party: p.cfg.party, avk: bst.aux.unwrap().bvks.get(p.cfg.party), sig: p.sig.unwrap()}),
+                                    bst: Some(bst) 
+                                })})))
+                        )
+                    }
+
+                    Set({...sys.brd_id_ctrans(),
+                        atms: sys.atms.atms_skip_trans(),
+                        brd: brd_trans,
+                    })
+                }
+
+            })
+        }).flatten().flatten()
+    }
+
+    pure def brd_br_6(sys : BRD_CSystem) : Set[BRD_CTransition] = {      
+        sys.brd.input.brd_get_bridge_br_algorithm_response_messages().map(p => {
+
+            if(p.resp.bst == None){
+                Map().get(1) // should not happen
+            }else{
+
+                Set({...sys.brd_id_ctrans(),
+                    brd: {
+                        post_state: {...sys.brd.state,
+                            bst: sys.brd.state.bst.put(p.cfg.party, p.resp.bst.unwrap())
+                        },
+                        effects: Set(
+                            BRD_UpdateInput(Set(BridgeDiffuse({cfg: p.cfg, args: p.args, resp: p.resp})))
+                        )
+                    },
+                })
+            }
+        }).flatten()
+    }
+
+    pure def brd_br_7(sys : BRD_CSystem) : Set[BRD_CTransition] = {   
+        sys.brd.input.brd_get_bridge_diffuse_messages().map(p => {
+            if(p.resp.m == None){
+                Set({...sys.brd_id_ctrans(),
+                    brd: {
+                        post_state: sys.brd.state,
+                        effects: Set(
+                            BRD_UpdateInput(Set(BridgeL1Submit(p)))
+                        )
+                    }
+                })
+            }else{
+
+                val brd_trans = {
+                        post_state: sys.brd.state,
+                        effects: Set(
+                            BRD_AppendHandle(BridgeDiffuseWait({cfg: p.cfg, args: p.args, resp: p.resp}))
+                        )}
+
+                val dif_trans = {
+                    post_state: sys.dif.state,
+                    effects: Set(
+                        DIF_UpdateInput(Set(DIF_DiffuseRequest({cfg: p.cfg, m: p.resp.m.unwrap()})))
+                    )
+                }
+
+                Set({...sys.brd_id_ctrans(),
+                    brd: brd_trans,
+                    dif : dif_trans
+                })
+            }
+        }).flatten()
+    }
+
+    pure def brd_br_8(sys : BRD_CSystem) : Set[BRD_CTransition] = {   
+        sys.dif.input.dif_get_diffuse_response_messages().map(p => {
+            sys.brd.handles.brd_get_bridge_diffuse_wait_messages().filter(q => p.cfg == q.cfg).map(q => {
+                Set({...sys.brd_id_ctrans(),
+                    dif: sys.dif.dif_skip_trans(),
+                    brd: {
+                        post_state: sys.brd.state,
+                        effects: Set(
+                            BRD_UpdateInput(Set(BridgeL1Submit({cfg: p.cfg, args: q.args, resp: q.resp})))
+                        )
+                    }
+                })
+            })
+        }).flatten().flatten()
+    }
+
+
+    pure def brd_br_9(sys : BRD_CSystem) : Set[BRD_CTransition] = {   
+        sys.brd.input.brd_get_bridge_l1_submit_messages().map(p => {
+            if(p.resp.btx1 == None){
+                Set({...sys.brd_id_ctrans(),
+                    brd: {
+                        post_state: sys.brd.state,
+                        effects: Set(
+                            BRD_UpdateInput(Set(BridgeL2Submit(p)))
+                        )
+                    }
+                })
+            } else {
+
+                val brd_trans = {
+                        post_state: sys.brd.state,
+                        effects: Set(
+                            BRD_AppendHandle(BridgeL1SubmitWait({cfg: p.cfg, args: p.args, resp: p.resp})),
+                            BRD_UpdateInput(Set())
+                        )
+                }
+
+                val ledger1_trans = {
+                    post_state: sys.ledger1.state,
+                    effects: Set(
+                        LED_UpdateInput(Set(SubmitRequest({cfg: p.cfg, tx: p.resp.btx1.unwrap()})))
+                    )
+                }
+
+                Set({...sys.brd_id_ctrans(),
+                    brd: brd_trans,
+                    ledger1: ledger1_trans
+                })
+            }
+        }).flatten()
+    }
+
+    pure def brd_br_10(sys : BRD_CSystem) : Set[BRD_CTransition] = {  
+        sys.ledger1.input.led_get_submit_response_messages().map(p => {
+            sys.brd.handles.brd_get_bridge_l1_submit_wait_messages().filter(q => p.cfg == q.cfg).map(q => {
+                Set({...sys.brd_id_ctrans(),
+                    ledger1: sys.ledger1.led_skip_trans(),
+                    brd: {
+                        post_state: sys.brd.state,
+                        effects: Set(
+                            BRD_UpdateInput(Set(BridgeL2Submit({cfg: p.cfg, args: q.args, resp: q.resp}))),
+                            BRD_RemoveHandle(BridgeL1SubmitWait(q))
+                        )
+                    }
+                })
+            }).flatten()
+        }).flatten()
+    }
+
+    pure def brd_br_11(sys : BRD_CSystem) : Set[BRD_CTransition] = {   
+        sys.brd.input.brd_get_bridge_l2_submit_messages().map(p => {
+            if(p.resp.btx2 == None){
+                Set({...sys.brd_id_ctrans(),
+                    brd: {
+                        post_state: sys.brd.state,
+                        effects: Set(
+                            BRD_UpdateInput(Set()),
+                            BRD_AppendHandle(BridgeOKWait({cfg: p.cfg, args: p.args, resp: p.resp}))
+                        )
+                    },
+                    clock: {
+                        post_state: sys.clock.state,
+                        effects: Set(
+                            GC_UpdateInput(Set(OkayRequest({cfg: p.cfg})))
+                        )
+                    }
+                })
+            } else {
+                val brd_trans = {
+                        post_state: sys.brd.state,
+                        effects: Set(
+                            BRD_AppendHandle(BridgeL2SubmitWait({cfg: p.cfg, args: p.args, resp: p.resp})),
+                            BRD_UpdateInput(Set())
+                        )
+                }
+
+                val ledger2_trans = {
+                    post_state: sys.ledger2.state,
+                    effects: Set(
+                        LED_UpdateInput(Set(SubmitRequest({cfg: p.cfg, tx: p.resp.btx2.unwrap()})))
+                    )
+                }
+
+                Set({...sys.brd_id_ctrans(),
+                    brd: brd_trans,
+                    ledger2: ledger2_trans
+                })
+            }
+        }).flatten()
+    }    
+
+    pure def brd_br_12(sys : BRD_CSystem) : Set[BRD_CTransition] = {  
+        sys.ledger2.input.led_get_submit_response_messages().map(p => {
+            sys.brd.handles.brd_get_bridge_l2_submit_wait_messages().filter(q => p.cfg == q.cfg).map(q => {
+                //Set()
+
+                Set({...sys.brd_id_ctrans(),
+                    ledger2: sys.ledger2.led_skip_trans(),
+                    brd: {
+                        post_state: sys.brd.state,
+                        effects: Set(
+                            BRD_UpdateInput(Set()),
+                            BRD_AppendHandle(BridgeOKWait({cfg: p.cfg, args: q.args, resp: q.resp})),
+                            BRD_RemoveHandle(BridgeL2SubmitWait(q))
+                        )
+                    },
+                    clock: {
+                        post_state: sys.clock.state,
+                        effects: Set(
+                            GC_UpdateInput(Set(OkayRequest({cfg: p.cfg})))
+                        )
+                    }
+                })
+            }).flatten()
+        }).flatten()
+    }    
+
+    pure def brd_br_13(sys : BRD_CSystem) : Set[BRD_CTransition] = {  
+        sys.clock.input.get_okay_response_messages().map(p => {
+            sys.brd.handles.brd_get_bridge_ok_wait_messages().filter(q => p.cfg == q.cfg).map(q => {
+                Set({...sys.brd_id_ctrans(),
+                    clock: sys.clock.gc_skip_trans(),
+                    brd: {
+                        post_state: sys.brd.state, 
+                        effects: Set(
+                            BRD_RemoveHandle(BridgeOKWait(q)),
+                            BRD_UpdateInput(Set(BridgeResponse({cfg: p.cfg, args: q.args, resp: q.resp})))
+                        )
+                    },
+                })
+            }).flatten()
+        }).flatten()
+    }
+
+    pure def brd_br_main_listener(sys: BRD_CSystem) : Set[BRD_CTransition] = {
+        Set(
+            brd_br_1(sys),
+            brd_br_2(sys),
+            brd_br_3(sys),
+            brd_br_4(sys),
+            brd_br_5(sys),
+            brd_br_5_case5_2(sys),
+            brd_br_6(sys),
+            brd_br_5_case3_6(sys),
+            brd_br_5_case3_5(sys),
+            brd_br_5_case3_4(sys),
+            brd_br_5_case3_3(sys),
+            brd_br_5_case3_2(sys),
+            brd_br_7(sys),
+            brd_br_8(sys),
+            brd_br_9(sys),
+            brd_br_10(sys),
+            brd_br_11(sys),
+            brd_br_12(sys),
+            brd_br_13(sys)
+        ).flatten()
     }
 
 

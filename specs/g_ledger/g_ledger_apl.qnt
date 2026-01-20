@@ -16,7 +16,7 @@ module g_ledger_apl {
                 {
                     post_state: led.state,
                     effects: Set(
-                        LED_UpdateInput(Set(SIMControl)),
+                        LED_UpdateInput(Set(LED_SIMControl)),
                         LED_AppendHandle(APLSIMHold({cfg: p.cfg, r: clock.state.TIME})),
                         LED_LogMessage(APLRequest(p))
                     )
@@ -39,7 +39,7 @@ module g_ledger_apl {
             all {
                 nondet transition = ts.oneOf()
                 all {
-                    g_ledger_s' = led_process_transitions(g_ledger_s, transition._1),
+                    g_ledger_s' = led_process_transitions(g_ledger_s, clock, transition._1),
                     g_clock_s' = gc_process_transitions(g_clock_s, transition._2)
                 }
             }

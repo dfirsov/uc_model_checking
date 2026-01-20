@@ -19,6 +19,9 @@ module p_bridge {
 
     import f_diff_types.* from "../f_diff/f_diff_types"
     import f_diff.* from "../f_diff/f_diff"    
+
+    import f_hash_types.* from "../f_hash/f_hash_types"
+    import f_hash.* from "../f_hash/f_hash"        
     
     
     var p_bridge_s : BRD_System
@@ -75,6 +78,7 @@ module p_bridge {
             ledger1: sys.ledger1.led_process_transitions(sys.clock, transition.ledger1),
             ledger2: sys.ledger2.led_process_transitions(sys.clock, transition.ledger2),
             dif: sys.dif.dif_process_transitions(sys.clock, transition.dif),
+            hash: sys.hash.hash_process_transitions(transition.hash),
         }
     } 
 
@@ -93,7 +97,7 @@ module p_bridge {
                 r0: 0,
                 delta: 0, 
                 t: 0, 
-                R: 0, 
+                R: 2, 
             },
             state : {
                 //bvk: Map(),

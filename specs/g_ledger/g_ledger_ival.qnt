@@ -189,7 +189,7 @@ module g_ledger_ival {
             all {
                 nondet transition = ts.oneOf()
                 all {
-                    g_ledger_s' = led_process_transitions(g_ledger_s, transition._1),
+                    g_ledger_s' = led_process_transitions(g_ledger_s, g_clock_s, transition._1),
                     g_clock_s' = gc_process_transitions(g_clock_s, transition._2)
                 }
             }
@@ -373,7 +373,7 @@ module g_ledger_ival {
             all {
                 nondet transition = ts.oneOf()
                 all {
-                    g_ledger_s' = led_process_transitions(g_ledger_s, transition._1),
+                    g_ledger_s' = led_process_transitions(g_ledger_s, g_clock_s, transition._1),
                     g_clock_s' = gc_process_transitions(g_clock_s, transition._2),
                     f_atms_s' = atms_process_transitions(f_atms_s, transition._3)
                 }

@@ -9,7 +9,7 @@ module g_ledger{
     
  
     var g_ledger_s : LED_System
-    const instance : int
+    //const instance : int
 
 
     pure def led_skip_trans(led: LED_System) : LED_Transition = {

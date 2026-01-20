@@ -11,6 +11,7 @@ module p_bridge_types {
     import f_diff_types.* from "../f_diff/f_diff_types" 
     import f_sig_types.* from "../f_sig/f_sig_types" 
     import f_pki_types.* from "../f_pki/f_pki_types"
+    import f_hash_types.* from "../f_hash/f_hash_types"
     
     type BRD_BVK = ATMS_VK 
     type BRD_ROT = ATMS_AVK 
@@ -54,17 +55,22 @@ module p_bridge_types {
         | BridgeBRAlgorithmRequest({cfg: MsgConfig, args: BRD_BR_Args})
         | BridgeBRAlgorithmResponse({cfg: MsgConfig, args: BRD_BR_Args, resp: BRD_BR_Resp})
 
-        | BridgeComSelWait({cfg: MsgConfig})
-        | BridgeAKeyWait({cfg: MsgConfig})
-        | BridgeAPLWait({cfg: MsgConfig})
-        | BridgeHashWait({cfg: MsgConfig})
-        | BridgeSigWait({cfg: MsgConfig})
+        | BridgeComSelWait({cfg: MsgConfig, args: BRD_BR_Args, bst: BRD_BST_Entry})
+        | BridgeAKeyWait({cfg: MsgConfig, args: BRD_BR_Args, bst: BRD_BST_Entry, com_prim: Committee})
+        | BridgeAPLWait({cfg: MsgConfig, args: BRD_BR_Args, bst: BRD_BST_Entry, com_prim: Committee, avk_prim: ATMS_AVK})
+        | BridgeHashWait({cfg: MsgConfig, args: BRD_BR_Args, bst: BRD_BST_Entry, com_prim: Committee, avk_prim: ATMS_AVK, apl: int})
+        | BridgeSigWait({cfg: MsgConfig, args: BRD_BR_Args, bst: BRD_BST_Entry, com_prim: Committee, avk_prim: ATMS_AVK, apl: int, h: int})
+
         | BridgeASigWait({cfg: MsgConfig, args: BRD_BR_Args, bst: BRD_BST_Entry, msg: {h: int, avk: ATMS_AVK}, cID: int})
-        | BridgeDiffuseWait({cfg: MsgConfig})
-        | BridgeL1SubmitWait({cfg: MsgConfig})
-        | BridgeL2SubmitWait({cfg: MsgConfig})
-        | BridgeOKWait({cfg: MsgConfig})
-        | BridgeResponse({cfg: MsgConfig})
+
+        | BridgeDiffuse({cfg: MsgConfig, args: BRD_BR_Args, resp: BRD_BR_Resp,})
+        | BridgeDiffuseWait({cfg: MsgConfig, args: BRD_BR_Args, resp: BRD_BR_Resp,})
+        | BridgeL1Submit({cfg: MsgConfig, args: BRD_BR_Args, resp: BRD_BR_Resp,})
+        | BridgeL1SubmitWait({cfg: MsgConfig, args: BRD_BR_Args, resp: BRD_BR_Resp,})
+        | BridgeL2Submit({cfg: MsgConfig, args: BRD_BR_Args, resp: BRD_BR_Resp,})
+        | BridgeL2SubmitWait({cfg: MsgConfig, args: BRD_BR_Args, resp: BRD_BR_Resp,})
+        | BridgeOKWait({cfg: MsgConfig, args: BRD_BR_Args, resp: BRD_BR_Resp,})
+        | BridgeResponse({cfg: MsgConfig, args: BRD_BR_Args, resp: BRD_BR_Resp,})
 
         | CertifyRequest({cfg: MsgConfig, rot: BRD_ROT, x: LED_Tx})
         | CertifyReadWait({cfg: MsgConfig})
@@ -139,6 +145,7 @@ module p_bridge_types {
         ledger1: LED_System,
         ledger2: LED_System,
         dif: DIF_System,
+        hash: HASH_System,
     }    
 
     type BRD_CTransition = {
@@ -149,6 +156,7 @@ module p_bridge_types {
         ledger1: LED_Transition,
         ledger2: LED_Transition,
         dif: DIF_Transition,
+        hash: HASH_Transition,
     }      
 
     pure def brd_id_ctrans(sys: BRD_CSystem) : BRD_CTransition = {
@@ -165,6 +173,7 @@ module p_bridge_types {
             ledger1: sys.ledger1.led_id_trans(), 
             ledger2: sys.ledger2.led_id_trans(), 
             dif: sys.dif.dif_id_trans(), 
+            hash: sys.hash.hash_id_trans(), 
         }
     }    
 
@@ -204,6 +213,15 @@ module p_bridge_types {
         })
     }
 
+    pure def brd_get_bridge_br_algorithm_response_messages(messages: Set[BRD_Message]): Set[{cfg: MsgConfig, args: BRD_BR_Args, resp: BRD_BR_Resp}] = {
+        messages.filterMap(m => {
+            match m {
+                | BridgeBRAlgorithmResponse(p) => Some(p)
+                | _ => None
+            }
+        })
+    }    
+
     pure def brd_get_bridge_l2_read_wait_messages(messages: Set[BRD_Message]): Set[{cfg: MsgConfig, r: Time, ms: Set[{party: Party, avk: ATMS_AVK, sig: SIG_Signature}], L1: List[LED_Tx]}] = {
         messages.filterMap(m => {
             match m {
@@ -213,7 +231,7 @@ module p_bridge_types {
         })
     }
 
-    pure def brd_get_bridge_com_sel_wait_messages(messages: Set[BRD_Message]): Set[{cfg: MsgConfig}] = {
+    pure def brd_get_bridge_com_sel_wait_messages(messages: Set[BRD_Message]): Set[{cfg: MsgConfig, args: BRD_BR_Args, bst: BRD_BST_Entry}] = {
         messages.filterMap(m => {
             match m {
                 | BridgeComSelWait(p) => Some(p)
@@ -222,7 +240,7 @@ module p_bridge_types {
         })
     }
 
-    pure def brd_get_bridge_akey_wait_messages(messages: Set[BRD_Message]): Set[{cfg: MsgConfig}] = {
+    pure def brd_get_bridge_akey_wait_messages(messages: Set[BRD_Message]): Set[{cfg: MsgConfig, args: BRD_BR_Args, bst: BRD_BST_Entry, com_prim: Committee}] = {
         messages.filterMap(m => {
             match m {
                 | BridgeAKeyWait(p) => Some(p)
@@ -231,7 +249,7 @@ module p_bridge_types {
         })
     }
 
-    pure def brd_get_bridge_apl_wait_messages(messages: Set[BRD_Message]): Set[{cfg: MsgConfig}] = {
+    pure def brd_get_bridge_apl_wait_messages(messages: Set[BRD_Message]): Set[{cfg: MsgConfig, args: BRD_BR_Args, bst: BRD_BST_Entry, com_prim: Committee, avk_prim: ATMS_AVK}] = {
         messages.filterMap(m => {
             match m {
                 | BridgeAPLWait(p) => Some(p)
@@ -240,7 +258,7 @@ module p_bridge_types {
         })
     }
 
-    pure def brd_get_bridge_hash_wait_messages(messages: Set[BRD_Message]): Set[{cfg: MsgConfig}] = {
+    pure def brd_get_bridge_hash_wait_messages(messages: Set[BRD_Message]): Set[{cfg: MsgConfig, args: BRD_BR_Args, bst: BRD_BST_Entry, com_prim: Committee, avk_prim: ATMS_AVK, apl: int}] = {
         messages.filterMap(m => {
             match m {
                 | BridgeHashWait(p) => Some(p)
@@ -249,7 +267,7 @@ module p_bridge_types {
         })
     }
 
-    pure def brd_get_bridge_sig_wait_messages(messages: Set[BRD_Message]): Set[{cfg: MsgConfig}] = {
+    pure def brd_get_bridge_sig_wait_messages(messages: Set[BRD_Message]): Set[{cfg: MsgConfig, args: BRD_BR_Args, bst: BRD_BST_Entry, com_prim: Committee, avk_prim: ATMS_AVK, apl: int, h: int}] = {
         messages.filterMap(m => {
             match m {
                 | BridgeSigWait(p) => Some(p)
@@ -267,7 +285,7 @@ module p_bridge_types {
         })
     }
 
-    pure def brd_get_bridge_diffuse_wait_messages(messages: Set[BRD_Message]): Set[{cfg: MsgConfig}] = {
+    pure def brd_get_bridge_diffuse_wait_messages(messages: Set[BRD_Message]): Set[{cfg: MsgConfig, args: BRD_BR_Args, resp: BRD_BR_Resp,}] = {
         messages.filterMap(m => {
             match m {
                 | BridgeDiffuseWait(p) => Some(p)
@@ -276,7 +294,16 @@ module p_bridge_types {
         })
     }
 
-    pure def brd_get_bridge_l1_submit_wait_messages(messages: Set[BRD_Message]): Set[{cfg: MsgConfig}] = {
+    pure def brd_get_bridge_diffuse_messages(messages: Set[BRD_Message]): Set[{cfg: MsgConfig, args: BRD_BR_Args, resp: BRD_BR_Resp,}] = {
+        messages.filterMap(m => {
+            match m {
+                | BridgeDiffuse(p) => Some(p)
+                | _ => None
+            }
+        })
+    }    
+
+    pure def brd_get_bridge_l1_submit_wait_messages(messages: Set[BRD_Message]): Set[{cfg: MsgConfig, args: BRD_BR_Args, resp: BRD_BR_Resp,}] = {
         messages.filterMap(m => {
             match m {
                 | BridgeL1SubmitWait(p) => Some(p)
@@ -285,7 +312,16 @@ module p_bridge_types {
         })
     }
 
-    pure def brd_get_bridge_l2_submit_wait_messages(messages: Set[BRD_Message]): Set[{cfg: MsgConfig}] = {
+    pure def brd_get_bridge_l1_submit_messages(messages: Set[BRD_Message]): Set[{cfg: MsgConfig, args: BRD_BR_Args, resp: BRD_BR_Resp,}] = {
+        messages.filterMap(m => {
+            match m {
+                | BridgeL1Submit(p) => Some(p)
+                | _ => None
+            }
+        })
+    }    
+
+    pure def brd_get_bridge_l2_submit_wait_messages(messages: Set[BRD_Message]): Set[{cfg: MsgConfig, args: BRD_BR_Args, resp: BRD_BR_Resp,}] = {
         messages.filterMap(m => {
             match m {
                 | BridgeL2SubmitWait(p) => Some(p)
@@ -294,7 +330,16 @@ module p_bridge_types {
         })
     }
 
-    pure def brd_get_bridge_ok_wait_messages(messages: Set[BRD_Message]): Set[{cfg: MsgConfig}] = {
+    pure def brd_get_bridge_l2_submit_messages(messages: Set[BRD_Message]): Set[{cfg: MsgConfig, args: BRD_BR_Args, resp: BRD_BR_Resp,}] = {
+        messages.filterMap(m => {
+            match m {
+                | BridgeL2Submit(p) => Some(p)
+                | _ => None
+            }
+        })
+    }    
+
+    pure def brd_get_bridge_ok_wait_messages(messages: Set[BRD_Message]): Set[{cfg: MsgConfig, args: BRD_BR_Args, resp: BRD_BR_Resp,}] = {
         messages.filterMap(m => {
             match m {
                 | BridgeOKWait(p) => Some(p)
@@ -303,7 +348,7 @@ module p_bridge_types {
         })
     }
 
-    pure def brd_get_bridge_response_messages(messages: Set[BRD_Message]): Set[{cfg: MsgConfig}] = {
+    pure def brd_get_bridge_response_messages(messages: Set[BRD_Message]): Set[{cfg: MsgConfig, args: BRD_BR_Args, resp: BRD_BR_Resp,}] = {
         messages.filterMap(m => {
             match m {
                 | BridgeResponse(p) => Some(p)

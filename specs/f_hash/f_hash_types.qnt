@@ -3,9 +3,11 @@ module f_hash_types {
     import basicSpells.* from "../../spells/basicSpells"
     import common.* from "../common"
 
+    import g_ledger_types.* from "../g_ledger/g_ledger_types" 
+
     // define types of the system  
     type Hash_Output = int
-    type Hash_Input = int
+    type Hash_Input = List[LED_Tx]
 
     type HASH_Message =
         | HashRequest({cfg: MsgConfig, x: Hash_Input}) 
@@ -13,7 +15,7 @@ module f_hash_types {
         | SIMHashRequestRelease({cfg: MsgConfig, x: Hash_Input, sim_h: Hash_Output})     
         | HashResponse({cfg: MsgConfig, x: Hash_Input, h: Hash_Output})
 
-        | SIMControl  
+        | HASH_SIMControl  
 
 
     // pure def hash_get_all_response_messages(messages: Set[HASH_Message]): Set[HASH_Message] = {
@@ -57,6 +59,21 @@ module f_hash_types {
         post_state: SID -> HASH_StateVars,
         effects: Set[HASH_Effect]
     }
+
+
+    pure def hash_id_trans(f_hash: HASH_System) : HASH_Transition = {
+        post_state : f_hash.state,
+        effects : Set(),
+    }
+
+    pure def hash_skip_trans(hash: HASH_System) : HASH_Transition = {
+        {
+            post_state: hash.state,
+            effects : Set(
+                HASH_UpdateInput(Set())
+            )
+        }
+    }        
 
    pure def hash_get_all_response_messages(messages: Set[HASH_Message]): Set[HASH_Message] = {
         messages.filterMap(m => {
@@ -105,7 +122,7 @@ module f_hash_types {
     pure def hash_get_sim_control_messages(messages: Set[HASH_Message]): Set[HASH_Message] = {
         messages.filterMap(m => {
             match m {
-                | SIMControl => Some(SIMControl)
+                | HASH_SIMControl => Some(HASH_SIMControl)
                 | _ => None
             }
         })

@@ -67,7 +67,10 @@ module p_bridge_bkgen{
             sys.brd.handles.brd_get_bkgen_atm_gen_wait_messages().filter(q => p.cfg == q.cfg).map(q => {
                 val brd_trans = {
                     post_state: {...sys.brd.state,
-                        bvk: sys.brd.state.bvk.put(p.cfg.party, p.vk)
+                        //bvk: sys.brd.state.bvk.put(p.cfg.party, p.vk)
+                        bst: sys.brd.state.bst.put(p.cfg.party, {...sys.brd.state.bst.get(p.cfg.party),
+                            bvk: Some(p.vk)
+                        })
                     },
                     effects: Set(
                         BRD_UpdateInput(Set()),

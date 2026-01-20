@@ -363,11 +363,9 @@ module f_diff{
         Set(
             dif_inject(dif),
             dif_diffuse_1(dif),
-            //dif_diffuse_2(dif),          
             dif_fetch_1(dif),
-        //    dif_fetch_2(dif),
             dif_fetch_3(dif),
-            dif_sim_loses_ctrl(dif)
+            //dif_sim_loses_ctrl(dif)
         ).flatten().map(x => (x,id)).union(
             Set(
                 dif_diffuse_3(dif, clock),

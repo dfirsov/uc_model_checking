@@ -8,10 +8,6 @@ module f_hash {
 
     var f_hash_s : HASH_System
 
-    pure def hash_id_trans(f_hash: HASH_System) : HASH_Transition = {
-        post_state : f_hash.state,
-        effects : Set(),
-    }
 
     pure def hash_hash_1(f_hash: HASH_System) : Set[HASH_Transition] = {
         f_hash.input.hash_get_hash_request_messages().map(p => {
@@ -20,7 +16,7 @@ module f_hash {
                 effects: Set(
                     HASH_LogMessage(HashRequest(p)),
                     HASH_AppendHandle(SIMHashRequestHold(p)),
-                    HASH_UpdateInput(Set(SIMControl))
+                    HASH_UpdateInput(Set(HASH_SIMControl))
                     )
                 }
         })

@@ -102,10 +102,12 @@ module p_bridge_rot{
                     )
                 }
 
+                val vks = p.com.listFilterMap(party => if (q.bvks.has(party) and p.com.listHas(party)) Some(q.bvks.get(party)) else None)
+
                 val atms_trans = {
                     post_state: sys.atms.state,
                     effects: Set(
-                        ATMS_UpdateInput(Set(AKeyRequest({cfg: q.cfg, vks: q.bvks}))),
+                        ATMS_UpdateInput(Set(AKeyRequest({cfg: q.cfg, vks: vks }))), 
                     )
                 }                
 
@@ -135,8 +137,12 @@ module p_bridge_rot{
                 }else{
                     val brd_trans = {
                         post_state: {...sys.brd.state, 
-                            rot: sys.brd.state.rot.put(p.cfg.party, p.avk.unwrap()),
-                            aux: sys.brd.state.aux.put(p.cfg.party, {bvks: q.bvks, com: q.com})
+                            bst: sys.brd.state.bst.put(p.cfg.party, {...sys.brd.state.bst.get(p.cfg.party),
+                                rot: p.avk,
+                                aux: Some({bvks: q.bvks, com: q.com})
+                            })
+                            //rot: sys.brd.state.rot.put(p.cfg.party, p.avk.unwrap()),
+                            //aux: sys.brd.state.aux.put(p.cfg.party, {bvks: q.bvks, com: q.com})
                         },
                         effects: Set(
                             BRD_UpdateInput(Set()),
