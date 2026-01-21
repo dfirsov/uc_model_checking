@@ -97,6 +97,18 @@ module f_diff{
     }
 
 
+    pure def dif_diffuse_3_prim(dif: DIF_System, clock: GC_System) : Set[(DIF_Transition, GC_Transition)] = {
+        dif.input.dif_get_sim_diffuse_release_messages().map(msg => {
+
+                     {
+                        post_state: dif.state,
+                        effects: Set(
+                            DIF_UpdateInput(Set(DIF_DiffuseResponse(msg))),
+                        )
+                    }
+        }).map(x => (x, gc_id_trans(clock)))
+    }
+
 
     pure def dif_diffuse_3(dif: DIF_System, clock: GC_System) : Set[(DIF_Transition, GC_Transition)] = {
         dif.input.dif_get_sim_diffuse_release_messages().map(msg => {
@@ -368,8 +380,9 @@ module f_diff{
             //dif_sim_loses_ctrl(dif)
         ).flatten().map(x => (x,id)).union(
             Set(
-                dif_diffuse_3(dif, clock),
-                dif_diffuse_4(dif, clock),
+                //dif_diffuse_3(dif, clock),
+                //dif_diffuse_4(dif, clock),
+                dif_diffuse_3_prim(dif, clock),
                 dif_ok_1(dif, clock),
                 dif_ok_2(dif, clock),
                 ).flatten()
