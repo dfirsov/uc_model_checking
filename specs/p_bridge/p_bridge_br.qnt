@@ -629,7 +629,8 @@ module p_bridge_br{
                             bst: sys.brd.state.bst.put(p.cfg.party, p.resp.bst.unwrap())
                         },
                         effects: Set(
-                            BRD_UpdateInput(Set(BridgeDiffuse({cfg: p.cfg, args: p.args, resp: p.resp})))
+                            BRD_UpdateInput(Set(BridgeDiffuse({cfg: p.cfg, args: p.args, resp: p.resp}))),
+                            BRD_LogMessage(BridgeBRAlgorithmResponse(p))
                         )
                     },
                 })

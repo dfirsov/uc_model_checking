@@ -2,6 +2,7 @@ module p_bridge_env{
     
     import basicSpells.* from "../../spells/basicSpells"
     import rareSpells.* from "../../spells/rareSpells"
+
     import common.* from "../common"
 
     import f_pki_types.* from "../f_pki/f_pki_types"    
@@ -21,100 +22,23 @@ module p_bridge_env{
 
     import g_clock_types.* from "../g_clock/g_clock_types"    
     import g_clock.* from "../g_clock/g_clock"
-    import p_bridge_types.* from "./p_bridge_types" 
-    import p_bridge.* from "./p_bridge" 
-
-
 
     import f_diff_types.* from "../f_diff/f_diff_types"    
     import f_diff.* from "../f_diff/f_diff"        
 
+    import p_bridge_types.* from "./p_bridge_types" 
+    import p_bridge.* from "./p_bridge" 
     import p_bridge_bkgen.* from "./p_bridge_bkgen"     
     import p_bridge_rot.* from "./p_bridge_rot"
     import p_bridge_br.* from "./p_bridge_br"
+    import p_bridge_led2.* from "./p_bridge_led2"
     
-    var g_ledger_s2 : LED_System    
-
-
-    action led2_gc_atms_step_with(q: (LED_System, GC_System, ATMS_System) => Set[(LED_Transition, GC_Transition, ATMS_Transition)]): bool = {
-        all{
-            val ts = q(g_ledger_s2, g_clock_s, f_atms_s)
-            all {
-                nondet transition = ts.oneOf()
-                all {
-                    g_ledger_s2' = led_process_transitions(g_ledger_s2, g_clock_s, transition._1),
-                    g_clock_s' = gc_process_transitions(g_clock_s, transition._2),
-                    f_atms_s' = atms_process_transitions(f_atms_s, transition._3)
-                }
-            }
-        }
-    }     
-
-    action led2_iread_2_act = {
-        all {
-            nondet simI_set = 1.to(10).powerset().oneOf() // TODO: determine appropriate size
-            val simI = simI_set.toList((a,b) => EQ)
-            nondet simPtr_prim = 1.to(10).oneOf() // TODO: what is the right range here?
-
-            val ts = led_iread_2(g_ledger_s2, g_clock_s, simI, simPtr_prim)
-            all {
-                nondet transition = ts.oneOf()
-                all {
-                    g_ledger_s2' = led_process_transitions(g_ledger_s2, g_clock_s, transition._1),
-                    g_clock_s' = gc_process_transitions(g_clock_s, transition._2)
-                }
-            }
-        }
-    }
-
-    action led2_step_ival : bool =  any {
-        led2_gc_atms_step_with(led_main_listener_ival),
-        all{
-            led2_iread_2_act,
-            f_atms_s' = f_atms_s,
-        }
-    }    
-
-    action led2_gc_step_with(q: (LED_System, GC_System) => Set[(LED_Transition, GC_Transition)]): bool = {
-        all{
-            val ts = q(g_ledger_s2, g_clock_s)
-            all {
-                nondet transition = ts.oneOf()
-                all {
-                    g_ledger_s2' = led_process_transitions(g_ledger_s2, g_clock_s, transition._1),
-                    g_clock_s' = gc_process_transitions(g_clock_s, transition._2)
-                }
-            }
-        }
-    }    
-
-    action led2_step : bool =  any {
-        led2_gc_step_with(led_main_listener),
-        led2_read_2_act,
-    }   
-
-    action led2_read_2_act = {
-        all {
-            nondet simI_set = 1.to(10).powerset().oneOf() // TODO: determine appropriate size
-            val simI = simI_set.toList((a,b) => EQ)
-            nondet simPtr_prim = 1.to(10).oneOf() // TODO: what is the right range here?
-
-            val ts = led_read_2(g_ledger_s2, g_clock_s, simI, simPtr_prim)
-            all {
-                nondet transition = ts.oneOf()
-                all {
-                    g_ledger_s2' = led_process_transitions(g_ledger_s2, g_clock_s, transition._1),
-                    g_clock_s' = gc_process_transitions(g_clock_s, transition._2)
-                }
-            }
-        }
-    }    
-
-    val Parties = Set(1)
+   
+    val Parties = Set(1,2)
     val C = Set()
     val SIDs = Set(1)
-    val P1 = Set(1)
-    val P2 = Set(1)
+    val P1 = Set(1,2)
+    val P2 = Set(1,2)
 
     pure def brd_main_listener(sys: BRD_CSystem) : Set[BRD_CTransition] = {
         brd_bkgen_main_listener(sys)
@@ -427,5 +351,87 @@ module p_bridge_env{
     val Q3 = g_clock_s.state.TIME <= 4
     val Q4 = f_hash_s.state.get(1).hash_map.keys().size() <= 1
     val Q5 = g_clock_s.state.TIME <= 8
+
+    val RoT_Agreement = p_bridge_s.log.map(x => x.msg).brd_get_rot_response_messages().forall(rsp1 =>
+        p_bridge_s.log.map(x => x.msg).brd_get_rot_response_messages().forall(rsp2 =>
+            rsp1.avk == rsp2.avk
+        )
+    )
+
+    val Bridge_State_Consistency = p_bridge_s.log.map(x => x.msg).brd_get_bridge_br_algorithm_response_messages().forall(p =>
+        p_bridge_s.log.map(x => x.msg).brd_get_bridge_br_algorithm_response_messages().forall(q =>
+            (p.args.r == q.args.r and p.resp.bst != None) implies {
+                val p_bst = p.resp.bst.unwrap()
+                val q_bst = q.resp.bst.unwrap()
+                and {
+                    p_bst.rot == q_bst.rot,
+                    p_bst.cID == q_bst.cID,
+                    p_bst.h == q_bst.h,
+
+                    
+                    p_bst.avk_prim == q_bst.avk_prim,
+                    p_bst.aux == q_bst.aux,
+                    p_bst.aux_prim == q_bst.aux_prim,
+
+                   //p_bst.bvk == q_bst.bvk, // falsified
+                   // p_bst.m == q_bst.m, // falsified
+                }
+            }
+        )
+    )
+
+    //Bridge aux update: For all rounds r and all parties P, we have that bst[P].aux @ (r + R) = bst[P].aux’ @ r.
+    val Bridge_Aux_Update = p_bridge_s.log.map(x => x.msg).brd_get_bridge_br_algorithm_response_messages().forall(p =>
+        p_bridge_s.log.map(x => x.msg).brd_get_bridge_br_algorithm_response_messages().forall(q =>
+            (p.cfg.party == q.cfg.party and p.args.r + p_bridge_s.params.R + p_bridge_s.params.delta + 2 == q.args.r and p.resp.bst != None and q.resp.bst != None) implies {
+                val p_bst = p.resp.bst.unwrap()
+                val q_bst = q.resp.bst.unwrap()
+                p_bst.aux == q_bst.aux_prim
+            }
+        )
+    )
+
+    // (VIOLATED) Bridge democracy: For all rounds r and all parties P, we have that bst[P].aux.Com @ r ≠ bst[P].aux.Com @ (r + R) (doesn’t hold – authoritarian regime possible)
+    val Bridge_Democracy = p_bridge_s.log.map(x => x.msg).brd_get_bridge_br_algorithm_response_messages().forall(p =>
+        p_bridge_s.log.map(x => x.msg).brd_get_bridge_br_algorithm_response_messages().forall(q =>
+            (p.cfg.party == q.cfg.party and p.args.r + p_bridge_s.params.R == q.args.r and p.resp.bst != None and q.resp.bst != None) implies {
+                val p_bst = p.resp.bst.unwrap()
+                val q_bst = q.resp.bst.unwrap()
+                (p_bst.aux != None and q_bst.aux != None) implies p_bst.aux.unwrap().com != q_bst.aux.unwrap().com
+            }
+        )
+    )
+
+    // Bridge state persistence: For all rounds r and r’ and all parties P,  we have 
+    // bst[P].(rot, cID, h, avk’, aux, aux’) @ r = bst[P].(rot, cID, h, avk’, aux, aux’) @ r’ as long as  1 ≤ (r % R),  (r’ % R) ≤ ∆ + 1; 
+    val Bridge_State_Persistence = p_bridge_s.log.map(x => x.msg).brd_get_bridge_br_algorithm_response_messages().forall(p =>
+        p_bridge_s.log.map(x => x.msg).brd_get_bridge_br_algorithm_response_messages().forall(q =>
+            and {
+                p.cfg.party == q.cfg.party,
+                p.args.r % p_bridge_s.params.R >= 1, 
+                q.args.r % p_bridge_s.params.R >= 1, 
+
+                p.args.r % p_bridge_s.params.R <= p_bridge_s.params.delta + 1,
+                q.args.r % p_bridge_s.params.R <= p_bridge_s.params.delta + 1,
+                
+                p.resp.bst != None,
+                q.resp.bst != None,
+                p.args.r + p_bridge_s.params.R < q.args.r,
+            } implies {
+                val p_bst = p.resp.bst.unwrap()
+                val q_bst = q.resp.bst.unwrap()
+                and {
+                    p_bst.rot == q_bst.rot,
+                    p_bst.cID == q_bst.cID,
+                    p_bst.h == q_bst.h,
+
+                    p_bst.avk_prim == q_bst.avk_prim,
+                    p_bst.aux == q_bst.aux,
+                    p_bst.aux_prim == q_bst.aux_prim,
+                }
+            }
+        )
+    )
+
 
 }

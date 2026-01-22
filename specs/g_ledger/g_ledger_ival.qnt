@@ -389,6 +389,4 @@ module g_ledger_ival {
         }
     }            
 
-    
-
 }
