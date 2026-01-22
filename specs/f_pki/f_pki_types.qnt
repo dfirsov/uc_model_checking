@@ -32,7 +32,7 @@ module f_pki_types {
         P : Set[Party], // parties who can use the functionality
         SIDs: Set[SID], // TODO: is this correct?
 
-        SIM_ALL_CERTS: Set[Certificate], // for the simulator: all possible certificates
+        //SIM_ALL_CERTS: Set[Certificate], // for the simulator: all possible certificates
     }
 
     type PKI_StateVars = SID -> 
@@ -92,6 +92,15 @@ module f_pki_types {
         post_state : pki.state,
         effects : Set(),
     } 
+
+    pure def pki_skip_trans(pki: PKI_System) : PKI_Transition = {
+        {
+            post_state: pki.state,
+            effects : Set(
+                PKI_UpdateInput(Set())
+            )
+        }
+    }    
 
     pure def pki_get_all_response_messages(messages: Set[PKI_Message]): Set[PKI_Message] = {
         messages.filterMap(m => {

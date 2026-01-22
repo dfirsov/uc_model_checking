@@ -13,7 +13,7 @@ module g_clock{
         effects : Set(),
     }
 
-
+    // skip the input transition
     pure def gc_skip_trans(clock: GC_System) : GC_Transition = {
         {
             post_state: clock.state,
@@ -60,7 +60,7 @@ module g_clock{
                 // for whatever reason we are keeping corrupted parties in the ok set
                 val new_ok = if (flag) Set() else clock.state.ok.setAdd(({party: msg.cfg.party, sid: msg.cfg.sid}))
                 
-                Set({
+                {
                     post_state : {...clock.state, 
                         ok: new_ok,
                         TIME: new_time
@@ -70,29 +70,29 @@ module g_clock{
                         GC_UpdateInput(Set(GC_SIMControl)),
                         GC_AppendHandle(SIMOkayRelease(msg)),
                     )
-                })
+                }
             } else {
-                Set({
+                {
                     post_state : clock.state,
                     effects : Set(
                         GC_UpdateInput(Set()),
                     )
-                })
+                }
             }
-        }).flatten()
+        })
     }
 
     pure def gc_okay_2(clock: GC_System) : Set[GC_Transition] = {
         clock.input.gc_get_sim_control_messages().map(p => {
             clock.SIM_handles.get_sim_okay_release_messages().map(q => {
-                Set(               {
+                {
                     post_state : clock.state,
                     effects : Set(
                         GC_UpdateInput(Set(OkayResponse(q))),
                         GC_RemoveHandle(SIMOkayRelease(q)),
                     )
-                })
-            }).flatten()
+                }
+            })
         }).flatten()
     }
 
@@ -114,17 +114,17 @@ module g_clock{
         val trans = q(g_clock_s)
 
         all {
-            trans.size() > 0,
             nondet transition = trans.oneOf()
             g_clock_s' = gc_process_transitions(g_clock_s, transition)        
         }
     }   
 
-    action gc_step : bool =  { 
-        //nondet iT: Set[{ x: int, y: bool }] = apalache::generate(20)
-        all {
-            gc_step_with(gc_main_listener)
-        }
+    action gc_step : bool =  any { 
+        gc_step_with(gc_main_listener)
+    }
+
+    pure def all_parties_at_all_sids(parties: Set[Party], sids: Set[SID]) : Set[{party: Party, sid: SID}] = {
+        parties.map(p => sids.map(s => {party: p, sid: s})).flatten()
     }
 
     action gc_init(C: Set[Party], time : int, Reg: Set[PartySID]): bool = {

@@ -29,7 +29,7 @@ module p_bridge_types {
     }
 
     type BRD_BR_Resp = {
-            btx1: Option[LED_Tx], 
+            //btx1: Option[LED_Tx], 
             btx2: Option[LED_Tx], 
             m: Option[{party: Party, avk: ATMS_AVK, sig: SIG_Signature}], 
             bst: Option[BRD_BST_Entry] }
@@ -65,8 +65,8 @@ module p_bridge_types {
 
         | BridgeDiffuse({cfg: MsgConfig, args: BRD_BR_Args, resp: BRD_BR_Resp,})
         | BridgeDiffuseWait({cfg: MsgConfig, args: BRD_BR_Args, resp: BRD_BR_Resp,})
-        | BridgeL1Submit({cfg: MsgConfig, args: BRD_BR_Args, resp: BRD_BR_Resp,})
-        | BridgeL1SubmitWait({cfg: MsgConfig, args: BRD_BR_Args, resp: BRD_BR_Resp,})
+        //| BridgeL1Submit({cfg: MsgConfig, args: BRD_BR_Args, resp: BRD_BR_Resp,})
+        //| BridgeL1SubmitWait({cfg: MsgConfig, args: BRD_BR_Args, resp: BRD_BR_Resp,})
         | BridgeL2Submit({cfg: MsgConfig, args: BRD_BR_Args, resp: BRD_BR_Resp,})
         | BridgeL2SubmitWait({cfg: MsgConfig, args: BRD_BR_Args, resp: BRD_BR_Resp,})
         | BridgeOKWait({cfg: MsgConfig, args: BRD_BR_Args, resp: BRD_BR_Resp,})
@@ -94,20 +94,16 @@ module p_bridge_types {
     type BRD_SystemParams = {
         P: Set[Party],
         C: Set[Party],
-        SIDs: Set[SID],
-        ssid : SID,
-        P1: Set[Party],
-        P2: Set[Party],
+        SIDs: Set[SID], 
+        //P1: Set[Party],
+        //P2: Set[Party],
         r0: Time,
         delta: int, // for diffuse
-        t: int, // for F-ATMS
+        //t: int, // for F-ATMS
         R: int, // length of rounds? 
     }
 
     type BRD_StateVars = {
-        //bvk: Party -> BRD_BVK,
-        //rot: Party -> BRD_ROT,
-        //aux: Party -> BRD_AUX,
         bst: Party -> BRD_BST_Entry,
 
         bkgen_flag: Set[Party],
@@ -157,16 +153,34 @@ module p_bridge_types {
         ledger2: LED_Transition,
         dif: DIF_Transition,
         hash: HASH_Transition,
-    }      
+    }   
+
+    pure def brd_skip_trans(bridge: BRD_System) : BRD_Transition = {
+        {
+            post_state: bridge.state,
+            effects : Set(
+                BRD_UpdateInput(Set())
+            )
+        }
+    }
+
+    pure def brd_id_trans(bridge: BRD_System) : BRD_Transition = {
+        {
+            post_state: bridge.state,
+            effects : Set()
+        }
+    }    
+          
 
     pure def brd_id_ctrans(sys: BRD_CSystem) : BRD_CTransition = {
         {
-            brd: {
-                post_state: sys.brd.state,
-                effects : Set(
-                    BRD_UpdateInput(Set())
-                )
-            },
+            // brd: {
+            //     post_state: sys.brd.state,
+            //     effects : Set(
+            //         BRD_UpdateInput(Set())
+            //     )
+            // },
+            brd: sys.brd.brd_id_trans(),
             clock: sys.clock.gc_id_trans(),
             atms: sys.atms.atms_id_trans(), 
             pki: sys.pki.pki_id_trans(),
@@ -303,23 +317,23 @@ module p_bridge_types {
         })
     }    
 
-    pure def brd_get_bridge_l1_submit_wait_messages(messages: Set[BRD_Message]): Set[{cfg: MsgConfig, args: BRD_BR_Args, resp: BRD_BR_Resp,}] = {
-        messages.filterMap(m => {
-            match m {
-                | BridgeL1SubmitWait(p) => Some(p)
-                | _ => None
-            }
-        })
-    }
+    // pure def brd_get_bridge_l1_submit_wait_messages(messages: Set[BRD_Message]): Set[{cfg: MsgConfig, args: BRD_BR_Args, resp: BRD_BR_Resp,}] = {
+    //     messages.filterMap(m => {
+    //         match m {
+    //             | BridgeL1SubmitWait(p) => Some(p)
+    //             | _ => None
+    //         }
+    //     })
+    // }
 
-    pure def brd_get_bridge_l1_submit_messages(messages: Set[BRD_Message]): Set[{cfg: MsgConfig, args: BRD_BR_Args, resp: BRD_BR_Resp,}] = {
-        messages.filterMap(m => {
-            match m {
-                | BridgeL1Submit(p) => Some(p)
-                | _ => None
-            }
-        })
-    }    
+    // pure def brd_get_bridge_l1_submit_messages(messages: Set[BRD_Message]): Set[{cfg: MsgConfig, args: BRD_BR_Args, resp: BRD_BR_Resp,}] = {
+    //     messages.filterMap(m => {
+    //         match m {
+    //             | BridgeL1Submit(p) => Some(p)
+    //             | _ => None
+    //         }
+    //     })
+    // }    
 
     pure def brd_get_bridge_l2_submit_wait_messages(messages: Set[BRD_Message]): Set[{cfg: MsgConfig, args: BRD_BR_Args, resp: BRD_BR_Resp,}] = {
         messages.filterMap(m => {

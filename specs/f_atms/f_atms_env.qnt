@@ -163,10 +163,10 @@ module f_atms_env{
             C: Corrupted,
             SIDs: sids,
             t: threshold,
-            ALL_VKS: ALL_VK,
-            ALL_SIGS: ALL_SIG,
-            ALL_AVKS: ALL_AVK,
-            ALL_ASIGS: ALL_SIG,
+            // ALL_VKS: ALL_VK,
+            // ALL_SIGS: ALL_SIG,
+            // ALL_AVKS: ALL_AVK,
+            // ALL_ASIGS: ALL_SIG,
         })
     }
 }

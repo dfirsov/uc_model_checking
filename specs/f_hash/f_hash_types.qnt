@@ -31,7 +31,7 @@ module f_hash_types {
         P : Set[Party], // parties who can use the functionality
         SIDs: Set[SID], // TODO: is this correct?
 
-        ALL_HASHES : Set[Hash_Output],
+        //ALL_HASHES : Set[Hash_Output],
     }
 
     type HASH_StateVars = 

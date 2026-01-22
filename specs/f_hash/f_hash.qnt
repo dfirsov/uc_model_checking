@@ -4,9 +4,12 @@ module f_hash {
     import rareSpells.* from "../../spells/rareSpells"
     
     import common.* from "../common"
+    
     import f_hash_types.* from "./f_hash_types"
 
     var f_hash_s : HASH_System
+
+    val HASH_ALL_HASHES = 50.to(150)
 
 
     pure def hash_hash_1(f_hash: HASH_System) : Set[HASH_Transition] = {
@@ -24,7 +27,7 @@ module f_hash {
     
     action hash_hash_2_act : bool = {
         all{
-            nondet sim_h = f_hash_s.params.ALL_HASHES.oneOf()
+            nondet sim_h = HASH_ALL_HASHES.oneOf()
             val ts = hash_hash_2(f_hash_s, sim_h)
             all {
                 nondet transition = ts.oneOf()
@@ -53,7 +56,7 @@ module f_hash {
         if(clean_hash(h, f_hash_s.state.get(sid).hash_map)){
             Some(h)
         } else {
-            f_hash_s.params.ALL_HASHES.find(hh => clean_hash(hh, f_hash_s.state.get(sid).hash_map))
+            HASH_ALL_HASHES.find(hh => clean_hash(hh, f_hash_s.state.get(sid).hash_map))
         }
     }
 
@@ -69,34 +72,33 @@ module f_hash {
             val sid_state = f_hash.state.get(sid)
 
             if(sid_state.hash_map.has(p.x)){
-                Set({
+                {
                     post_state: f_hash.state,
                     effects: Set(
                         HASH_UpdateInput(Set(HashResponse({cfg: p.cfg, x: p.x, h: sid_state.hash_map.get(p.x)})))
                     )
-                })
+                }
             }else{
                 val maybe_hash = san_hash(p.sim_h, f_hash, sid)
                 if(maybe_hash == None){
-                    // no valid hash found
-                    Set({
+                    {
                         post_state: f_hash.state,
                         effects: Set(
-                            HASH_UpdateInput(Set())
+                            HASH_UpdateInput(Set()) // 
                         )
-                    })
+                    }
                 }else{
                     val hash = maybe_hash.unwrap()
-                    Set({
+                    {
                         post_state: f_hash.state.put(sid, {hash_map: sid_state.hash_map.put(p.x, hash)}),
                         effects: Set(
                             HASH_UpdateInput(Set(HashResponse({cfg: p.cfg, x: p.x, h: hash}))),
                         )
-                    })
+                    }
                 }
             }   
 
-        }).flatten()
+        })
     }   
 
     pure def hash_sim_loses_ctrl(hash: HASH_System) : Set[HASH_Transition] = {
@@ -142,12 +144,11 @@ module f_hash {
     }        
 
 
-    pure def hash_initial(P: Set[Party], SIDs: Set[SID], ALL_HASHES: Set[Hash_Output]) : HASH_System = {
+    pure def hash_initial(P: Set[Party], SIDs: Set[SID]) : HASH_System = {
         {
             params : {
                 P: P,
                 SIDs: SIDs,
-                ALL_HASHES : ALL_HASHES,
             },
             state: SIDs.mapBy(sid => {
                 hash_map: Map(),
@@ -156,11 +157,11 @@ module f_hash {
             nonce: 0, 
             log: Set(),
             handles: Set()
-        }        
-    }    
+        }
+    }
 
-    action hash_init(P: Set[Party], SIDs: Set[SID], ALL_HASHES: Set[Hash_Output]) : bool = all {
-        f_hash_s' = hash_initial(P, SIDs, ALL_HASHES)
+    action hash_init(P: Set[Party], SIDs: Set[SID]) : bool = all {
+        f_hash_s' = hash_initial(P, SIDs)
     }   
 
 }

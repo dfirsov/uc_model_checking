@@ -10,7 +10,6 @@ module f_diff{
 
     var f_dif_s : DIF_System
 
-
     def dif_diffuse_1(sys: DIF_System) : Set[DIF_Transition] = { 
         sys.input.dif_get_diffuse_request_messages().map(msg => 
             if (dif_access_check(msg.cfg, sys.params)) {
@@ -29,7 +28,7 @@ module f_diff{
                     // computing the new_L
                     // TODO: abstract this into a function for joining maps
                     val new_L_vals = sys.params.P.map(party =>{
-                        ({to: party, ctr: new_ctr},{data:m, time: t})
+                        ({to: party, ctr: new_ctr}, {data:m, time: t})
                     })
                     val old_L_vals = sid_state.L.keys().map(k => (k, sid_state.L.get(k)))
                     val new_L = new_L_vals.union(old_L_vals).setToMap()
@@ -99,13 +98,12 @@ module f_diff{
 
     pure def dif_diffuse_3_prim(dif: DIF_System, clock: GC_System) : Set[(DIF_Transition, GC_Transition)] = {
         dif.input.dif_get_sim_diffuse_release_messages().map(msg => {
-
-                     {
-                        post_state: dif.state,
-                        effects: Set(
-                            DIF_UpdateInput(Set(DIF_DiffuseResponse(msg))),
-                        )
-                    }
+            {
+            post_state: dif.state,
+            effects: Set(
+                DIF_UpdateInput(Set(DIF_DiffuseResponse(msg))),
+            )
+            }
         }).map(x => (x, gc_id_trans(clock)))
     }
 
@@ -365,7 +363,7 @@ module f_diff{
                 post_state : dif.state,
                 effects : Set( 
                     DIF_UpdateInput(Set()),
-                    )  
+                )  
             })
     }
 
@@ -383,9 +381,9 @@ module f_diff{
                 //dif_diffuse_3(dif, clock),
                 //dif_diffuse_4(dif, clock),
                 dif_diffuse_3_prim(dif, clock),
-                dif_ok_1(dif, clock),
-                dif_ok_2(dif, clock),
-                ).flatten()
+                //dif_ok_1(dif, clock),
+                //dif_ok_2(dif, clock),
+            ).flatten()
         )
     }
 
@@ -438,6 +436,7 @@ module f_diff{
 
     action dif_init(P: Set[Party], C: Set[Party], SIDs: Set[SID], delta: Time) : bool =  all {
         C.subseteq(P),
+        delta >= 0,
         f_dif_s' = dif_initial(P, C, SIDs, delta)
     }      
     

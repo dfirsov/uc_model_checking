@@ -4,6 +4,7 @@ module f_hash_properties{
     import common.* from "../common"
     import f_hash_types.*   from "./f_hash_types"
     import f_hash.*  from "./f_hash"
+    import g_ledger_types.* from "../g_ledger/g_ledger_types" 
 
     val Parties = Set(1,2,3)
     val sids = Set(4,5)
@@ -17,7 +18,7 @@ module f_hash_properties{
 
 
     action init = all {
-        hash_init(Parties, sids, ALL_HASHES),
+        hash_init(Parties, sids),
     }
 
     action env_hash_send_all_reqs : bool = all {
@@ -25,15 +26,19 @@ module f_hash_properties{
         f_hash_s.input.size() == 0,
         
         // Non-deterministically choose a party and SID
-        nondet from = Parties.oneOf()
-        nondet sid = sids.oneOf()
-        nondet x = ALL_HASHES.oneOf()
-        val cfg = {party: from, sid: sid, nonce: f_hash_s.nonce}
+        all {
+            nondet from = Parties.oneOf() 
+            nondet sid = sids.oneOf()
+            nondet x = HASH_ALL_HASHES.oneOf()
 
-        f_hash_s' = {...f_hash_s, 
-            input: Set(HashRequest({cfg: cfg, x: x})),
-            nonce: f_hash_s.nonce + 1
-        },
+            val cfg = {party: from, sid: sid, nonce: f_hash_s.nonce}
+            all {
+                f_hash_s' = {...f_hash_s, 
+                    input: Set(HashRequest({cfg: cfg, x: List(Normal({tx: x, b: true})) })),
+                    nonce: f_hash_s.nonce + 1
+                }
+            }
+        }
     }
 
     pure def env_consume_response(sys: HASH_System) : Set[HASH_Transition] = {

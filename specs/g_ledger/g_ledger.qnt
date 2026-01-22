@@ -405,19 +405,19 @@ module g_ledger{
         //led_read_2_act,
     }    
 
-    pure def led_initial(P: Set[Party], C: Set[Party], SIDs: Set[SID], delta_latency: Time, delta_slack: Time, delta_apl: Time, Val: LED_ValidatorState, comsel_a: int, comsel_b: int, comsel_c: int) : LED_System = {
+    pure def led_initial(x : {P: Set[Party], C: Set[Party], SIDs: Set[SID], delta_latency: Time, delta_slack: Time, delta_apl: Time, Val: LED_ValidatorState, comsel_a: int, comsel_b: int, comsel_c: int}) : LED_System = {
         {
             params : {
-                P : P,
-                C : C,
-                SIDs: SIDs,
-                delta_latency: delta_latency,
-                delta_slack: delta_slack,
-                delta_apl: delta_apl,
+                P : x.P,
+                C : x.C,
+                SIDs: x.SIDs,
+                delta_latency: x.delta_latency,
+                delta_slack: x.delta_slack,
+                delta_apl: x.delta_apl,
 
-                comsel_a: comsel_a,
-                comsel_b: comsel_b,
-                comsel_c: comsel_c,  
+                comsel_a: x.comsel_a,
+                comsel_b: x.comsel_b,
+                comsel_c: x.comsel_c,  
             },
             state : 
                 {
@@ -425,7 +425,7 @@ module g_ledger{
                     eID : 0,
                     log: List(),
                     ptr: Map(),
-                    Val: Val,
+                    Val: x.Val,
                     Com: Map(),
                     APL: Map(),
                     genesis: 0,
@@ -439,7 +439,7 @@ module g_ledger{
     }
 
     action led_init(P: Set[Party], C: Set[Party], SIDs: Set[SID], delta_latency: Time, delta_slack: Time, delta_apl: Time, Val: LED_ValidatorState, comsel_a: int, comsel_b: int, comsel_c: int) : bool =  all {
-        g_ledger_s' = led_initial(P, C, SIDs, delta_latency, delta_slack, delta_apl, Val, comsel_a, comsel_b, comsel_c)
+        g_ledger_s' = led_initial({P: P, C: C, SIDs: SIDs, delta_latency: delta_latency, delta_slack: delta_slack, delta_apl: delta_apl, Val: Val, comsel_a: comsel_a, comsel_b: comsel_b, comsel_c: comsel_c})
     }
 
 }

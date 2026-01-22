@@ -5,8 +5,13 @@ module f_atms{
     import common.* from "../common"   
     import f_atms_types.* from "./f_atms_types"
 
-
+    
     var f_atms_s : ATMS_System
+
+    val ALL_VKS: Set[ATMS_VK] = 1.to(5)
+    val ALL_SIGS: Set[ATMS_Signature] = 1.to(5)
+    val ALL_AVKS: Set[ATMS_AVK] = 1.to(5)
+    val ALL_ASIGS: Set[ATMS_ASignature] = 1.to(5)  
 
     // SIM gives control back to the environment
     // pure def atms_sim_loses_ctrl(atms: ATMS_System) : Set[ATMS_Transition] = {
@@ -37,29 +42,29 @@ module f_atms{
     pure def atms_gen_1(atms: ATMS_System) : Set[ATMS_Transition] = {
         atms.input.atms_get_gen_request_messages().map(p =>{
             if(atms_access_check(p.cfg, atms.params)) {
-                Set({
+                {
                     post_state: atms.state,
                     effects: Set(
                         ATMS_LogMessage(GenRequest(p)),
                         ATMS_UpdateInput(Set(SIMControl)),
                         ATMS_AppendHandle(SIMGenHold(p))
                     )
-                })                
+                }
             } else {
-                Set({
+                {
                     post_state: atms.state,
                     effects: Set(
                         ATMS_UpdateInput(Set())
                     )
-                })
+                }
             }
-        }).flatten()
+        })
     }
 
     action atms_gen_2_act = all {
         f_atms_s.input.atms_get_sim_control_messages().size() > 0,
         f_atms_s.handles.atms_get_sim_gen_hold_messages().size() > 0,
-        nondet sim_vk = f_atms_s.params.ALL_VKS.oneOf()
+        nondet sim_vk = ALL_VKS.oneOf()
         nondet t = atms_gen_2(f_atms_s, Some(sim_vk)).oneOf()
         f_atms_s' = atms_process_transitions(f_atms_s, t) 
     }
@@ -78,7 +83,7 @@ module f_atms{
         }).flatten()
     }
 
-    pure def clean_vk(vk: Option[ATMS_VK], sid_state: ATMS_StateVars) : bool = { 
+    pure def clean_vk(vk: Option[ATMS_VK], sid_state: ATMS_StateVars) : bool = {
         and {
             vk != None,
             not (vk.unwrap().in(sid_state.CVK.union(sid_state.VK.map(x => x.vk)))),
@@ -89,12 +94,12 @@ module f_atms{
         }
     }
 
-    def san_vk(vk: Option[ATMS_VK], atms: ATMS_System, sid: SID) : Option[ATMS_VK] = {
+    pure def san_vk(vk: Option[ATMS_VK], atms: ATMS_System, sid: SID) : Option[ATMS_VK] = {
         val sid_state = atms.state.get(sid)
         if(clean_vk(vk, sid_state)){
             vk
         }else{ 
-            atms.params.ALL_VKS.find(vk => clean_vk(Some(vk), sid_state))
+            ALL_VKS.find(vk => clean_vk(Some(vk), sid_state))
         }        
     }
 
@@ -106,63 +111,63 @@ module f_atms{
             val maybe_vk = sid_state.VK.find(x => x.party == P) // TODO: make sure that VK is functional
 
             if(maybe_vk != None){
-                Set({
+                {
                     post_state: atms.state,
                     effects: Set(
                         ATMS_UpdateInput(Set(GenResponse({cfg: p.cfg, vk: maybe_vk.unwrap().vk}))),
                     )
-                })
+                }
             }else{
 
                 val maybe_new_vk = san_vk(p.sim_vk, atms, sid)
 
                 if(maybe_new_vk != None and clean_vk(maybe_new_vk, sid_state)){
-                    Set({
+                    {
                         post_state: atms.state.set(sid, {...sid_state,
                             VK: sid_state.VK.setAdd({party: P, vk: maybe_new_vk.unwrap()})
                         }),
                         effects: Set(
                             ATMS_UpdateInput(Set(GenResponse({cfg: p.cfg, vk: maybe_new_vk.unwrap()}))),
                         )
-                    })
+                    }
                 }else{
-                    Set({
+                    {
                         post_state: atms.state,
                         effects: Set(
                             ATMS_UpdateInput(Set()),
                         )
-                    }) // run out of VKS, raise error?
+                    } // run out of VKS, raise error?
                 }
             }
-        }).flatten()
+        })
     }
 
     pure def atms_akey_1(atms: ATMS_System) : Set[ATMS_Transition] = {
         atms.input.atms_get_akey_request_messages().map(p =>{
             if(atms_access_check(p.cfg, atms.params)) {
-                Set({   
+                {
                     post_state: atms.state,
                     effects: Set(
                         ATMS_LogMessage(AKeyRequest(p)),
                         ATMS_UpdateInput(Set(SIMControl)),
                         ATMS_AppendHandle(SIMAKeyHold(p))
                     )
-                })                
+                }                
             } else {
-                Set({
+                {
                     post_state: atms.state,
                     effects: Set(
                         ATMS_UpdateInput(Set())
                     )
-                })
+                }
             }
-        }).flatten()
+        })
     }    
 
     action atms_akey_2_act : bool = all {
         f_atms_s.input.atms_get_sim_control_messages().size() > 0,
         f_atms_s.handles.atms_get_sim_akey_hold_messages().size() > 0,
-        nondet sim_avk = f_atms_s.params.ALL_AVKS.oneOf()
+        nondet sim_avk = ALL_AVKS.oneOf()
         nondet t = atms_akey_2(f_atms_s, Some(sim_avk)).oneOf()
         f_atms_s' = atms_process_transitions(f_atms_s, t) 
     }    
@@ -205,7 +210,7 @@ module f_atms{
         if(clean_avk(avk, vks, sid_state, atms.params.C)){
             avk
         }else{ // TODO: add None here for checking?
-            atms.params.ALL_AVKS.find(avk => clean_avk(Some(avk), vks, sid_state, atms.params.C))
+            ALL_AVKS.find(avk => clean_avk(Some(avk), vks, sid_state, atms.params.C))
         }
     }
 
@@ -288,7 +293,7 @@ module f_atms{
     action atms_acheck_2_act = all {
         f_atms_s.input.atms_get_sim_control_messages().size() > 0,
         f_atms_s.handles.atms_get_sim_acheck_hold_messages().size() > 0,
-        nondet sim_avk = f_atms_s.params.ALL_AVKS.oneOf()
+        nondet sim_avk = ALL_AVKS.oneOf()
         nondet t = atms_acheck_2(f_atms_s, Some(sim_avk)).oneOf()
         f_atms_s' = atms_process_transitions(f_atms_s, t) 
     }     
@@ -399,7 +404,7 @@ module f_atms{
     action atms_sign_2_act = all {
         f_atms_s.input.atms_get_sim_control_messages().size() > 0,
         f_atms_s.handles.atms_get_sim_sign_hold_messages().size() > 0,
-        nondet sim_sig = f_atms_s.params.ALL_SIGS.oneOf()
+        nondet sim_sig = ALL_SIGS.oneOf()
         nondet t = atms_sign_2(f_atms_s, Some(sim_sig)).oneOf()
         f_atms_s' = atms_process_transitions(f_atms_s, t) 
     }         
@@ -442,7 +447,7 @@ module f_atms{
         if(clean_sig(sig, vk, m, sid_state)){
                 sig
             }else{  
-                atms.params.ALL_SIGS.find(x => clean_sig(Some(x), vk, m, sid_state) )
+                ALL_SIGS.find(x => clean_sig(Some(x), vk, m, sid_state) )
             }
     }
 
@@ -593,8 +598,8 @@ module f_atms{
     action atms_asign_2_act = all {
         f_atms_s.input.atms_get_sim_control_messages().size() > 0,
         f_atms_s.handles.atms_get_sim_asign_hold_messages().size() > 0,
-        nondet sim_avk = f_atms_s.params.ALL_AVKS.oneOf()
-        nondet sim_tau = f_atms_s.params.ALL_ASIGS.oneOf()
+        nondet sim_avk = ALL_AVKS.oneOf()
+        nondet sim_tau = ALL_ASIGS.oneOf()
         //val sim_bs = List(true, false, true) // TODO: generate this thing somehow
         nondet sim_bs = listSamplingSpace(5, Set(true,false)).oneOf()
         nondet t = atms_asign_2(f_atms_s, Some(sim_avk), Some(sim_tau), sim_bs).oneOf()
@@ -639,7 +644,7 @@ module f_atms{
         if(clean_asig(tau, avk, m, sid_state)){
                 tau
             }else{  
-                atms.params.ALL_ASIGS.find(x => clean_asig(Some(x), avk, m, sid_state) )
+                ALL_ASIGS.find(x => clean_asig(Some(x), avk, m, sid_state) )
             }
     }
 
@@ -672,20 +677,21 @@ module f_atms{
 
             val avk = sid_state.AVK.find(x => x.vks == p.vks).unwrap().avk
 
-            if(not (clean_avk(avk, p.vks, sid_state, atms.params.C))){
-                    Set({
-                        post_state: atms.state,
-                        effects: Set(
-                            ATMS_UpdateInput(Set()),
-                        )
-                    }) // run out of VKS, raise error?
+            if(false and (not (clean_avk(avk, p.vks, sid_state, atms.params.C)))){
+                    // Set({
+                    //     post_state: atms.state,
+                    //     effects: Set(
+                    //         ATMS_UpdateInput(Set()),
+                    //     )
+                    // }) // run out of VKS, raise error?
+                    Map().get(1)
             }else{
 
                 if(or {
                     avk == None,
                     not (p.S.indices().forall(i => {
                         (p.vks.indices().filter(j => p.vks[j] == p.S[i].vk)).size() == 1
-                    })),                
+                    })),
                 }){
                     Set({
                         post_state: atms.state.set(p.cfg.sid, sid_state),  // TODO: update the state here?
@@ -725,6 +731,9 @@ module f_atms{
 
 
                     if(p.S.indices().filter(i => X.bs[i]).size() <= atms.params.t){
+                        //Map().get(X.bs)
+                        //Set()
+
                         Set({
                             post_state: atms.state.set(p.cfg.sid, {...sid_state,
                                 VER: X.ver,
@@ -732,6 +741,7 @@ module f_atms{
                             }),
                             effects: Set( 
                                 ATMS_UpdateInput(Set(ASignResponse({cfg: p.cfg, m: p.m, vks: p.vks, S: p.S, avk: avk, bs : X.bs, tau: None}))),
+                                //ATMS_LogMessage(SIMASignRelease(p))
                             )
                         })
                     }else{
@@ -788,7 +798,7 @@ module f_atms{
     action atms_aver_2_act = all {
         f_atms_s.input.atms_get_sim_control_messages().size() > 0,
         f_atms_s.handles.atms_get_sim_averify_hold_messages().size() > 0,
-        nondet sim_vks_set = f_atms_s.params.ALL_VKS.powerset().oneOf()
+        nondet sim_vks_set = ALL_VKS.powerset().oneOf()
         nondet sim_b = Set(true,false).oneOf()
         nondet t = atms_aver_2(f_atms_s, Some(sim_vks_set.setToList()), sim_b).oneOf()
         f_atms_s' = atms_process_transitions(f_atms_s, t) 

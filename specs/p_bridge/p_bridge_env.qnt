@@ -6,6 +6,10 @@ module p_bridge_env{
 
     import f_pki_types.* from "../f_pki/f_pki_types"    
     import f_pki.* from "../f_pki/f_pki"
+
+    import f_hash_types.* from "../f_hash/f_hash_types"    
+    import f_hash.* from "../f_hash/f_hash"    
+
     import f_atms_types.* from "../f_atms/f_atms_types"    
     import f_atms.* from "../f_atms/f_atms"    
 
@@ -20,8 +24,7 @@ module p_bridge_env{
     import p_bridge_types.* from "./p_bridge_types" 
     import p_bridge.* from "./p_bridge" 
 
-    import f_hash_types.* from "../f_hash/f_hash_types"    
-    import f_hash.* from "../f_hash/f_hash"    
+
 
     import f_diff_types.* from "../f_diff/f_diff_types"    
     import f_diff.* from "../f_diff/f_diff"        
@@ -76,7 +79,6 @@ module p_bridge_env{
         all{
             val ts = q(g_ledger_s2, g_clock_s)
             all {
-                ts.size() > 0,
                 nondet transition = ts.oneOf()
                 all {
                     g_ledger_s2' = led_process_transitions(g_ledger_s2, g_clock_s, transition._1),
@@ -248,7 +250,40 @@ module p_bridge_env{
         },
         p_bridge_consume_responses,
         p_bridge_request_messages,
+        g_ledger1_request_messages,
+        g_ledger1_response_messages,
     }
+
+   pure def g_ledger1_response_messages_trans(sys: LED_System) : Set[LED_Transition] = {
+         sys.input.led_get_submit_response_messages().map(msg_log =>
+         {
+            post_state : sys.state,
+            effects : Set(
+                LED_LogMessage(SubmitResponse(msg_log)),
+                LED_UpdateInput(Set())
+            )
+         })
+    }
+
+    action g_ledger1_response_messages : bool =  all {
+        // Precondition: there is a response message in input
+        val response_msgs = g_ledger1_response_messages_trans(g_ledger_s)
+        
+        all {
+        // Non-deterministically choose one response message to consume
+            nondet transition = response_msgs.oneOf()
+
+        // Update the system state by consuming the message    
+            g_ledger_s' = led_process_transitions(g_ledger_s, g_clock_s, transition),
+            f_atms_s' = f_atms_s,
+            pki_s' = pki_s,
+            g_clock_s' = g_clock_s, 
+            g_ledger_s2' = g_ledger_s2,
+            f_hash_s' = f_hash_s,          
+            f_dif_s' = f_dif_s,   
+            p_bridge_s' = p_bridge_s,
+        }
+   }            
 
     action p_bridge_request_messages : bool = all {
         p_bridge_s.input.size() == 0,
@@ -279,6 +314,47 @@ module p_bridge_env{
             f_dif_s' = f_dif_s,     
         }
     }    
+
+    action g_ledger1_request_messages : bool = all {
+        p_bridge_s.input.size() == 0,
+        f_atms_s.input.size() == 0,
+        pki_s.input.size() == 0,
+        g_clock_s.input.size() == 0,
+        g_ledger_s.input.size() == 0,
+        g_ledger_s2.input.size() == 0,
+        f_hash_s.input.size() == 0,
+        f_dif_s.input.size() == 0,
+        and { g_ledger_s.state.buffer.keys().size() < 1
+           , g_ledger_s.state.log.length() < 3 },        
+
+        all {        
+            nondet from = P1.oneOf()
+            nondet sid = SIDs.oneOf()
+
+            val cfg = {party: from, sid: sid, nonce: g_ledger_s.nonce}
+            any {
+                g_ledger1_submit_request(cfg),
+            },
+            f_atms_s' = f_atms_s,
+            pki_s' = pki_s,
+            g_clock_s' = g_clock_s, 
+            p_bridge_s' = p_bridge_s,
+            g_ledger_s2' = g_ledger_s2,
+            f_hash_s' = f_hash_s,          
+            f_dif_s' = f_dif_s,     
+        }
+    }    
+
+    action g_ledger1_submit_request(cfg: MsgConfig) : bool = all {
+        nondet tx = 1.to(100).oneOf() // TODO: determine appropriate range
+        val ntx = SubmitRequest({cfg: cfg, tx: Normal({tx: tx, b: true})})
+
+        g_ledger_s' = {...g_ledger_s, 
+            input: Set(ntx),
+            nonce: g_ledger_s.nonce + 1
+        }
+    }
+
 
     action p_bridge_bkgen_request(cfg: MsgConfig) : bool = all {
         p_bridge_s' = {...p_bridge_s, 
@@ -326,35 +402,30 @@ module p_bridge_env{
     }
 
     action init : bool = all {
-        brd_init(Parties, C, SIDs, P1, P2),
-        gc_init(C,0, Parties.map(x => SIDs.map(y => {party:x,sid:y})).flatten()),
-        pki_init(Parties, 1.to(5), SIDs),
+        val r0 = 0
+        val delta = 1
+        val t = 1
+        val R = 4
 
-        dif_init(Parties, C, SIDs, 1),
-        hash_init(Parties, SIDs, 1.to(5)),
+        all{
+            hash_init(Parties, SIDs),
+            pki_init(Parties, SIDs),
+            gc_init(C, r0, all_parties_at_all_sids(Parties, SIDs)),
+            dif_init(Parties, C, SIDs, delta),
 
-        atms_init({
+            brd_init(Parties, C, SIDs, r0, delta, R),
+            atms_init({P : Parties, C : C, SIDs: SIDs, t: (t-1)}),
 
-            P : Parties,
-            C : C, 
-            SIDs: SIDs, 
-            t: 1,
-
-            ALL_VKS: 1.to(5),
-            ALL_SIGS: 1.to(5),
-            ALL_AVKS: 1.to(5),
-            ALL_ASIGS: 1.to(5),
-        }),
-        led_init(Parties, C, SIDs, 1, 1, 1, true, 1, 1, 1),
-        all {
-            g_ledger_s2' = led_initial(Parties, C, SIDs, 1, 1, 1, true, 1, 1, 1)
+            g_ledger_s' = led_initial({P: Parties, C: C, SIDs: SIDs, delta_latency: 1, delta_slack: 1, delta_apl: 1, Val: true, comsel_a: 1, comsel_b: 1, comsel_c: 1}),
+            g_ledger_s2' = led_initial({P: Parties, C: C, SIDs: SIDs, delta_latency: 1, delta_slack: 1, delta_apl: 1, Val: true, comsel_a: 1, comsel_b: 1, comsel_c: 1})
+            
         }
     }
 
     val Q1 = p_bridge_s.log.size() <= 1
     val Q2 = p_bridge_s.state.bst.get(1).rot == None
-    val Q3 = g_clock_s.state.TIME <= 2
-
-
+    val Q3 = g_clock_s.state.TIME <= 4
+    val Q4 = f_hash_s.state.get(1).hash_map.keys().size() <= 1
+    val Q5 = g_clock_s.state.TIME <= 8
 
 }

@@ -26,22 +26,7 @@ module p_bridge {
     
     var p_bridge_s : BRD_System
 
-    pure def brd_skip_trans(bridge: BRD_System) : BRD_Transition = {
-        {
-            post_state: bridge.state,
-            effects : Set(
-                BRD_UpdateInput(Set())
-            )
-        }
-    }
 
-    pure def brd_id_trans(bridge: BRD_System) : BRD_Transition = {
-        {
-            post_state: bridge.state,
-            effects : Set()
-        }
-    }    
-   
 
     pure def brd_process_transitions(sys: BRD_System, transition: BRD_Transition) : BRD_System = {
         val new_sys = {...sys, state: transition.post_state}
@@ -84,25 +69,27 @@ module p_bridge {
 
 
 
-    action brd_init(P: Set[Party], C: Set[Party], SIDs: Set[SID], P1: Set[Party], P2: Set[Party]) : bool =  all {
+    action brd_init(P: Set[Party], C: Set[Party], SIDs: Set[SID], r0: Time, delta: int, R: int) : bool =  all {
+        C.subseteq(P),
+        
+        r0 >= 0,
+        R >= 0,
+        R >= delta + 3,
+        delta >= 1, // check that
+
         p_bridge_s' = {
             params : {
                 P: P,
                 C: C,
-                SIDs: SIDs,
-
-                ssid : -5,                
-                P1: P1,
-                P2: P2,
-                r0: 0,
-                delta: 0, 
-                t: 0, 
-                R: 2, 
+                SIDs: SIDs, 
+                // P1: P1,
+                // P2: P2,
+                r0: r0,
+                delta: delta, 
+                //t: t, 
+                R: R, 
             },
             state : {
-                //bvk: Map(),
-                //rot: Map(),
-                //aux: Map(),
                 bst: P.mapBy(p => {
                     bvk: None,
                     rot: None,

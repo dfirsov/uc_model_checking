@@ -16,10 +16,10 @@ module f_atms_types {
         SIDs: Set[SID], 
         t: int,
 
-        ALL_VKS: Set[ATMS_VK],
-        ALL_SIGS: Set[ATMS_Signature],
-        ALL_AVKS: Set[ATMS_AVK],
-        ALL_ASIGS: Set[ATMS_ASignature],
+        // ALL_VKS: Set[ATMS_VK],
+        // ALL_SIGS: Set[ATMS_Signature],
+        // ALL_AVKS: Set[ATMS_AVK],
+        // ALL_ASIGS: Set[ATMS_ASignature],
     }        
 
     type ATMS_StateVars = {

@@ -8,15 +8,7 @@ module f_pki {
 
     var pki_s : PKI_System
 
-
-    pure def pki_skip_trans(pki: PKI_System) : PKI_Transition = {
-        {
-            post_state: pki.state,
-            effects : Set(
-                PKI_UpdateInput(Set())
-            )
-        }
-    }
+    val SIM_ALL_CERTS = 1.to(5)
 
     pure def pki_register_1(pki: PKI_System) : Set[PKI_Transition] = {      
         pki.input.pki_get_register_request_messages().map(p => {
@@ -35,7 +27,7 @@ module f_pki {
     pure def pki_register_2(pki: PKI_System) : Set[PKI_Transition] = {      
         pki.input.pki_get_sim_control_messages().map(m => {
             pki.SIM_handles.pki_get_sim_register_request_hold_messages().map(p => {
-                pki.params.SIM_ALL_CERTS.map(cert => {
+                SIM_ALL_CERTS.map(cert => {
                     {
                         post_state: pki.state,
                         effects: Set(
@@ -56,14 +48,14 @@ module f_pki {
             val sid_state = pki.state.get(sid)
 
             if(sid_state.Reg.exists(r => r.party == party)){
-                Set({
+                {
                     post_state: pki.state,
                     effects: Set(
                         PKI_UpdateInput(Set(PKI_RegisterResponse({cfg: p.cfg, vk: p.vk, cert: None}))),
                     )
-                })   
+                }   
             }else{
-                Set({
+                {
                     post_state: 
                      pki.state.put(sid, {...sid_state,
                          Reg: sid_state.Reg.union(Set({party: party, vk: p.vk})),
@@ -72,9 +64,9 @@ module f_pki {
                     effects: Set( 
                         PKI_UpdateInput(Set(PKI_RegisterResponse({cfg: p.cfg, vk: p.vk, cert: Some(p.cert)}))),
                     )                    
-                })
+                }
             }
-        }).flatten()
+        })
     }
 
 
@@ -154,13 +146,13 @@ module f_pki {
                 }
             }
 
-            Set({
+            {
                 post_state: pki.state,
                 effects: Set( 
                     PKI_UpdateInput(Set(PKI_RetrieveResponse({cfg: p.cfg, Q: p.Q, vk: vk_res})))
                 )
-            })
-        }).flatten()
+            }
+        })
     }    
 
     pure def pki_cert_verify_1(pki: PKI_System) : Set[PKI_Transition] = {
@@ -172,7 +164,7 @@ module f_pki {
 
             val result = sid_state.Ver.exists(x => x.party == p.Q and x.vk == p.vk and x.cert == p.cert)            
 
-            Set({
+            {
                 post_state: pki.state,
                 effects: Set(
                     PKI_LogMessage(PKI_CertVerifyRequest(p)),                   
@@ -184,8 +176,8 @@ module f_pki {
                         result: result
                     })))
                 )
-            })
-        }).flatten()
+            }
+        })
     }
 
     // sim might want to give control back to the environment
@@ -248,7 +240,6 @@ module f_pki {
         all{
             val ts = q(pki_s)
             all {
-                ts.size() > 0,
                 nondet transition = ts.oneOf()
                 all {
                     pki_s' = pki_process_transitions(pki_s, transition)
@@ -261,13 +252,13 @@ module f_pki {
         pki_step_with(pki_main_listener)
     }    
 
-    pure def pki_initial(P: Set[Party], all_certs: Set[Certificate], SIDs: Set[SID]) : PKI_System = {
+    pure def pki_initial(P: Set[Party], SIDs: Set[SID]) : PKI_System = {
         {
             params : {
                 P: P,
                 SIDs: SIDs,
 
-                SIM_ALL_CERTS: all_certs
+                //SIM_ALL_CERTS: all_certs
             },
             state: SIDs.mapBy(sid => {
                 Ver: Set(),
@@ -280,8 +271,8 @@ module f_pki {
         }        
     }    
 
-    action pki_init(P: Set[Party], all_certs: Set[Certificate], SIDs: Set[SID]) : bool =  all {
-        pki_s' = pki_initial(P, all_certs, SIDs)
+    action pki_init(P: Set[Party], SIDs: Set[SID]) : bool =  all {
+        pki_s' = pki_initial(P, SIDs)
     }    
 
 }
