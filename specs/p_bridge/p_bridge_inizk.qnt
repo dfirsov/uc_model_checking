@@ -151,12 +151,74 @@ module p_bridge_inizk{
         }).flatten()
     }
 
+    pure def brd_verify_1(sys : BRD_CSystem) : Set[BRD_CTransition] = {
+        sys.brd.input.brd_get_verify_request_messages().map(p => {
+            if(brd_access_check(p.cfg, sys.brd.params)) {
+                if(sys.ledger2.state.mem.has(p.rot) == false) {
+                    Set({...sys.brd_id_ctrans(),
+                        brd: sys.brd.brd_skip_trans()
+                    })
+                }  else {
+                    val mem = sys.ledger2.state.mem.get(p.rot)
+                    val brd_trans = {
+                        post_state: sys.brd.state,
+                        effects: Set(
+                            BRD_LogMessage(BRD_VerifyRequest(p)),
+                            BRD_UpdateInput(Set()),
+                            BRD_AppendHandle(BRD_VerifyNIZKVerifyWait({cfg: p.cfg, rot: p.rot, x: p.x, proof: p.proof, mem: mem}))
+                        )
+                    }
+
+                    val nizk_trans = {
+                        post_state: sys.nizk.state,
+                        effects: Set(
+                            //NIZK_VerifyRequest({cfg: MsgConfig, x: NIZK_Statement, pi: NIZK_Proof}),
+                            NIZK_UpdateInput(Set(NIZK_VerifyRequest({cfg: p.cfg, x: {x: p.x, h: p.proof.h}, pi: p.proof.pi})))
+                        )
+                    }
+
+                    Set({...sys.brd_id_ctrans(),
+                        brd: brd_trans,
+                        nizk: nizk_trans
+                    })
+                }
+            }else{
+                Set({...sys.brd_id_ctrans(),
+                    brd: sys.brd.brd_skip_trans()
+                })
+            }
+        }).flatten()
+    }
+
+    pure def brd_verify_2(sys : BRD_CSystem) : Set[BRD_CTransition] = {
+        sys.nizk.input.nizk_get_verify_response_messages().map(p => {
+            sys.brd.handles.brd_get_verify_nizk_verify_wait_messages().filter(q => p.cfg == q.cfg).map(q => {
+                val res = p.b and q.mem.hs.listHas(q.proof.h)
+                
+                val brd_trans = {
+                    post_state: sys.brd.state,
+                    effects: Set(
+                        BRD_UpdateInput(Set(BRD_VerifyResponse({cfg: q.cfg, rot: q.rot, x: q.x, proof: q.proof, mem: q.mem, res: res}))),
+                        BRD_RemoveHandle(BRD_VerifyNIZKVerifyWait(q))
+                    )
+                }
+
+                Set({...sys.brd_id_ctrans(),
+                    brd: brd_trans,
+                    nizk: sys.nizk.nizk_skip_trans()
+                })
+            }).flatten()
+        }).flatten()
+    }
+
     pure def brd_inizk_main_listener(sys: BRD_CSystem) : Set[BRD_CTransition] = {
         brd_certify_1(sys)
         .union(brd_certify_2(sys))
         .union(brd_certify_3(sys))
         .union(brd_certify_4(sys))
         .union(brd_certify_5(sys))
+        .union(brd_verify_1(sys))
+        .union(brd_verify_2(sys))
     }
                 
     

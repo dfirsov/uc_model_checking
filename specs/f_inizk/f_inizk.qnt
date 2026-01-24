@@ -8,20 +8,23 @@ module f_inizk{
     import f_hash.* from "../f_hash/f_hash"
 
     var f_nizk_s : NIZK_System
- 
+
+    val ALL_PROOFS = 1.to(10)
+    val ALL_WITNESSES = Set(List())
+
     pure def nizk_rel_1(nizk: NIZK_System, hash: HASH_System) : Set[(NIZK_Transition, HASH_Transition)] = {
         nizk.input.nizk_get_rel_request_messages().map(m => {
            // if(nizk_access_check(m.cfg, nizk.params)) {
                 val sid = m.cfg.sid
                 val party = m.cfg.party
                 val sid_state = nizk.state.get(sid)
-                val in_relation = nizk_Rel_sat(nizk, sid, m.x, m.w)
+                //val in_relation = nizk_Rel_sat(m.x, m.w)
 
                 val nizk_transition = {
                     post_state : nizk.state,
                     effects : Set( 
-                        NIZK_LogMessage(RelRequest(m)),
-                        NIZK_AppendHandle(RelRequestWait(m)),
+                        NIZK_LogMessage(NIZK_RelRequest(m)),
+                        NIZK_AppendHandle(NIZK_RelRequestWait(m)),
                         NIZK_UpdateInput(Set())
                     )
                 }
@@ -47,14 +50,14 @@ module f_inizk{
                 val party = p.cfg.party
                 val sid_state = nizk.state.get(sid)
 
-                val in_relation = nizk_Rel_sat(nizk, sid, p.x, p.w)
+                val in_relation = nizk_Rel_sat(p.x, p.w) and r.h == p.x.h
 
                 val nizk_transition = {
                     post_state : nizk.state,
                     effects : Set( 
-                        //NIZK_LogMessage(RelRequestWait(p)),
-                        NIZK_UpdateInput(Set(RelResponse({cfg: p.cfg, x: p.x, w: p.w, b: in_relation}))),
-                        NIZK_RemoveHandle(RelRequestWait(p))
+                        //NIZK_LogMessage(NIZK_RelRequestWait(p)),
+                        NIZK_UpdateInput(Set(NIZK_RelResponse({cfg: p.cfg, x: p.x, w: p.w, b: in_relation}))),
+                        NIZK_RemoveHandle(NIZK_RelRequestWait(p))
                     )
                 }
 
@@ -80,9 +83,9 @@ module f_inizk{
                 {
                     post_state : nizk.state,
                     effects : Set( 
-                        NIZK_LogMessage(ProveRequest(m)),
-                        NIZK_UpdateInput(Set(RelRequest({cfg: m.cfg, x: m.x, w: m.w}))),
-                        NIZK_AppendHandle(ProveRelWait({cfg: m.cfg, x: m.x, w: m.w}))
+                        NIZK_LogMessage(NIZK_ProveRequest(m)),
+                        NIZK_UpdateInput(Set(NIZK_RelRequest({cfg: m.cfg, x: m.x, w: m.w}))),
+                        NIZK_AppendHandle(NIZK_ProveRelWait({cfg: m.cfg, x: m.x, w: m.w}))
                     )
                 }            
                 
@@ -109,8 +112,8 @@ module f_inizk{
                     {
                         post_state : nizk.state,
                         effects : Set( 
-                            NIZK_UpdateInput(Set(ProveResponse({cfg: m.cfg, x: m.x, w: m.w, pi: None}))),
-                            NIZK_RemoveHandle(ProveRelWait(m)),
+                            NIZK_UpdateInput(Set(NIZK_ProveResponse({cfg: m.cfg, x: m.x, w: m.w, pi: None}))),
+                            NIZK_RemoveHandle(NIZK_ProveRelWait(m)),
                         )
                     }
                 }else{
@@ -118,8 +121,8 @@ module f_inizk{
                         post_state: nizk.state,
                         effects: Set(
                             NIZK_UpdateInput(Set(NIZK_SIMControl)),
-                            NIZK_AppendHandle(SIMProveHold({cfg:m.cfg, x:m.x, w:m.w})),
-                            NIZK_RemoveHandle(ProveRelWait(m)),
+                            NIZK_AppendHandle(NIZK_SIMProveHold({cfg:m.cfg, x:m.x, w:m.w})),
+                            NIZK_RemoveHandle(NIZK_ProveRelWait(m)),
                         )
                     }
                 }
@@ -133,8 +136,8 @@ module f_inizk{
                 {
                     post_state : nizk.state,
                     effects : Set( 
-                        NIZK_UpdateInput(Set(SIMProveRelease({cfg: q.cfg, x: q.x, w: q.w, pi: sim_pi}))),
-                        NIZK_RemoveHandle(SIMProveHold(q))
+                        NIZK_UpdateInput(Set(NIZK_SIMProveRelease({cfg: q.cfg, x: q.x, w: q.w, pi: sim_pi}))),
+                        NIZK_RemoveHandle(NIZK_SIMProveHold(q))
                     )
                 }
             })
@@ -144,7 +147,7 @@ module f_inizk{
     action nizk_prove_2_act : bool = all {
         f_nizk_s.input.nizk_get_sim_control_messages().size() > 0,
         f_nizk_s.handles.nizk_get_sim_prove_hold_messages().size() > 0,
-        nondet sim_pi = f_nizk_s.params.ALL_PROOFS.oneOf()
+        nondet sim_pi = ALL_PROOFS.oneOf()
         nondet t = nizk_prove_2(f_nizk_s, sim_pi).oneOf()
         f_nizk_s' =  nizk_process_transitions(f_nizk_s, t)
     } 
@@ -162,7 +165,7 @@ module f_inizk{
             }
 
             val maybe_new_pi = if(san_predicate(p.pi)){
-                nizk.params.ALL_PROOFS.find(x => not (san_predicate(x)))
+                ALL_PROOFS.find(x => not (san_predicate(x)))
             }else{
                 Some(p.pi)
             }
@@ -181,7 +184,7 @@ module f_inizk{
                         Ver: sid_state.Ver.setAdd({x: p.x, pi: new_pi, b: true})
                     }),
                     effects: Set(
-                        NIZK_UpdateInput(Set(ProveResponse({cfg: p.cfg, x: p.x, w: p.w, pi: Some(new_pi)})))
+                        NIZK_UpdateInput(Set(NIZK_ProveResponse({cfg: p.cfg, x: p.x, w: p.w, pi: Some(new_pi)})))
                     )
                 }
             }
@@ -197,9 +200,9 @@ module f_inizk{
                 {
                     post_state: nizk.state,
                     effects: Set(
-                        NIZK_LogMessage(VerifyRequest(m)),
+                        NIZK_LogMessage(NIZK_VerifyRequest(m)),
                         NIZK_UpdateInput(Set(NIZK_SIMControl)),
-                        NIZK_AppendHandle(SIMVerifyHold(m))
+                        NIZK_AppendHandle(NIZK_SIMVerifyHold(m))
                     )
                 }
             }else{
@@ -219,8 +222,8 @@ module f_inizk{
                 {
                     post_state : nizk.state,
                     effects : Set( 
-                        NIZK_UpdateInput(Set(SIMVerifyRelease({cfg: q.cfg, x: q.x, pi: q.pi, w: sim_w}))),
-                        NIZK_RemoveHandle(SIMVerifyHold(q))
+                        NIZK_UpdateInput(Set(NIZK_SIMVerifyRelease({cfg: q.cfg, x: q.x, pi: q.pi, w: sim_w}))),
+                        NIZK_RemoveHandle(NIZK_SIMVerifyHold(q))
                     )
                 }
             })
@@ -230,7 +233,7 @@ module f_inizk{
     action nizk_verify_2_act : bool = all {
         f_nizk_s.input.nizk_get_sim_control_messages().size() > 0,
         f_nizk_s.handles.nizk_get_sim_verify_hold_messages().size() > 0,
-        nondet sim_w = f_nizk_s.params.ALL_WITNESSES.oneOf()
+        nondet sim_w = ALL_WITNESSES.oneOf()
         nondet t = nizk_verify_2(f_nizk_s, sim_w).oneOf()
         f_nizk_s' =  nizk_process_transitions(f_nizk_s, t)
     }      
@@ -246,7 +249,7 @@ module f_inizk{
                 {
                     post_state: nizk.state,
                     effects: Set( 
-                        NIZK_UpdateInput(Set(VerifyResponse({cfg:p.cfg, x:p.x, pi: p.pi, b: old_b})))
+                        NIZK_UpdateInput(Set(NIZK_VerifyResponse({cfg:p.cfg, x:p.x, pi: p.pi, b: old_b})))
                     )
                 }
             }else{
@@ -254,8 +257,8 @@ module f_inizk{
                 {
                     post_state: nizk.state,
                     effects: Set(
-                        NIZK_UpdateInput(Set(RelRequest({cfg:p.cfg, x:p.x, w: p.w}))),
-                        NIZK_AppendHandle(VerifyRelWait({cfg:p.cfg, x:p.x, w: p.w, pi: p.pi}))
+                        NIZK_UpdateInput(Set(NIZK_RelRequest({cfg:p.cfg, x:p.x, w: p.w}))),
+                        NIZK_AppendHandle(NIZK_VerifyRelWait({cfg:p.cfg, x:p.x, w: p.w, pi: p.pi}))
                     )
                 }
             }
@@ -275,8 +278,8 @@ module f_inizk{
                             Ver: sid_state.Ver.setAdd({x: p.x, pi: p.pi, b: new_b})
                         }),
                         effects: Set(
-                            NIZK_UpdateInput(Set(VerifyResponse({cfg:p.cfg, x:p.x, pi: p.pi, b: new_b}))),
-                            NIZK_RemoveHandle(VerifyRelWait(p))
+                            NIZK_UpdateInput(Set(NIZK_VerifyResponse({cfg:p.cfg, x:p.x, pi: p.pi, b: new_b}))),
+                            NIZK_RemoveHandle(NIZK_VerifyRelWait(p))
                         )
                     }
 
@@ -332,19 +335,19 @@ module f_inizk{
         }
     }  
 
-   action nizk_init(P: Set[Party], C: Set[Party],SIDs: Set[SID], ALL_PROOFS: Set[NIZK_Proof], ALL_WITNESSES: Set[NIZK_Witness], Rel: NIZK_Relation) : bool =  all {
+   action nizk_init(x : {P: Set[Party], C: Set[Party],SIDs: Set[SID]}) : bool =  all {
         f_nizk_s' = {
             params : {
-                P: P,
-                C: C,
-                SIDs: SIDs,
+                P: x.P,
+                C: x.C,
+                SIDs: x.SIDs,
 
-                ALL_PROOFS: ALL_PROOFS,
-                ALL_WITNESSES: ALL_WITNESSES,
+                //ALL_PROOFS: ALL_PROOFS,
+                //ALL_WITNESSES: ALL_WITNESSES,
             },
-            state : SIDs.mapBy(sid => {
+            state : x.SIDs.mapBy(sid => {
                 Ver: Set(),
-                Rel: Rel,
+                //Rel: Rel,
             }),
             input : Set(),
             nonce : 0,

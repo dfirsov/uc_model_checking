@@ -23,10 +23,11 @@ module p_bridge {
     import f_hash_types.* from "../f_hash/f_hash_types"
     import f_hash.* from "../f_hash/f_hash"        
     
+    import f_inizk_types.* from "../f_inizk/f_inizk_types"
+    import f_inizk.* from "../f_inizk/f_inizk"  
+
     
     var p_bridge_s : BRD_System
-
-
 
     pure def brd_process_transitions(sys: BRD_System, transition: BRD_Transition) : BRD_System = {
         val new_sys = {...sys, state: transition.post_state}
@@ -64,6 +65,7 @@ module p_bridge {
             ledger2: sys.ledger2.led_process_transitions(sys.clock, transition.ledger2),
             dif: sys.dif.dif_process_transitions(sys.clock, transition.dif),
             hash: sys.hash.hash_process_transitions(transition.hash),
+            nizk: sys.nizk.nizk_process_transitions(transition.nizk),
         }
     } 
 

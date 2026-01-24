@@ -12,6 +12,7 @@ module p_bridge_types {
     import f_sig_types.* from "../f_sig/f_sig_types" 
     import f_pki_types.* from "../f_pki/f_pki_types"
     import f_hash_types.* from "../f_hash/f_hash_types"
+    import f_inizk_types.* from "../f_inizk/f_inizk_types"
     
     type BRD_BVK = ATMS_VK 
     type BRD_ROT = ATMS_AVK 
@@ -65,19 +66,22 @@ module p_bridge_types {
 
         | BridgeDiffuse({cfg: MsgConfig, args: BRD_BR_Args, resp: BRD_BR_Resp,})
         | BridgeDiffuseWait({cfg: MsgConfig, args: BRD_BR_Args, resp: BRD_BR_Resp,})
-        //| BridgeL1Submit({cfg: MsgConfig, args: BRD_BR_Args, resp: BRD_BR_Resp,})
-        //| BridgeL1SubmitWait({cfg: MsgConfig, args: BRD_BR_Args, resp: BRD_BR_Resp,})
         | BridgeL2Submit({cfg: MsgConfig, args: BRD_BR_Args, resp: BRD_BR_Resp,})
         | BridgeL2SubmitWait({cfg: MsgConfig, args: BRD_BR_Args, resp: BRD_BR_Resp,})
         | BridgeOKWait({cfg: MsgConfig, args: BRD_BR_Args, resp: BRD_BR_Resp,})
         | BridgeResponse({cfg: MsgConfig, args: BRD_BR_Args, resp: BRD_BR_Resp,})
 
         | CertifyRequest({cfg: MsgConfig, rot: BRD_ROT, x: LED_Tx})
-        | CertifyReadWait({cfg: MsgConfig})
-        | CertifyAPLWait({cfg: MsgConfig})
-        | CertifyHashWait({cfg: MsgConfig})
-        | CertifyProveWait({cfg: MsgConfig})
-        | CertifyResponse({cfg: MsgConfig, res: Option[({pi: int, h: int})]})
+        | CertifyReadWait({cfg: MsgConfig, rot: BRD_ROT, x: LED_Tx})
+        | CertifyAPLWait({cfg: MsgConfig, rot: BRD_ROT, x: LED_Tx, L1 : List[LED_Tx]})
+        | CertifyHashWait({cfg: MsgConfig, rot: BRD_ROT, x: LED_Tx, L1 : List[LED_Tx], apl: int})
+        | CertifyProveWait({cfg: MsgConfig, rot: BRD_ROT, x: LED_Tx, L1 : List[LED_Tx], apl: int, h: int})
+        | CertifyResponse({cfg: MsgConfig, rot: BRD_ROT, x: LED_Tx, L1 : List[LED_Tx], apl: int, h: int, res: Option[({pi: int, h: int})]})
+
+        | BRD_VerifyRequest({cfg: MsgConfig, rot: BRD_ROT, x: LED_Tx, proof: {pi: int, h: int}})
+        | BRD_VerifyNIZKVerifyWait({cfg: MsgConfig, rot: BRD_ROT, x: LED_Tx, proof: {pi: int, h: int}, mem: {hs: List[Hash_Output], avk: Option[ATMS_AVK]}})
+        | BRD_VerifyResponse({cfg: MsgConfig, rot: BRD_ROT, x: LED_Tx, proof: {pi: int, h: int}, mem: {hs: List[Hash_Output], avk: Option[ATMS_AVK]}, res: bool})
+        
 
     pure def brd_get_all_response_messages(messages: Set[BRD_Message]): Set[BRD_Message] = {
         messages.filterMap(m => {
@@ -86,6 +90,7 @@ module p_bridge_types {
                 | RoTResponse(_) => Some(m)
                 | CertifyResponse(_) => Some(m)
                 | BridgeResponse(_) => Some(m)
+                | BRD_VerifyResponse(_) => Some(m)
                 | _ => None
             }
         })
@@ -142,6 +147,7 @@ module p_bridge_types {
         ledger2: LED_System,
         dif: DIF_System,
         hash: HASH_System,
+        nizk: NIZK_System,
     }    
 
     type BRD_CTransition = {
@@ -153,6 +159,7 @@ module p_bridge_types {
         ledger2: LED_Transition,
         dif: DIF_Transition,
         hash: HASH_Transition,
+        nizk: NIZK_Transition,
     }   
 
     pure def brd_skip_trans(bridge: BRD_System) : BRD_Transition = {
@@ -187,7 +194,8 @@ module p_bridge_types {
             ledger1: sys.ledger1.led_id_trans(), 
             ledger2: sys.ledger2.led_id_trans(), 
             dif: sys.dif.dif_id_trans(), 
-            hash: sys.hash.hash_id_trans(), 
+            hash: sys.hash.hash_id_trans(),
+            nizk: sys.nizk.nizk_id_trans(), 
         }
     }    
 
@@ -433,7 +441,7 @@ module p_bridge_types {
         })
     }
 
-    pure def brd_get_certify_read_wait_messages(messages: Set[BRD_Message]): Set[{cfg: MsgConfig}] = {
+    pure def brd_get_certify_read_wait_messages(messages: Set[BRD_Message]): Set[{cfg: MsgConfig, rot: BRD_ROT, x: LED_Tx}] = {
         messages.filterMap(m => {
             match m {
                 | CertifyReadWait(p) => Some(p)
@@ -442,7 +450,7 @@ module p_bridge_types {
         })
     }
 
-    pure def brd_get_certify_apl_wait_messages(messages: Set[BRD_Message]): Set[{cfg: MsgConfig}] = {
+    pure def brd_get_certify_apl_wait_messages(messages: Set[BRD_Message]): Set[{cfg: MsgConfig, rot: BRD_ROT, x: LED_Tx, L1: List[LED_Tx]}] = {
         messages.filterMap(m => {
             match m {
                 | CertifyAPLWait(p) => Some(p)
@@ -451,7 +459,7 @@ module p_bridge_types {
         })
     }
 
-    pure def brd_get_certify_hash_wait_messages(messages: Set[BRD_Message]): Set[{cfg: MsgConfig}] = {
+    pure def brd_get_certify_hash_wait_messages(messages: Set[BRD_Message]): Set[{cfg: MsgConfig, rot: BRD_ROT, x: LED_Tx, L1: List[LED_Tx], apl: int}] = {
         messages.filterMap(m => {
             match m {
                 | CertifyHashWait(p) => Some(p)
@@ -460,10 +468,37 @@ module p_bridge_types {
         })
     }
 
-    pure def brd_get_certify_prove_wait_messages(messages: Set[BRD_Message]): Set[{cfg: MsgConfig}] = {
+    pure def brd_get_certify_prove_wait_messages(messages: Set[BRD_Message]): Set[{cfg: MsgConfig, rot: BRD_ROT, x: LED_Tx, L1: List[LED_Tx], apl: int, h: int}] = {
         messages.filterMap(m => {
             match m {
                 | CertifyProveWait(p) => Some(p)
+                | _ => None
+            }
+        })
+    }
+
+    pure def brd_get_verify_request_messages(messages: Set[BRD_Message]): Set[{cfg: MsgConfig, rot: BRD_ROT, x: LED_Tx, proof: {pi: int, h: int}}] = {
+        messages.filterMap(m => {
+            match m {
+                | BRD_VerifyRequest(p) => Some(p)
+                | _ => None
+            }
+        })
+    }
+
+    pure def brd_get_verify_nizk_verify_wait_messages(messages: Set[BRD_Message]): Set[{cfg: MsgConfig, rot: BRD_ROT, x: LED_Tx, proof: {pi: int, h: int}, mem: {hs: List[Hash_Output], avk: Option[ATMS_AVK]}}] = {
+        messages.filterMap(m => {
+            match m {
+                | BRD_VerifyNIZKVerifyWait(p) => Some(p)
+                | _ => None
+            }
+        })
+    }
+
+    pure def brd_get_verify_response_messages(messages: Set[BRD_Message]): Set[{cfg: MsgConfig, rot: BRD_ROT, x: LED_Tx, proof: {pi: int, h: int}, mem: {hs: List[Hash_Output], avk: Option[ATMS_AVK]}, res: bool}] = {
+        messages.filterMap(m => {
+            match m {
+                | BRD_VerifyResponse(p) => Some(p)
                 | _ => None
             }
         })
@@ -517,7 +552,7 @@ module p_bridge_types {
         })
     }
 
-    pure def brd_get_certify_response_messages(messages: Set[BRD_Message]): Set[{cfg: MsgConfig, res: Option[({pi: int, h: int})]}] = {
+    pure def brd_get_certify_response_messages(messages: Set[BRD_Message]): Set[{cfg: MsgConfig, rot: BRD_ROT, x: LED_Tx, L1: List[LED_Tx], apl: int, h: int, res: Option[({pi: int, h: int})]}] = {
         messages.filterMap(m => {
             match m {
                 | CertifyResponse(p) => Some(p)

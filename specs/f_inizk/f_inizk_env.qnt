@@ -104,7 +104,7 @@ module f_inizk_env{
 
     action env_prove_reqs_args(cfg: MsgConfig, x: NIZK_Statement, w: NIZK_Witness) : bool = all {
         f_nizk_s' = {...f_nizk_s, 
-            input: Set(ProveRequest({cfg: cfg, x: x, w: w}) ),
+            input: Set(NIZK_ProveRequest({cfg: cfg, x: x, w: w}) ),
             nonce: f_nizk_s.nonce + 1
         }
     }
@@ -120,7 +120,7 @@ module f_inizk_env{
 
     action env_verify_reqs_args(cfg: MsgConfig, x: NIZK_Statement, pi: NIZK_Proof) : bool = all {
         f_nizk_s' = {...f_nizk_s, 
-            input: Set(VerifyRequest({cfg: cfg, x: x, pi: pi}) ),
+            input: Set(NIZK_VerifyRequest({cfg: cfg, x: x, pi: pi}) ),
             nonce: f_nizk_s.nonce + 1
         }
     }

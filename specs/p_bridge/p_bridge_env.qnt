@@ -26,11 +26,15 @@ module p_bridge_env{
     import f_diff_types.* from "../f_diff/f_diff_types"    
     import f_diff.* from "../f_diff/f_diff"        
 
+    import f_inizk_types.* from "../f_inizk/f_inizk_types"    
+    import f_inizk.* from "../f_inizk/f_inizk"    
+
     import p_bridge_types.* from "./p_bridge_types" 
     import p_bridge.* from "./p_bridge" 
     import p_bridge_bkgen.* from "./p_bridge_bkgen"     
     import p_bridge_rot.* from "./p_bridge_rot"
     import p_bridge_br.* from "./p_bridge_br"
+    import p_bridge_inizk.* from "./p_bridge_inizk"
     import p_bridge_led2.* from "./p_bridge_led2"
     
    
@@ -38,6 +42,7 @@ module p_bridge_env{
         brd_bkgen_main_listener(sys)
             .union(brd_rot_main_listener(sys))
             .union(brd_br_main_listener(sys))
+            .union(brd_inizk_main_listener(sys))
     }
 
     action brd_step_pure : bool = {
@@ -51,6 +56,7 @@ module p_bridge_env{
                 ledger2: g_ledger_s2,
                 hash: f_hash_s,
                 dif: f_dif_s,
+                nizk: f_nizk_s,
             }
             val ts = brd_main_listener(sys)
             all {
@@ -65,6 +71,7 @@ module p_bridge_env{
                     g_ledger_s2' = new_sys.ledger2,
                     f_hash_s' = new_sys.hash,
                     f_dif_s' = new_sys.dif,
+                    f_nizk_s' = new_sys.nizk,
                 }
             }
         }
@@ -83,6 +90,7 @@ module p_bridge_env{
         g_ledger_s2' = g_ledger_s2,
         f_hash_s' = f_hash_s,
         f_dif_s' = f_dif_s,
+        f_nizk_s' = f_nizk_s,
     }
 
 
@@ -97,6 +105,7 @@ module p_bridge_env{
             g_ledger_s2' = g_ledger_s2,
             f_hash_s' = f_hash_s,
             f_dif_s' = f_dif_s,
+            f_nizk_s' = f_nizk_s,
         },
         all { // pki steps
             pki_step,
@@ -107,6 +116,7 @@ module p_bridge_env{
             g_ledger_s2' = g_ledger_s2,
             f_hash_s' = f_hash_s,
             f_dif_s' = f_dif_s,
+            f_nizk_s' = f_nizk_s,
         },
         all { // atms steps
             atms_step,
@@ -117,6 +127,7 @@ module p_bridge_env{
             g_ledger_s2' = g_ledger_s2,
             f_hash_s' = f_hash_s,
             f_dif_s' = f_dif_s,
+            f_nizk_s' = f_nizk_s,
         },
         all{ // ledger1 steps
             any {
@@ -130,6 +141,7 @@ module p_bridge_env{
             f_hash_s' = f_hash_s,
             g_ledger_s2' = g_ledger_s2,
             f_dif_s' = f_dif_s,
+            f_nizk_s' = f_nizk_s,
         },
         all { // ledger1 ival steps
             led_step_ival,
@@ -138,6 +150,7 @@ module p_bridge_env{
             g_ledger_s2' = g_ledger_s2,
             f_hash_s' = f_hash_s,
             f_dif_s' = f_dif_s,
+            f_nizk_s' = f_nizk_s,
         },
         all{ // ledger2 steps
             any {
@@ -149,6 +162,7 @@ module p_bridge_env{
             f_hash_s' = f_hash_s,
             g_ledger_s' = g_ledger_s,
             f_dif_s' = f_dif_s,
+            f_nizk_s' = f_nizk_s,
         },  
         all { // ledger2 ival steps
             led2_step_ival,
@@ -157,6 +171,7 @@ module p_bridge_env{
             g_ledger_s' = g_ledger_s,
             f_hash_s' = f_hash_s,
             f_dif_s' = f_dif_s,
+            f_nizk_s' = f_nizk_s,
         },              
         all { // hash steps
             hash_step,
@@ -167,6 +182,7 @@ module p_bridge_env{
             g_ledger_s' = g_ledger_s,
             g_ledger_s2' = g_ledger_s2,
             f_dif_s' = f_dif_s,
+            f_nizk_s' = f_nizk_s,
         },
         all { // diffuse steps
             dif_step,
@@ -176,7 +192,18 @@ module p_bridge_env{
             g_ledger_s' = g_ledger_s,
             g_ledger_s2' = g_ledger_s2,
             f_hash_s' = f_hash_s,
+            f_nizk_s' = f_nizk_s,
         },
+        all { // nizk steps
+            nizk_step,
+            p_bridge_s' = p_bridge_s,
+            g_clock_s' = g_clock_s,
+            f_atms_s' = f_atms_s,
+            pki_s' = pki_s,
+            g_ledger_s' = g_ledger_s,
+            g_ledger_s2' = g_ledger_s2,
+            f_dif_s' = f_dif_s,
+        }
     }
 
    pure def g_ledger1_response_messages_trans(sys: LED_System) : Set[LED_Transition] = {
@@ -207,6 +234,7 @@ module p_bridge_env{
             f_hash_s' = f_hash_s,          
             f_dif_s' = f_dif_s,   
             p_bridge_s' = p_bridge_s,
+            f_nizk_s' = f_nizk_s,
         }
    }            
 
@@ -219,6 +247,7 @@ module p_bridge_env{
         g_ledger_s2.input.size() == 0,
         f_hash_s.input.size() == 0,
         f_dif_s.input.size() == 0,
+        f_nizk_s.input.size() == 0,
     }
 
     action only_brd_changes : bool = all {
@@ -229,6 +258,7 @@ module p_bridge_env{
         g_ledger_s2' = g_ledger_s2,
         f_hash_s' = f_hash_s,
         f_dif_s' = f_dif_s,
+        f_nizk_s' = f_nizk_s,
     }
 
     action only_led1_changes : bool = all {
@@ -239,6 +269,7 @@ module p_bridge_env{
         g_ledger_s2' = g_ledger_s2,
         f_hash_s' = f_hash_s,
         f_dif_s' = f_dif_s,
+        f_nizk_s' = f_nizk_s,
     }
 
     action p_bridge_request_messages(x:{Parties: Set[Party], SIDs: Set[SID]}) : bool = all {
@@ -330,6 +361,7 @@ module p_bridge_env{
         g_ledger_s2' = g_ledger_s2,
         f_hash_s' = f_hash_s,
         f_dif_s' = f_dif_s,
+        f_nizk_s' = f_nizk_s,
     }
 
     action p_bridge_env_init(x: {P: Set[Party], SIDs: Set[SID], C: Set[Party], r0: int, delta: int, t: int, R: int, delta_latency: int, delta_slack: int, delta_apl: int, comsel_a: int, comsel_b: int, comsel_c: int}) : bool = all {
@@ -345,11 +377,9 @@ module p_bridge_env{
             brd_init(x.P, x.C, x.SIDs, r0, delta, R),
             atms_init({P : x.P, C : x.C, SIDs: x.SIDs, t: (t-1)}),
             g_ledger_s' = led_initial({P: x.P, C: x.C, SIDs: x.SIDs, delta_latency: x.delta_latency, delta_slack: x.delta_slack, delta_apl: x.delta_apl, Val: true, comsel_a: x.comsel_a, comsel_b: x.comsel_b, comsel_c: x.comsel_c}),
-            g_ledger_s2' = led_initial({P: x.P, C: x.C, SIDs: x.SIDs, delta_latency: x.delta_latency, delta_slack: x.delta_slack, delta_apl: x.delta_apl, Val: true, comsel_a: x.comsel_a, comsel_b: x.comsel_b, comsel_c: x.comsel_c})
+            g_ledger_s2' = led_initial({P: x.P, C: x.C, SIDs: x.SIDs, delta_latency: x.delta_latency, delta_slack: x.delta_slack, delta_apl: x.delta_apl, Val: true, comsel_a: x.comsel_a, comsel_b: x.comsel_b, comsel_c: x.comsel_c}),
+            nizk_init({P: x.P, C: x.C, SIDs: x.SIDs}),
         }
     }
-
-
-
 
 }

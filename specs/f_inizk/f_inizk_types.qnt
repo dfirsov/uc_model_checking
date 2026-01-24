@@ -2,30 +2,31 @@ module f_inizk_types{
 
     import basicSpells.* from "../../spells/basicSpells"
     import rareSpells.* from "../../spells/rareSpells"
-    import common.* from "../common"    
+    import common.* from "../common"
+    import g_ledger_types.* from "../g_ledger/g_ledger_types"    
     
-    type NIZK_Witness = int
-    type NIZK_Statement = str
+    type NIZK_Witness = List[LED_Tx]
+    type NIZK_Statement = {x: LED_Tx, h: int}
     type NIZK_Proof = int    
     type NIZK_Relation = Set[(NIZK_Statement, NIZK_Witness)]
 
 
     type NIZK_Message =
-        | ProveRequest({cfg: MsgConfig, x: NIZK_Statement, w: NIZK_Witness}) 
-        | ProveRelWait({cfg: MsgConfig, x: NIZK_Statement, w: NIZK_Witness})
-        | SIMProveHold({cfg: MsgConfig, x: NIZK_Statement, w: NIZK_Witness}) 
-        | SIMProveRelease({cfg: MsgConfig, x: NIZK_Statement, w: NIZK_Witness, pi: NIZK_Proof})
-        | ProveResponse({cfg: MsgConfig, x: NIZK_Statement, w: NIZK_Witness, pi: Option[NIZK_Proof]}) 
+        | NIZK_ProveRequest({cfg: MsgConfig, x: NIZK_Statement, w: NIZK_Witness}) 
+        | NIZK_ProveRelWait({cfg: MsgConfig, x: NIZK_Statement, w: NIZK_Witness})
+        | NIZK_SIMProveHold({cfg: MsgConfig, x: NIZK_Statement, w: NIZK_Witness}) 
+        | NIZK_SIMProveRelease({cfg: MsgConfig, x: NIZK_Statement, w: NIZK_Witness, pi: NIZK_Proof})
+        | NIZK_ProveResponse({cfg: MsgConfig, x: NIZK_Statement, w: NIZK_Witness, pi: Option[NIZK_Proof]}) 
 
-        | VerifyRequest({cfg: MsgConfig, x: NIZK_Statement, pi: NIZK_Proof})
-        | SIMVerifyHold({cfg: MsgConfig, x: NIZK_Statement, pi: NIZK_Proof}) 
-        | SIMVerifyRelease({cfg: MsgConfig, x: NIZK_Statement, pi: NIZK_Proof, w: NIZK_Witness}) 
-        | VerifyRelWait({cfg: MsgConfig, x: NIZK_Statement, pi: NIZK_Proof, w: NIZK_Witness}) 
-        | VerifyResponse({cfg: MsgConfig, x: NIZK_Statement, pi: NIZK_Proof, b: bool})
+        | NIZK_VerifyRequest({cfg: MsgConfig, x: NIZK_Statement, pi: NIZK_Proof})
+        | NIZK_SIMVerifyHold({cfg: MsgConfig, x: NIZK_Statement, pi: NIZK_Proof}) 
+        | NIZK_SIMVerifyRelease({cfg: MsgConfig, x: NIZK_Statement, pi: NIZK_Proof, w: NIZK_Witness}) 
+        | NIZK_VerifyRelWait({cfg: MsgConfig, x: NIZK_Statement, pi: NIZK_Proof, w: NIZK_Witness}) 
+        | NIZK_VerifyResponse({cfg: MsgConfig, x: NIZK_Statement, pi: NIZK_Proof, b: bool})
 
-        | RelRequest({cfg: MsgConfig, x: NIZK_Statement, w: NIZK_Witness})
-        | RelRequestWait({cfg: MsgConfig, x: NIZK_Statement, w: NIZK_Witness})
-        | RelResponse({cfg: MsgConfig, x: NIZK_Statement, w: NIZK_Witness, b: bool})
+        | NIZK_RelRequest({cfg: MsgConfig, x: NIZK_Statement, w: NIZK_Witness})
+        | NIZK_RelRequestWait({cfg: MsgConfig, x: NIZK_Statement, w: NIZK_Witness})
+        | NIZK_RelResponse({cfg: MsgConfig, x: NIZK_Statement, w: NIZK_Witness, b: bool})
 
         | NIZK_SIMControl
   
@@ -33,7 +34,7 @@ module f_inizk_types{
     pure def nizk_get_verify_rel_wait_messages(messages: Set[NIZK_Message]): Set[{cfg: MsgConfig, x: NIZK_Statement, pi: NIZK_Proof, w: NIZK_Witness}] = {
         messages.filterMap(m => {
         match m {
-            | VerifyRelWait(p) => Some(p)
+            | NIZK_VerifyRelWait(p) => Some(p)
             | _ => None
         }
         })
@@ -42,7 +43,7 @@ module f_inizk_types{
     pure def nizk_get_prove_rel_wait_messages(messages: Set[NIZK_Message]): Set[{cfg: MsgConfig, x: NIZK_Statement, w: NIZK_Witness}] = {
         messages.filterMap(m => {
         match m {
-            | ProveRelWait(p) => Some(p)
+            | NIZK_ProveRelWait(p) => Some(p)
             | _ => None
         }
         })
@@ -53,14 +54,14 @@ module f_inizk_types{
         C: Set[Party],
         SIDs: Set[SID], 
 
-        ALL_WITNESSES: Set[NIZK_Witness],
-        ALL_PROOFS: Set[NIZK_Proof],
+        //ALL_WITNESSES: Set[NIZK_Witness],
+        //ALL_PROOFS: Set[NIZK_Proof],
     }        
 
     type NIZK_StateVars = SID -> 
         {
             Ver: Set[{x: NIZK_Statement, pi: NIZK_Proof, b: bool}], // verified proofs for statements with witness w
-            Rel:  NIZK_Relation,
+            //Rel:  NIZK_Relation,
         }    
 
     type NIZK_System = {
@@ -84,6 +85,16 @@ module f_inizk_types{
         effects: Set[NIZK_Effect]
     }
 
+    pure def nizk_id_trans(nizk: NIZK_System) : NIZK_Transition = {
+        post_state : nizk.state,
+        effects : Set(),
+    }    
+
+   pure def nizk_skip_trans(nizk: NIZK_System) : NIZK_Transition = {
+        post_state : nizk.state,
+        effects : Set(NIZK_UpdateInput(Set())),
+    }     
+
     pure def nizk_access_check(cfg: MsgConfig, params: NIZK_SystemParams): bool = {
             cfg.party.in(params.P) and cfg.sid.in(params.SIDs)
     }    
@@ -91,8 +102,8 @@ module f_inizk_types{
    pure def nizk_get_all_response_messages(messages: Set[NIZK_Message]): Set[NIZK_Message] = {
         messages.filterMap(m => {
         match m {
-            | ProveResponse(p) => Some(ProveResponse(p))
-            | VerifyResponse(p) => Some(VerifyResponse(p))  
+            | NIZK_ProveResponse(p) => Some(NIZK_ProveResponse(p))
+            | NIZK_VerifyResponse(p) => Some(NIZK_VerifyResponse(p))  
             | _ => None
         }
         })
@@ -110,7 +121,7 @@ module f_inizk_types{
     pure def nizk_get_prove_request_messages(messages: Set[NIZK_Message]): Set[{cfg: MsgConfig, x: NIZK_Statement, w: NIZK_Witness}] = {
         messages.filterMap(m => {
         match m {
-            | ProveRequest(p) => Some(p)
+            | NIZK_ProveRequest(p) => Some(p)
             | _ => None
         }
         })
@@ -118,7 +129,7 @@ module f_inizk_types{
     pure def nizk_get_rel_request_messages(messages: Set[NIZK_Message]): Set[{cfg: MsgConfig, x: NIZK_Statement, w: NIZK_Witness}] = {
         messages.filterMap(m => {
         match m {
-            | RelRequest(p) => Some(p)
+            | NIZK_RelRequest(p) => Some(p)
             | _ => None
         }
         })
@@ -127,7 +138,7 @@ module f_inizk_types{
     pure def nizk_get_rel_request_wait_messages(messages: Set[NIZK_Message]): Set[{cfg: MsgConfig, x: NIZK_Statement, w: NIZK_Witness}] = {
         messages.filterMap(m => {
         match m {
-            | RelRequestWait(p) => Some(p)
+            | NIZK_RelRequestWait(p) => Some(p)
             | _ => None
         }
         })
@@ -136,7 +147,7 @@ module f_inizk_types{
     pure def nizk_get_rel_response_messages(messages: Set[NIZK_Message]): Set[{cfg: MsgConfig, x: NIZK_Statement, w: NIZK_Witness, b: bool}] = {
         messages.filterMap(m => {
         match m {
-            | RelResponse(p) => Some(p)
+            | NIZK_RelResponse(p) => Some(p)
             | _ => None
         }
         })
@@ -144,7 +155,7 @@ module f_inizk_types{
     pure def nizk_get_sim_prove_hold_messages(messages: Set[NIZK_Message]): Set[{cfg: MsgConfig, x: NIZK_Statement, w: NIZK_Witness}] = {
         messages.filterMap(m => {
         match m {
-            | SIMProveHold(p) => Some(p)
+            | NIZK_SIMProveHold(p) => Some(p)
             | _ => None
         }
         })
@@ -153,7 +164,7 @@ module f_inizk_types{
     pure def nizk_get_sim_prove_release_messages(messages: Set[NIZK_Message]): Set[{cfg: MsgConfig, x: NIZK_Statement, w: NIZK_Witness, pi: NIZK_Proof}] = {
         messages.filterMap(m => {
         match m {
-            | SIMProveRelease(p) => Some(p)
+            | NIZK_SIMProveRelease(p) => Some(p)
             | _ => None
         }
         })
@@ -162,7 +173,7 @@ module f_inizk_types{
     pure def nizk_get_prove_response_messages(messages: Set[NIZK_Message]): Set[{cfg: MsgConfig, x: NIZK_Statement, w: NIZK_Witness, pi: Option[NIZK_Proof]}] = {
         messages.filterMap(m => {
         match m {
-            | ProveResponse(p) => Some(p)
+            | NIZK_ProveResponse(p) => Some(p)
             | _ => None
         }
         })
@@ -171,7 +182,7 @@ module f_inizk_types{
     pure def nizk_get_verify_request_messages(messages: Set[NIZK_Message]): Set[{cfg: MsgConfig, x: NIZK_Statement, pi: NIZK_Proof}] = {
         messages.filterMap(m => {
         match m {
-            | VerifyRequest(p) => Some(p)
+            | NIZK_VerifyRequest(p) => Some(p)
             | _ => None
         }
         })
@@ -180,7 +191,7 @@ module f_inizk_types{
     pure def nizk_get_sim_verify_hold_messages(messages: Set[NIZK_Message]): Set[{cfg: MsgConfig, x: NIZK_Statement, pi: NIZK_Proof}] = {
         messages.filterMap(m => {
         match m {
-            | SIMVerifyHold(p) => Some(p)
+            | NIZK_SIMVerifyHold(p) => Some(p)
             | _ => None
         }
         })
@@ -189,7 +200,7 @@ module f_inizk_types{
     pure def nizk_get_sim_verify_release_messages(messages: Set[NIZK_Message]): Set[{cfg: MsgConfig, x: NIZK_Statement, pi: NIZK_Proof, w: NIZK_Witness}] = {
         messages.filterMap(m => {
         match m {
-            | SIMVerifyRelease(p) => Some(p)
+            | NIZK_SIMVerifyRelease(p) => Some(p)
             | _ => None
         }
         })
@@ -198,7 +209,7 @@ module f_inizk_types{
     pure def nizk_get_verify_response_messages(messages: Set[NIZK_Message]): Set[{cfg: MsgConfig, x: NIZK_Statement, pi: NIZK_Proof, b: bool}] = {
         messages.filterMap(m => {
         match m {
-            | VerifyResponse(p) => Some(p)
+            | NIZK_VerifyResponse(p) => Some(p)
             | _ => None
         }
         })
@@ -225,8 +236,9 @@ module f_inizk_types{
         }
     }
 
-    pure def nizk_Rel_sat(sys: NIZK_System, sid: SID, x: NIZK_Statement, w: NIZK_Witness): bool = {
-        sys.state.get(sid).Rel.contains((x, w))
+    pure def nizk_Rel_sat(x: NIZK_Statement, w: NIZK_Witness): bool = {
+        w.listHas(x.x)
+        //sys.state.get(sid).Rel.contains((x, w))
     }         
 
 
