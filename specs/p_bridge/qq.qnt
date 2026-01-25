@@ -1,3 +1,4 @@
+// @mainModule p_bridge_testing
 module p_bridge_testing{
     
     import basicSpells.* from "../../spells/basicSpells"
@@ -25,9 +26,6 @@ module p_bridge_testing{
 
     import f_diff_types.* from "../f_diff/f_diff_types"    
     import f_diff.* from "../f_diff/f_diff"        
-
-    import f_inizk_types.* from "../f_inizk/f_inizk_types"    
-    import f_inizk.* from "../f_inizk/f_inizk" 
 
     import p_bridge_types.* from "./p_bridge_types" 
     import p_bridge.* from "./p_bridge" 
@@ -228,4 +226,142 @@ module p_bridge_testing{
 
     }
     
-}
+import f_inizk.* from "../f_inizk/f_inizk" 
+
+}/*! test1 !*/
+
+/*! certify_cycle(1,4, Normal({b: true, tx: 62})) !*/
+
+/*! p_bridge_s.input !*/
+
+/*! brd_consume_responses !*/
+
+/*! verify_cycle(1, 4, (Normal({b: true, tx: 62})), 3, 70) !*/
+
+/*! p_bridge_s.input !*/
+
+/*! f_hash_s !*/
+
+/*! verify_cycle(1, 4, (Normal({b: true, tx: 62})), 3, 111) !*/
+
+/*! brd_consume_responses !*/
+
+/*! verify_cycle(1, 4, (Normal({b: true, tx: 62})), 3, 111) !*/
+
+/*! p_bridge_s.input !*/
+
+/*! p_bridge_s.log.map(x => x.msg).brd_get_certify_response_messages() !*/
+
+/*! f_hash_s !*/
+
+/*! f_nizk_s !*/
+
+/*! verify_cycle(1, 4, (Normal({b: true, tx: 62})), 3, 70) !*/
+
+/*! brd_consume_responses !*/
+
+/*! verify_cycle(1, 4, (Normal({b: true, tx: 62})), 3, 70) !*/
+
+/*! p_bridge_s.input !*/
+
+/*! g_ledger_s2.state.mem !*/
+
+/*! f_hash_s !*/
+
+/*! p_bridge_s.input !*/
+
+/*! brd_consume_responses !*/
+
+/*! certify_cycle(1,4, Normal({b: true, tx: 62})) !*/
+
+/*! p_bridge_s.input !*/
+
+/*! f_hash_s.state !*/
+
+/*! p_bridge_s.state !*/
+
+/*! g_ledger_s2.state.mem !*/
+
+/*! f_hash_s.state !*/
+
+/*! List(1,2,3).slice(0,1) !*/
+
+/*! List(1,2,3).slice(0,2) !*/
+
+/*! g_clock_s.state !*/
+
+/*! g_ledger_s2.state !*/
+
+/*! g_ledger_s.state !*/
+
+/*! p_bridge_s.state !*/
+
+/*! p_bridge_s.input !*/
+
+/*! f_hash_s.state !*/
+
+/*! br_cycle(1) !*/
+
+/*! brd_consume_responses !*/
+
+/*! br_cycle(1) !*/
+
+/*! g_ledger_s2.state.mem !*/
+
+/*! brd_consume_responses !*/
+
+/*! br_cycle(2) !*/
+
+/*! g_ledger_s2.state.mem !*/
+
+/*! br_cycle(1) !*/
+
+/*! brd_consume_responses !*/
+
+/*! g_ledger_s2.state.mem !*/
+
+/*! brd_consume_responses !*/
+
+/*! br_cycle(2) !*/
+
+/*! g_ledger_s2.state.mem !*/
+
+/*! g_clock_s.state.TIME !*/
+
+/*! brd_consume_responses !*/
+
+/*! br_cycle(2) !*/
+
+/*! brd_consume_responses !*/
+
+/*! br_cycle(1) !*/
+
+/*! g_clock_s.state.TIME !*/
+
+/*! g_ledger_s2.state.mem !*/
+
+/*! g_ledger_s2.state !*/
+
+/*! g_ledger_s.state !*/
+
+/*! br_cycle(1).then(brd_consume_responses) !*/
+
+/*! brd_consume_responses !*/
+
+/*! br_cycle(1).then(brd_consume_responses) !*/
+
+/*! br_cycle(2).then(brd_consume_responses) !*/
+
+/*! g_ledger_s.state !*/
+
+/*! g_ledger_s2.state.mem !*/
+
+/*! verify_cycle(1,4,Normal({b: true, tx:62}), 3, 70) !*/
+
+/*! p_bridge_s.input !*/
+
+/*! g_ledger_s2 !*/
+
+/*! g_ledger_s.state !*/
+
+/*! List(1,2,3)[1] !*/

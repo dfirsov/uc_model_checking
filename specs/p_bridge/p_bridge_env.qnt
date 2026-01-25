@@ -325,6 +325,7 @@ module p_bridge_env{
         }
     }
 
+
     action p_bridge_rot_request(cfg: MsgConfig) : bool = all {
         p_bridge_s' = {...p_bridge_s, 
             input: Set(RoTRequest({cfg: cfg})),
@@ -338,6 +339,20 @@ module p_bridge_env{
             nonce: p_bridge_s.nonce + 1
         }
     }    
+
+    action p_bridge_certify_request(cfg: MsgConfig, rot: BRD_ROT, x: LED_Tx) : bool = all {
+        p_bridge_s' = {...p_bridge_s, 
+            input: Set(CertifyRequest({cfg: cfg, rot: rot, x: x})),
+            nonce: p_bridge_s.nonce + 1
+        }
+    }
+
+    action p_bridge_verify_request(cfg: MsgConfig, rot: BRD_ROT, x: LED_Tx, pi: int, h: int) : bool = all {
+        p_bridge_s' = {...p_bridge_s, 
+            input: Set(BRD_VerifyRequest({cfg: cfg, rot: rot, x: x, proof: {pi: pi, h: h} })),
+            nonce: p_bridge_s.nonce + 1
+        }
+    }
  
     pure def p_bridge_consume_response(brd: BRD_System) : Set[BRD_Transition] = {
          brd.input.brd_get_all_response_messages().map(msg_log => {
