@@ -23,6 +23,17 @@ module g_clock{
         }
     }    
 
+    // sim might want to give control back to the environment
+    pure def gc_sim_loses_ctrl(dif: GC_System) : Set[GC_Transition] = {
+        dif.input.gc_get_sim_control_messages().map(c =>  // sim must have control
+            {   
+                post_state : dif.state,
+                effects : Set( 
+                    GC_UpdateInput(Set()),
+                )  
+            })
+    }    
+
     pure def gc_register(clock: GC_System) :  Set[GC_Transition] = { 
         clock.input.get_register_request_messages().map(msg => 
         {
@@ -32,18 +43,22 @@ module g_clock{
             effects : Set( 
                 GC_LogMessage(RegisterRequest(msg)), 
                 GC_UpdateInput(Set(RegisterResponse(msg))),
+                GC_LogMessage(RegisterResponse(msg)),
             )
         })
     }
 
     pure def gc_time(clock: GC_System) : Set[GC_Transition] = {
-        clock.input.get_time_request_messages().map(msg =>
-        {
-            post_state : clock.state,
-            effects : Set(
-                GC_LogMessage(TimeRequest(msg)),
-                GC_UpdateInput(Set(TimeResponse({cfg: msg.cfg, time: clock.state.TIME}))),
-            )
+        clock.input.get_time_request_messages().map(msg =>{
+            val tr = TimeResponse({cfg: msg.cfg, time: clock.state.TIME})
+            {
+                post_state : clock.state,
+                effects : Set(
+                    GC_LogMessage(TimeRequest(msg)),
+                    GC_UpdateInput(Set(tr)),
+                    GC_LogMessage(tr),
+                )
+            }
         })
     }
 
@@ -84,12 +99,13 @@ module g_clock{
 
     pure def gc_okay_2(clock: GC_System) : Set[GC_Transition] = {
         clock.input.gc_get_sim_control_messages().map(p => {
-            clock.SIM_handles.get_sim_okay_release_messages().map(q => {
+            clock.handles.get_sim_okay_release_messages().map(q => {
                 {
                     post_state : clock.state,
                     effects : Set(
                         GC_UpdateInput(Set(OkayResponse(q))),
                         GC_RemoveHandle(SIMOkayRelease(q)),
+                        GC_LogMessage(OkayResponse(q)),
                     )
                 }
             })
@@ -102,6 +118,7 @@ module g_clock{
             gc_time(clock),
             gc_okay_1(clock),
             gc_okay_2(clock),
+            if (clock.params.responsive_simulator) Set() else gc_sim_loses_ctrl(clock),
         ).flatten()
     }  
 
@@ -127,20 +144,22 @@ module g_clock{
         parties.map(p => sids.map(s => {party: p, sid: s})).flatten()
     }
 
-    action gc_init(C: Set[Party], time : int, Reg: Set[PartySID]): bool = {
+    action gc_init(x : {C: Set[Party], time : int, Reg: Set[PartySID], responsive_simulator: bool, enable_logging: bool}): bool = {
         g_clock_s' = {
             params: {
-                C : C,
+                C : x.C,
+                responsive_simulator: x.responsive_simulator,
+                enable_logging: x.enable_logging,
             },
             state : {
-                TIME : time,
-                Reg : Reg,
+                TIME : x.time,
+                Reg : x.Reg,
                 ok  : Set(),
             },
             nonce : 0,
             input : Set(),
             log : Set(),
-            SIM_handles : Set(),
+            handles : Set(),
         }
     }
 

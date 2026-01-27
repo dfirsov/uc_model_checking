@@ -17,21 +17,14 @@ module f_hash_types {
 
         | HASH_SIMControl  
 
-
-    // pure def hash_get_all_response_messages(messages: Set[HASH_Message]): Set[HASH_Message] = {
-    //     messages.filterMap(m => {
-    //     match m {
-    //         | HashResponse(p) => Some(HashResponse(p))
-    //         | _ => None
-    //     }
-    //     })
-    // }      
+ 
 
     type HASH_SystemParams = {
         P : Set[Party], // parties who can use the functionality
         SIDs: Set[SID], // TODO: is this correct?
 
-        //ALL_HASHES : Set[Hash_Output],
+        enable_logging: bool,
+        responsive_simulator: bool,
     }
 
     type HASH_StateVars = 
@@ -132,11 +125,12 @@ module f_hash_types {
         match eff {
         | HASH_LogMessage(msg) => 
             {...sys, 
-                log: sys.log.setAdd({idx: sys.log.size(), msg: msg,})
+                log: if (sys.params.enable_logging) sys.log.setAdd({idx: sys.log.size(), msg: msg,}) else sys.log
             }
         | HASH_UpdateInput(msgs) => 
             {...sys, 
-                input: msgs
+                input: msgs,
+                log: if (sys.params.enable_logging and msgs.hash_get_all_response_messages().size() == 1) sys.log.setAdd({idx: sys.log.size(), msg: (msgs.pickSome()),}) else sys.log
             }
         | HASH_AppendHandle(msg) => 
             {...sys,

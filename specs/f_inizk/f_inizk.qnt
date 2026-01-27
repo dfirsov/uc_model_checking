@@ -9,8 +9,18 @@ module f_inizk{
 
     var f_nizk_s : NIZK_System
 
-    val ALL_PROOFS = 1.to(10)
-    val ALL_WITNESSES = Set(List())
+    val ALL_PROOFS = 1.to(UNIVERSE_SIZE)
+    //val ALL_WITNESSES = Set(List()) // TODO: change that to get more adv behaviors
+
+    pure def nizk_sim_loses_ctrl(nizk: NIZK_System) : Set[NIZK_Transition] = {
+        nizk.input.nizk_get_sim_control_messages().map(c =>  
+            {
+                post_state : nizk.state,
+                effects : Set(
+                    NIZK_UpdateInput(Set()),
+                )
+            })
+    }    
 
     pure def nizk_rel_1(nizk: NIZK_System, hash: HASH_System) : Set[(NIZK_Transition, HASH_Transition)] = {
         nizk.input.nizk_get_rel_request_messages().map(m => {
@@ -233,7 +243,8 @@ module f_inizk{
     action nizk_verify_2_act : bool = all {
         f_nizk_s.input.nizk_get_sim_control_messages().size() > 0,
         f_nizk_s.handles.nizk_get_sim_verify_hold_messages().size() > 0,
-        nondet sim_w = ALL_WITNESSES.oneOf()
+        //nondet sim_w = Set(List()).oneOf() // TODO: change that to get more adv behaviors
+        val sim_w = List()
         nondet t = nizk_verify_2(f_nizk_s, sim_w).oneOf()
         f_nizk_s' =  nizk_process_transitions(f_nizk_s, t)
     }      
@@ -302,6 +313,7 @@ module f_inizk{
            nizk_verify_1(nizk),
            nizk_verify_3(nizk),
            nizk_verify_4(nizk),
+           if(nizk.params.responsive_simulator) Set() else nizk_sim_loses_ctrl(nizk)
 
             
         ).flatten().map(x => (x, hash_id_trans(hash))).union(Set(
@@ -335,19 +347,18 @@ module f_inizk{
         }
     }  
 
-   action nizk_init(x : {P: Set[Party], C: Set[Party],SIDs: Set[SID]}) : bool =  all {
+   action nizk_init(x : {P: Set[Party], C: Set[Party],SIDs: Set[SID], enable_logging: bool, responsive_simulator: bool}) : bool =  all {
         f_nizk_s' = {
             params : {
                 P: x.P,
                 C: x.C,
                 SIDs: x.SIDs,
 
-                //ALL_PROOFS: ALL_PROOFS,
-                //ALL_WITNESSES: ALL_WITNESSES,
+                enable_logging: x.enable_logging,
+                responsive_simulator: x.responsive_simulator
             },
             state : x.SIDs.mapBy(sid => {
                 Ver: Set(),
-                //Rel: Rel,
             }),
             input : Set(),
             nonce : 0,

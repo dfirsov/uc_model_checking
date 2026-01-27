@@ -3,7 +3,7 @@ module p_bridge {
     import basicSpells.* from "../../spells/basicSpells"
     import common.* from "../common"
 
-    import p_bridge_types.* from "./p_bridge_types"    
+    import p_bridge_types.* from "./p_bridge_types"
 
     import f_pki_types.* from "../f_pki/f_pki_types"    
     import f_pki.* from "../f_pki/f_pki"    
@@ -17,14 +17,15 @@ module p_bridge {
     import g_ledger_types.* from "../g_ledger/g_ledger_types"
     import g_ledger.* from "../g_ledger/g_ledger"
 
-    import f_diff_types.* from "../f_diff/f_diff_types"
-    import f_diff.* from "../f_diff/f_diff"    
+    import f_dif_types.* from "../f_dif/f_dif_types"
+    import f_dif.* from "../f_dif/f_dif"    
 
     import f_hash_types.* from "../f_hash/f_hash_types"
     import f_hash.* from "../f_hash/f_hash"        
     
     import f_inizk_types.* from "../f_inizk/f_inizk_types"
     import f_inizk.* from "../f_inizk/f_inizk"  
+
 
     
     var p_bridge_s : BRD_System
@@ -34,7 +35,7 @@ module p_bridge {
         transition.effects.fold(new_sys, ((a1,a2) => brd_apply_effect(a1,a2)))
     }
 
-    pure def brd_apply_effect(sys: BRD_System, eff: BRD_Effect): BRD_System = {
+    pure def brd_apply_effect(sys: BRD_System, eff: BRD_Effect) : BRD_System = {
         match eff {
         | BRD_LogMessage(msg) => 
             {...sys, 
@@ -55,6 +56,7 @@ module p_bridge {
         }
     }
 
+
     pure def brd_process_ctransitions(sys: BRD_CSystem, transition: BRD_CTransition) : BRD_CSystem = {
         {
             brd: brd_process_transitions(sys.brd, transition.brd),
@@ -71,28 +73,28 @@ module p_bridge {
 
 
 
-    action brd_init(P: Set[Party], C: Set[Party], SIDs: Set[SID], r0: Time, delta: int, R: int) : bool =  all {
-        C.subseteq(P),
+    action brd_init(x : {P: Set[Party], C: Set[Party], SIDs: Set[SID], r0: Time, delta: int, R: int }) : bool =  all {
+        x.C.subseteq(x.P),
         
-        r0 >= 0,
-        R >= 0,
-        R >= delta + 3,
-        delta >= 1, // check that
+        x.r0 >= 0,
+        x.R >= 0,
+        x.R >= x.delta + 3,
+        x.delta >= 1, // check that
 
         p_bridge_s' = {
             params : {
-                P: P,
-                C: C,
-                SIDs: SIDs, 
+                P: x.P,
+                C: x.C,
+                SIDs: x.SIDs, 
                 // P1: P1,
                 // P2: P2,
-                r0: r0,
-                delta: delta, 
+                r0: x.r0,
+                delta: x.delta, 
                 //t: t, 
-                R: R, 
+                R: x.R, 
             },
             state : {
-                bst: P.mapBy(p => {
+                bst: x.P.mapBy(p => {
                     bvk: None,
                     rot: None,
                     cID: None,
@@ -112,5 +114,4 @@ module p_bridge {
             handles : Set()
         }
     }
-
 }

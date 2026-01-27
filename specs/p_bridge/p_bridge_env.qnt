@@ -23,8 +23,8 @@ module p_bridge_env{
     import g_clock_types.* from "../g_clock/g_clock_types"    
     import g_clock.* from "../g_clock/g_clock"
 
-    import f_diff_types.* from "../f_diff/f_diff_types"    
-    import f_diff.* from "../f_diff/f_diff"        
+    import f_dif_types.* from "../f_dif/f_dif_types"    
+    import f_dif.* from "../f_dif/f_dif"        
 
     import f_inizk_types.* from "../f_inizk/f_inizk_types"    
     import f_inizk.* from "../f_inizk/f_inizk"    
@@ -36,6 +36,7 @@ module p_bridge_env{
     import p_bridge_br.* from "./p_bridge_br"
     import p_bridge_inizk.* from "./p_bridge_inizk"
     import p_bridge_led2.* from "./p_bridge_led2"
+    
     
    
     pure def brd_main_listener(sys: BRD_CSystem) : Set[BRD_CTransition] = {
@@ -51,7 +52,7 @@ module p_bridge_env{
                 brd: p_bridge_s,
                 clock: g_clock_s,
                 atms: f_atms_s,
-                pki: pki_s,
+                pki: f_pki_s,
                 ledger1: g_ledger_s,
                 ledger2: g_ledger_s2,
                 hash: f_hash_s,
@@ -66,7 +67,7 @@ module p_bridge_env{
                     p_bridge_s' = new_sys.brd,
                     g_clock_s' = new_sys.clock,
                     f_atms_s' = new_sys.atms,
-                    pki_s' = new_sys.pki,
+                    f_pki_s' = new_sys.pki,
                     g_ledger_s' = new_sys.ledger1,
                     g_ledger_s2' = new_sys.ledger2,
                     f_hash_s' = new_sys.hash,
@@ -85,7 +86,7 @@ module p_bridge_env{
         p_bridge_s' = p_bridge_s,
         g_clock_s' = g_clock_s,
         f_atms_s' = f_atms_s,
-        pki_s' = pki_s,
+        f_pki_s' = f_pki_s,
         g_ledger_s' = g_ledger_s,
         g_ledger_s2' = g_ledger_s2,
         f_hash_s' = f_hash_s,
@@ -100,7 +101,7 @@ module p_bridge_env{
             gc_step,
             p_bridge_s' = p_bridge_s,
             f_atms_s' = f_atms_s,
-            pki_s' = pki_s,
+            f_pki_s' = f_pki_s,
             g_ledger_s' = g_ledger_s,
             g_ledger_s2' = g_ledger_s2,
             f_hash_s' = f_hash_s,
@@ -122,7 +123,7 @@ module p_bridge_env{
             atms_step,
             p_bridge_s' = p_bridge_s,
             g_clock_s' = g_clock_s,
-            pki_s' = pki_s,
+            f_pki_s' = f_pki_s,
             g_ledger_s' = g_ledger_s,
             g_ledger_s2' = g_ledger_s2,
             f_hash_s' = f_hash_s,
@@ -137,7 +138,7 @@ module p_bridge_env{
             },
             p_bridge_s' = p_bridge_s,
             f_atms_s' = f_atms_s,
-            pki_s' = pki_s,
+            f_pki_s' = f_pki_s,
             f_hash_s' = f_hash_s,
             g_ledger_s2' = g_ledger_s2,
             f_dif_s' = f_dif_s,
@@ -146,7 +147,7 @@ module p_bridge_env{
         all { // ledger1 ival steps
             led_step_ival,
             p_bridge_s' = p_bridge_s,
-            pki_s' = pki_s,
+            f_pki_s' = f_pki_s,
             g_ledger_s2' = g_ledger_s2,
             f_hash_s' = f_hash_s,
             f_dif_s' = f_dif_s,
@@ -158,7 +159,7 @@ module p_bridge_env{
             },
             p_bridge_s' = p_bridge_s,
             f_atms_s' = f_atms_s,
-            pki_s' = pki_s,
+            f_pki_s' = f_pki_s,
             f_hash_s' = f_hash_s,
             g_ledger_s' = g_ledger_s,
             f_dif_s' = f_dif_s,
@@ -167,7 +168,7 @@ module p_bridge_env{
         all { // ledger2 ival steps
             led2_step_ival,
             p_bridge_s' = p_bridge_s,
-            pki_s' = pki_s,
+            f_pki_s' = f_pki_s,
             g_ledger_s' = g_ledger_s,
             f_hash_s' = f_hash_s,
             f_dif_s' = f_dif_s,
@@ -178,7 +179,7 @@ module p_bridge_env{
             p_bridge_s' = p_bridge_s,
             g_clock_s' = g_clock_s,
             f_atms_s' = f_atms_s,
-            pki_s' = pki_s,
+            f_pki_s' = f_pki_s,
             g_ledger_s' = g_ledger_s,
             g_ledger_s2' = g_ledger_s2,
             f_dif_s' = f_dif_s,
@@ -188,7 +189,7 @@ module p_bridge_env{
             dif_step,
             p_bridge_s' = p_bridge_s,
             f_atms_s' = f_atms_s,
-            pki_s' = pki_s,
+            f_pki_s' = f_pki_s,
             g_ledger_s' = g_ledger_s,
             g_ledger_s2' = g_ledger_s2,
             f_hash_s' = f_hash_s,
@@ -199,7 +200,7 @@ module p_bridge_env{
             p_bridge_s' = p_bridge_s,
             g_clock_s' = g_clock_s,
             f_atms_s' = f_atms_s,
-            pki_s' = pki_s,
+            f_pki_s' = f_pki_s,
             g_ledger_s' = g_ledger_s,
             g_ledger_s2' = g_ledger_s2,
             f_dif_s' = f_dif_s,
@@ -228,7 +229,7 @@ module p_bridge_env{
         // Update the system state by consuming the message    
             g_ledger_s' = led_process_transitions(g_ledger_s, g_clock_s, transition),
             f_atms_s' = f_atms_s,
-            pki_s' = pki_s,
+            f_pki_s' = f_pki_s,
             g_clock_s' = g_clock_s, 
             g_ledger_s2' = g_ledger_s2,
             f_hash_s' = f_hash_s,          
@@ -241,7 +242,7 @@ module p_bridge_env{
     def all_inputs_empty : bool = all {
         p_bridge_s.input.size() == 0,
         f_atms_s.input.size() == 0,
-        pki_s.input.size() == 0,
+        f_pki_s.input.size() == 0,
         g_clock_s.input.size() == 0,
         g_ledger_s.input.size() == 0,
         g_ledger_s2.input.size() == 0,
@@ -253,7 +254,7 @@ module p_bridge_env{
     action only_brd_changes : bool = all {
         g_clock_s' = g_clock_s,
         f_atms_s' = f_atms_s,
-        pki_s' = pki_s,
+        f_pki_s' = f_pki_s,
         g_ledger_s' = g_ledger_s,
         g_ledger_s2' = g_ledger_s2,
         f_hash_s' = f_hash_s,
@@ -265,7 +266,7 @@ module p_bridge_env{
         p_bridge_s' = p_bridge_s,
         g_clock_s' = g_clock_s,
         f_atms_s' = f_atms_s,
-        pki_s' = pki_s,
+        f_pki_s' = f_pki_s,
         g_ledger_s2' = g_ledger_s2,
         f_hash_s' = f_hash_s,
         f_dif_s' = f_dif_s,
@@ -284,6 +285,27 @@ module p_bridge_env{
                 p_bridge_bkgen_request(cfg),
                 p_bridge_rot_request(cfg),
                 p_bridge_br_request(cfg),
+
+                all { // certify request
+                    p_bridge_s.state.bst.get(from).rot != None,
+                    nondet x = g_ledger_s.state.log.toSet().oneOf()
+                    p_bridge_certify_request(cfg, p_bridge_s.state.bst.get(from).rot.unwrap(), x.tx),
+                },
+                // all { // verify request
+                //     p_bridge_s.state.bst.get(from).rot != None,
+                    
+                //     nondet x = g_ledger_s.state.log.toSet().oneOf()
+                //     nondet pi = ALL_PROOFS.oneOf() // TODO: determine appropriate range
+                //     nondet h = HASH_ALL_HASHES.oneOf() // TODO: determine appropriate range
+                //     p_bridge_verify_request(cfg, p_bridge_s.state.bst.get(from).rot.unwrap(), x.tx, pi, h),
+                // },
+                all { // specific case for verify requests
+                    nondet p = p_bridge_s.log.map(x => x.msg).brd_get_certify_response_messages().oneOf()
+                    all {
+                        p.res != None,
+                        p_bridge_verify_request(cfg, p.rot, p.x, p.res.unwrap().pi, p.res.unwrap().h),
+                    }
+                }
             },
             only_brd_changes,
         }
@@ -371,7 +393,7 @@ module p_bridge_env{
         p_bridge_s' = brd_process_transitions(p_bridge_s, transition),
         g_clock_s' = g_clock_s,
         f_atms_s' = f_atms_s,
-        pki_s' = pki_s,
+        f_pki_s' = f_pki_s,
         g_ledger_s' = g_ledger_s,
         g_ledger_s2' = g_ledger_s2,
         f_hash_s' = f_hash_s,
@@ -384,16 +406,16 @@ module p_bridge_env{
         val delta = x.delta
         val t = x.t
         val R = x.R
-        all{
-            hash_init(x.P, x.SIDs),
-            pki_init(x.P, x.SIDs),
-            gc_init(x.C, r0, all_parties_at_all_sids(x.P, x.SIDs)),
-            dif_init(x.P, x.C, x.SIDs, delta),
-            brd_init(x.P, x.C, x.SIDs, r0, delta, R),
-            atms_init({P : x.P, C : x.C, SIDs: x.SIDs, t: (t-1)}),
-            g_ledger_s' = led_initial({P: x.P, C: x.C, SIDs: x.SIDs, delta_latency: x.delta_latency, delta_slack: x.delta_slack, delta_apl: x.delta_apl, Val: true, comsel_a: x.comsel_a, comsel_b: x.comsel_b, comsel_c: x.comsel_c}),
-            g_ledger_s2' = led_initial({P: x.P, C: x.C, SIDs: x.SIDs, delta_latency: x.delta_latency, delta_slack: x.delta_slack, delta_apl: x.delta_apl, Val: true, comsel_a: x.comsel_a, comsel_b: x.comsel_b, comsel_c: x.comsel_c}),
-            nizk_init({P: x.P, C: x.C, SIDs: x.SIDs}),
+        all {
+            hash_init({P: x.P, SIDs: x.SIDs, enable_logging: false, responsive_simulator: true}),
+            pki_init({P: x.P, SIDs: x.SIDs, enable_logging: false, responsive_simulator: true}),
+            gc_init({C: x.C, time: r0, Reg: all_parties_at_all_sids(x.P, x.SIDs), enable_logging: false, responsive_simulator: true}),
+            dif_init({P : x.P, C:  x.C, SIDs: x.SIDs, delta:delta, enable_logging: false, responsive_simulator: true}),
+            brd_init({P : x.P, C : x.C, SIDs: x.SIDs, r0: r0, delta: delta, R: R, }), //TODO: enable_logging: false, responsive_simulator: true
+            atms_init({P : x.P, C : x.C, SIDs: x.SIDs, t: (t-1), enable_logging: false, responsive_simulator: true}),
+            g_ledger_s' = led_initial({P: x.P, C: x.C, SIDs: x.SIDs, delta_latency: x.delta_latency, delta_slack: x.delta_slack, delta_apl: x.delta_apl, Val: true, comsel_a: x.comsel_a, comsel_b: x.comsel_b, comsel_c: x.comsel_c, enable_logging: false, responsive_simulator: true}),
+            g_ledger_s2' = led_initial({P: x.P, C: x.C, SIDs: x.SIDs, delta_latency: x.delta_latency, delta_slack: x.delta_slack, delta_apl: x.delta_apl, Val: true, comsel_a: x.comsel_a, comsel_b: x.comsel_b, comsel_c: x.comsel_c, enable_logging: false, responsive_simulator: true}),
+            nizk_init({P: x.P, C: x.C, SIDs: x.SIDs, enable_logging: false, responsive_simulator: true}),
         }
     }
 

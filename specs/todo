@@ -1,7 +1,19 @@
-- rewrite F-SIG within new framework
-- rewrite F-NIZK within new framework
-- send Time requests instead of reading the variable
-- define F-VC 
-- investigate G-MC
-+ define F-CRS
-+ define F-PKI
+* Define testing scenarios and validate that bridge acts as it is supposed to.
+
++ Define the main properties (soundness, liveness) of the bridge and check.
+
+* Look at the possible attack vectors (e.g., injects by diffuse) and recheck the properties.
+
+* Decide which functionalities might have "non-responsive" simulator and recheck the properties.
+
+* add
+   - dynamic logging
+   - dynamic simulator
+
+* Play with different combination of bridge parameters (latency, threshold, apl, etc.).
+
+* Write README.md
+
+* Upload the code to anonymized repository.
+
+* Proofread the paper.

@@ -10,19 +10,19 @@ module f_atms{
 
     val ALL_VKS: Set[ATMS_VK] = 1.to(5)
     val ALL_SIGS: Set[ATMS_Signature] = 1.to(5)
-    val ALL_AVKS: Set[ATMS_AVK] = 1.to(5)
+    val ALL_AVKS: Set[ATMS_AVK] = 1.to(10)
     val ALL_ASIGS: Set[ATMS_ASignature] = 1.to(5)  
 
     // SIM gives control back to the environment
-    // pure def atms_sim_loses_ctrl(atms: ATMS_System) : Set[ATMS_Transition] = {
-    //     atms.input.atms_get_sim_control_messages().map(c =>  // sim must have control
-    //         {   
-    //             post_state : atms.state,
-    //             effects : Set( 
-    //                 ATMS_UpdateInput(Set())
-    //             )  
-    //         })
-    // }    
+    pure def atms_sim_loses_ctrl(atms: ATMS_System) : Set[ATMS_Transition] = {
+        atms.input.atms_get_sim_control_messages().map(c =>  // sim must have control
+            {   
+                post_state : atms.state,
+                effects : Set( 
+                    ATMS_UpdateInput(Set())
+                )  
+            })
+    }    
 
     pure def atms_id_trans(atms : ATMS_System) : ATMS_Transition = {
         post_state : atms.state,
@@ -186,7 +186,7 @@ module f_atms{
         }).flatten()
     }
 
-    pure def clean_avk(avk: Option[ATMS_AVK], vks: List[ATMS_VK], sid_state: ATMS_StateVars, C: Set[Party]) : bool = {
+    def clean_avk(avk: Option[ATMS_AVK], vks: List[ATMS_VK], sid_state: ATMS_StateVars, C: Set[Party]) : bool = {
         if(avk != None){
             and {
                 not (sid_state.AVK.exists(x => x.avk == avk)),
@@ -196,21 +196,23 @@ module f_atms{
                 }                
             }
         }else{
+            //  (∃ vk ∈ vk. ∀ P ∉ C. vk ≠ VK[P])
             vks.indices().exists(i => {
                 sid_state.VK.forall(x => {
-                    not (C.contains(x.party)) implies (x.vk != vks[i])
+                    (not (C.contains(x.party))) implies (x.vk != vks[i]) 
                 })
             })
         }
     }
 
-    pure def san_avk(avk: Option[ATMS_AVK], vks: List[ATMS_VK], atms: ATMS_System, sid: SID) : Option[ATMS_AVK] = {
+     def san_avk(avk: Option[ATMS_AVK], vks: List[ATMS_VK], atms: ATMS_System, sid: SID) : Option[ATMS_AVK] = {
         val sid_state = atms.state.get(sid)
 
         if(clean_avk(avk, vks, sid_state, atms.params.C)){
             avk
         }else{ // TODO: add None here for checking?
-            ALL_AVKS.find(avk => clean_avk(Some(avk), vks, sid_state, atms.params.C))
+            val x = ALL_AVKS.find(avk => clean_avk(Some(avk), vks, sid_state, atms.params.C))
+            x
         }
     }
 
@@ -231,6 +233,7 @@ module f_atms{
                 val maybe_new_avk = san_avk(p.sim_avk, p.vks, atms, p.cfg.sid)
 
                 if (clean_avk(maybe_new_avk, p.vks, sid_state, atms.params.C)){ 
+                    
                     val new_AVK = sid_state.AVK.setAdd({vks: p.vks, avk: maybe_new_avk})
 
                     val new_VKs = if(maybe_new_avk != None) {
@@ -674,7 +677,6 @@ module f_atms{
             }
             val sid_state = Y
 
-
             val avk = sid_state.AVK.find(x => x.vks == p.vks).unwrap().avk
 
             if(false and (not (clean_avk(avk, p.vks, sid_state, atms.params.C)))){
@@ -947,7 +949,7 @@ module f_atms{
             atms_aver_1(atms),
             atms_aver_3(atms),
 
-            //atms_sim_loses_ctrl(atms),
+            if(atms.params.responsive_simulator) Set() else atms.atms_sim_loses_ctrl(),
         ).flatten()
     }
 
@@ -961,7 +963,7 @@ module f_atms{
         atms_aver_2_act,
     }
 
-   action atms_init(params: ATMS_SystemParams) : bool =  all {
+   action atms_init(params: ATMS_SystemParams) : bool = all {
         params.C.subseteq(params.P),
 
         f_atms_s' = {

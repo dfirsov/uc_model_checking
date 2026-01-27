@@ -6,7 +6,7 @@ module f_atms_types {
     // define types of the system  
     type ATMS_VK = int
     type ATMS_AVK = int
-    type ATMS_Document = {h: int, avk: int } 
+    type ATMS_Document = {h: int, avk: int} 
     type ATMS_Signature = int
     type ATMS_ASignature = int
 
@@ -16,10 +16,8 @@ module f_atms_types {
         SIDs: Set[SID], 
         t: int,
 
-        // ALL_VKS: Set[ATMS_VK],
-        // ALL_SIGS: Set[ATMS_Signature],
-        // ALL_AVKS: Set[ATMS_AVK],
-        // ALL_ASIGS: Set[ATMS_ASignature],
+        responsive_simulator: bool,
+        enable_logging: bool,
     }        
 
     type ATMS_StateVars = {
@@ -72,10 +70,6 @@ module f_atms_types {
         | SIMControl   
 
 
-
-
-
-
     type ATMS_System = {
         params : ATMS_SystemParams,
         state : SID -> ATMS_StateVars,
@@ -101,11 +95,12 @@ module f_atms_types {
         match eff {
         | ATMS_LogMessage(msg) => 
             {...sys, 
-                log: sys.log.setAdd({idx: sys.log.size(), msg: msg, state: sys.state}) , 
+                log: if(sys.params.enable_logging) sys.log.setAdd({idx: sys.log.size(), msg: msg, state: sys.state}) else sys.log, 
             }
         | ATMS_UpdateInput(msgs) => 
             {...sys, 
-                input: msgs
+                input: msgs,
+                log: if(sys.params.enable_logging and msgs.atms_get_all_response_messages().size() == 1) sys.log.setAdd({idx: sys.log.size(), msg: msgs.pickSome(), state: sys.state}) else sys.log,
             }
         | ATMS_AppendHandle(msg) => 
             {...sys,

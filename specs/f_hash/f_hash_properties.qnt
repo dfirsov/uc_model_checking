@@ -8,18 +8,28 @@ module f_hash_properties{
 
     val Parties = Set(1,2,3)
     val sids = Set(4,5)
-    val ALL_HASHES = 1.to(1000)
+    
 
     action step : bool = any {
         hash_step,  
         env_hash_send_all_reqs,
         env_consume_responses,
+        env_hash_sim_reqs,
     }    
 
 
     action init = all {
-        hash_init(Parties, sids),
+        hash_init({P: Parties, SIDs: sids, responsive_simulator: true, enable_logging: true}),
     }
+
+    action env_hash_sim_reqs : bool = all {
+        f_hash_s.input.size() == 0, 
+        f_hash_s.handles.size() > 0,
+        f_hash_s' = {...f_hash_s, 
+            input: Set(HASH_SIMControl),
+            nonce: f_hash_s.nonce + 1
+        }
+    }       
 
     action env_hash_send_all_reqs : bool = all {
         // Precondition: input must be empty
@@ -29,7 +39,7 @@ module f_hash_properties{
         all {
             nondet from = Parties.oneOf() 
             nondet sid = sids.oneOf()
-            nondet x = HASH_ALL_HASHES.oneOf()
+            nondet x = ALL_HASHES.oneOf()
 
             val cfg = {party: from, sid: sid, nonce: f_hash_s.nonce}
             all {
@@ -46,7 +56,6 @@ module f_hash_properties{
          {
             post_state : sys.state,
             effects : Set(
-                HASH_LogMessage(msg_log),
                 HASH_UpdateInput(Set())
             )
          })
@@ -105,6 +114,11 @@ module f_hash_properties{
                 | _ => true
             }
         })
+    }
+
+    val AllProps = all {
+        HASH_Correctness,
+        HASH_CollisionResistance,
     }
 
 }

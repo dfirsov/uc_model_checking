@@ -10,15 +10,15 @@ module g_ledger_env {
     import g_clock.* from "../g_clock/g_clock"
     import common.* from "../common"    
 
-   val ALL_TXS = 1.to(5)
+   val ALL_TXS = 1.to(5).map(x => Normal({b: true, tx: x})).union(
+       1.to(5).map(x => Normal({b: false, tx: x})) )
+
    val Parties = Set(1,2)
    val C = Set()
    val sids = Set(1)
    val delta_latency = 1
    val delta_slack = 1
    val delta_apl = 1
-   //pure def Val : LED_ValidatorState = (parties, tx) => true
-
 
     action step : bool = any {
         led_step,  
@@ -26,7 +26,7 @@ module g_ledger_env {
         led_step_apl,
         led_step_genesis,
         gc_step_led_wait,
-        env_led_send_all_reqs,
+        // env_led_send_all_reqs,
         env_consume_responses,
     }
 
@@ -56,14 +56,14 @@ module g_ledger_env {
             nondet transition = response_msgs.oneOf()
 
         // Update the system state by consuming the message    
-            g_ledger_s' = led_process_transitions(g_ledger_s, transition),
+            g_ledger_s' = led_process_transitions(g_ledger_s, g_clock_s, transition),
             gc_stutter
         }
    }        
   
     action init = all {
-        led_init(Parties, C, sids, delta_latency, delta_slack, delta_apl, true,1,1,2),
-        gc_init(C,0,Set({party: 1, sid: 1}, {party:2, sid:1})),
+        led_init({P: Parties, C: C, SIDs: sids, delta_latency: delta_latency, delta_slack: delta_slack, delta_apl: delta_apl, Val:  true, comsel_a: 1, comsel_b: 1, comsel_c: 2, responsive_simulator: true, enable_logging: true}),
+        gc_init({C: C,time: 0, Reg: Parties.map(x => sids.map(y => {party: x, sid: y})).flatten(), responsive_sim: true, enable_logging: false} ),
     }
 
     action env_led_send_all_reqs : bool = all {
@@ -75,16 +75,15 @@ module g_ledger_env {
             env_led_submit_reqs(from, sid, tx), 
             env_led_read_reqs(from, sid),
             env_ok_reqs(from, sid),
-            env_ok_reqs(from, sid),
-            //env_led_apl_reqs(from, sid),
+            env_led_apl_reqs(from, sid),
             env_led_genesis_reqs(from, sid),
-            //env_led_comsel_reqs(from, sid)
+            env_led_comsel_reqs(from, sid)
         }
     }
 
  
     // Environment interaction: non-deterministically add requests when input is empty
-    action env_led_submit_reqs(from:Party, sid: SID, tx: TX) : bool = all {
+    action env_led_submit_reqs(from:Party, sid: SID, tx: LED_Tx) : bool = all {
         // Precondition: input must be empty
         g_clock_s.input.size() == 0 and g_ledger_s.input.size() == 0,
         
@@ -170,22 +169,18 @@ module g_ledger_env {
         gc_stutter     
     }
 
-    // action env_led_sim_reqs : bool = all {
-    //     g_clock_s.input.size() == 0 and g_ledger_s.input.size() == 0,
-    //     g_ledger_s' = {...g_ledger_s, 
-    //         input: Set(SIMControl),
-    //         nonce: g_ledger_s.nonce + 1
-    //     },
-    //     gc_stutter
-    // }
+    action env_led_sim_reqs : bool = all {
+        g_clock_s.input.size() == 0, 
+        g_ledger_s.input.size() == 0,
+        g_ledger_s.handles.size() > 0,
 
-    // action env_gc_sim_reqs : bool = all {
-    //     g_clock_s.input.size() == 0 and g_ledger_s.input.size() == 0,
-    //     g_clock_s' = {...g_clock_s, 
-    //         input: Set(GC_SIMControl),
-    //         nonce: g_clock_s.nonce + 1
-    //     },
-    //     g_ledger_s' = g_ledger_s,
-    // }
+        g_ledger_s' = {...g_ledger_s, 
+            input: Set(LED_SIMControl),
+            nonce: g_ledger_s.nonce + 1
+        },
+        gc_stutter
+    }
+
+
        
 }

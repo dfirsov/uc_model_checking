@@ -54,8 +54,8 @@ module f_inizk_types{
         C: Set[Party],
         SIDs: Set[SID], 
 
-        //ALL_WITNESSES: Set[NIZK_Witness],
-        //ALL_PROOFS: Set[NIZK_Proof],
+        enable_logging: bool,
+        responsive_simulator: bool
     }        
 
     type NIZK_StateVars = SID -> 
@@ -219,11 +219,12 @@ module f_inizk_types{
         match eff {
         | NIZK_LogMessage(msg) => 
             {...sys, 
-                log: sys.log.setAdd({idx: sys.log.size(), msg: msg}) 
+                log: if(sys.params.enable_logging) sys.log.setAdd({idx: sys.log.size(), msg: msg}) else sys.log
             }
         | NIZK_UpdateInput(msgs) => 
             {...sys, 
-                input: msgs
+                input: msgs,
+                log: if(sys.params.enable_logging and msgs.nizk_get_all_response_messages().size() == 1) sys.log.setAdd({idx: sys.log.size(), msg: (msgs.pickSome())}) else sys.log
             }
         | NIZK_AppendHandle(msg) => 
             {...sys,

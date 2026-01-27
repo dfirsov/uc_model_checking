@@ -26,12 +26,7 @@ module g_ledger_ival_env {
    val sids = Set(1)
    val delta_latency = 1
    val delta_slack = 1
-   val delta_apl = 1
-
-   val ALL_VKS = 1.to(5)
-   val ALL_SIGS = 1.to(5)
-   val ALL_AVKS = 1.to(5)
-   val ALL_ASIGS = 1.to(5)  
+   val delta_apl = 1 
 
    val ATMS_T = 1
 
@@ -138,25 +133,23 @@ module g_ledger_ival_env {
         
         all {
             nondet transition = response_msgs.oneOf()
-            g_ledger_s' = led_process_transitions(g_ledger_s, transition),
+            g_ledger_s' = led_process_transitions(g_ledger_s, g_clock_s, transition),
             f_atms_s'  = f_atms_s,
             g_clock_s' = g_clock_s            
         }
     }
 
     action init = all {
-        led_init(Parties, C, sids, delta_latency, delta_slack, delta_apl, true,1,1,1),
-        gc_init(C,0,Set({party: 1, sid: 1}, {party:2, sid:1})),
+        led_init({P: Parties, C: C, SIDs: sids, delta_latency: delta_latency, delta_slack: delta_slack, delta_apl: delta_apl, Val:  true, comsel_a: 1, comsel_b: 1, comsel_c: 2, responsive_simulator: true, enable_logging: true}),
+        gc_init({C: C,time: 0, Reg: Parties.map(x => sids.map(y => {party: x, sid: y})).flatten(), responsive_sim: true, enable_logging: false} ),        
+
         atms_init({
             P : Parties, 
             C : C, 
             SIDs: sids, 
             t: ATMS_T,
-
-            ALL_VKS: ALL_VKS,
-            ALL_SIGS: ALL_SIGS,
-            ALL_AVKS: ALL_AVKS,
-            ALL_ASIGS: ALL_ASIGS,
+            enable_logging: false,
+            responsive_simulator: true,
         })
     }           
 

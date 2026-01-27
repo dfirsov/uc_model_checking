@@ -138,7 +138,7 @@ module p_bridge_inizk{
                 val brd_trans = {
                     post_state: sys.brd.state,
                     effects: Set(
-                        BRD_UpdateInput(Set(CertifyResponse({cfg: q.cfg, rot: q.rot, x: q.x, L1: q.L1, apl: q.apl, h: q.h, res: res}))),
+                        BRD_UpdateInput(Set(CertifyResponse({cfg: q.cfg, rot: q.rot, x: q.x, L1: q.L1, apl: q.apl, h: q.h, res: res, r: sys.clock.state.TIME}))),
                         BRD_RemoveHandle(CertifyProveWait(q))
                     )
                 }
@@ -198,7 +198,7 @@ module p_bridge_inizk{
                 val brd_trans = {
                     post_state: sys.brd.state,
                     effects: Set(
-                        BRD_UpdateInput(Set(BRD_VerifyResponse({cfg: q.cfg, rot: q.rot, x: q.x, proof: q.proof, mem: q.mem, res: res}))),
+                        BRD_UpdateInput(Set(BRD_VerifyResponse({cfg: q.cfg, rot: q.rot, x: q.x, proof: q.proof, mem: q.mem, res: res, r: sys.clock.state.TIME}))),
                         BRD_RemoveHandle(BRD_VerifyNIZKVerifyWait(q))
                     )
                 }

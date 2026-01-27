@@ -302,16 +302,18 @@ val Sig_Correctness = f_atms_s.log.map(x => x.msg).atms_get_sign_response_messag
 
 // Avk correctness: Any bunch of honestly generated vk's can be aggregated to an avk ≠ ⊥. 
 // for all AVK responses in the log, if all vks are from honest parties then avk != None
-val AVK_Correctness = f_atms_s.log.map(x => x.msg).atms_get_akey_response_messages().forall(akey_resp => {
+val AVK_Correctness = f_atms_s.log.forall(log1 => {
+    Set(log1.msg).atms_get_akey_response_messages().forall(akey_resp => {
     // Find all Gen responses to determine which parties own which VKs
 
-    val sid_state = f_atms_s.state.get(akey_resp.cfg.sid)
+    val sid_state = log1.state.get(akey_resp.cfg.sid)
     // Check if all VKs in this akey_resp.vks are from honest parties
     val all_vks_from_honest = akey_resp.vks.indices().forall(i => {
             val vk = akey_resp.vks[i]   
             sid_state.VK.exists(x => and {
                 x.vk == vk,
-                not (f_atms_s.params.C.contains(x.party))
+                //not (f_atms_s.params.C.contains(x.party))
+                f_atms_s.params.P.exclude(f_atms_s.params.C).contains(x.party)
             })
     })
     
@@ -320,6 +322,7 @@ val AVK_Correctness = f_atms_s.log.map(x => x.msg).atms_get_akey_response_messag
         all_vks_from_honest,
         akey_resp.vks != List()
     }) implies (akey_resp.avk != None)
+    })
 })
 
 //ASign Correctness: Given a set of at least t + 1 honestly generated signatures (obtained from P.Sign for some honest P) on the same message, one can compute an aggregate signature which will verify.

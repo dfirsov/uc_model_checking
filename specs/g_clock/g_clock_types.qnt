@@ -25,7 +25,11 @@ module g_clock_types {
     type GC_SystemParams = {
         // P : Nat
         // SIDs : Nat
-        C : Set[Party] // corrupted parties
+        C : Set[Party], // corrupted parties
+
+        responsive_simulator: bool,
+        enable_logging: bool,
+
     }
 
 
@@ -43,7 +47,7 @@ module g_clock_types {
         input : Set[GC_Message], // always not more than 1 message in the system
         nonce : Nonce,        // to be able to match requests and responses in the trace
         log : Set[{idx: int, msg: GC_Message, state: GC_StateVars}],  
-        SIM_handles : Set[GC_Message],
+        handles : Set[GC_Message],
     }  
  
     type GC_Effect = 
@@ -61,7 +65,7 @@ module g_clock_types {
         match eff {
         | GC_LogMessage(msg) => 
             {...sys, 
-                log: sys.log.setAdd({idx: sys.log.size(), msg: msg, state : sys.state})
+                log: if (sys.params.enable_logging) sys.log.setAdd({idx: sys.log.size(), msg: msg, state : sys.state}) else sys.log
             }
         | GC_UpdateInput(msgs) => 
             {...sys, 
@@ -69,11 +73,11 @@ module g_clock_types {
             }
         | GC_AppendHandle(msg) => 
             {...sys,
-                SIM_handles: sys.SIM_handles.union(Set(msg)),
+                handles: sys.handles.union(Set(msg)),
             }
         | GC_RemoveHandle(handle_to_remove) =>
             {...sys,
-                SIM_handles: sys.SIM_handles.exclude(Set(handle_to_remove))
+                handles: sys.handles.exclude(Set(handle_to_remove))
             }
         }
     }   

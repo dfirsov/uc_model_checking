@@ -10,8 +10,8 @@ module p_bridge_br{
     import f_atms_types.* from "../f_atms/f_atms_types"    
     import f_atms.* from "../f_atms/f_atms"    
 
-    import f_diff_types.* from "../f_diff/f_diff_types"    
-    import f_diff.* from "../f_diff/f_diff"        
+    import f_dif_types.* from "../f_dif/f_dif_types"    
+    import f_dif.* from "../f_dif/f_dif"        
     
     import g_clock_types.* from "../g_clock/g_clock_types"    
     import g_clock.* from "../g_clock/g_clock"

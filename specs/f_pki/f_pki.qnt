@@ -6,9 +6,9 @@ module f_pki {
     import common.* from "../common"
     import f_pki_types.* from "./f_pki_types"
 
-    var pki_s : PKI_System
+    var f_pki_s : PKI_System
 
-    val SIM_ALL_CERTS = 1.to(5)
+    val SIM_ALL_CERTS = 1.to(UNIVERSE_SIZE)
 
     pure def pki_register_1(pki: PKI_System) : Set[PKI_Transition] = {      
         pki.input.pki_get_register_request_messages().map(p => {
@@ -26,7 +26,7 @@ module f_pki {
     // TODO: rewrite with non-det if experiencing performance issues
     pure def pki_register_2(pki: PKI_System) : Set[PKI_Transition] = {      
         pki.input.pki_get_sim_control_messages().map(m => {
-            pki.SIM_handles.pki_get_sim_register_request_hold_messages().map(p => {
+            pki.handles.pki_get_sim_register_request_hold_messages().map(p => {
                 SIM_ALL_CERTS.map(cert => {
                     {
                         post_state: pki.state,
@@ -48,10 +48,11 @@ module f_pki {
             val sid_state = pki.state.get(sid)
 
             if(sid_state.Reg.exists(r => r.party == party)){
+                val rr = PKI_RegisterResponse({cfg: p.cfg, vk: p.vk, cert: None})
                 {
                     post_state: pki.state,
                     effects: Set(
-                        PKI_UpdateInput(Set(PKI_RegisterResponse({cfg: p.cfg, vk: p.vk, cert: None}))),
+                        PKI_UpdateInput(Set(rr)),
                     )
                 }   
             }else{
@@ -85,7 +86,7 @@ module f_pki {
 
     pure def pki_get_all_2(pki: PKI_System) : Set[PKI_Transition] = {      
         pki.input.pki_get_sim_control_messages().map(m => {
-            pki.SIM_handles.pki_get_sim_get_all_request_wait_messages().map(p => {
+            pki.handles.pki_get_sim_get_all_request_wait_messages().map(p => {
                 {
                         post_state: pki.state,
                         effects: Set(
@@ -116,7 +117,7 @@ module f_pki {
 
     pure def pki_retrieve_2(pki: PKI_System) : Set[PKI_Transition] = {      
         pki.input.pki_get_sim_control_messages().map(m => {
-            pki.SIM_handles.pki_get_sim_retrieve_request_hold_messages().map(p => {
+            pki.handles.pki_get_sim_retrieve_request_hold_messages().map(p => {
                 {
                         post_state: pki.state,
                         effects: Set(
@@ -127,7 +128,6 @@ module f_pki {
             })
         }).flatten()
     }    
-
 
 
     pure def pki_retrieve_3(pki: PKI_System) : Set[PKI_Transition] = {
@@ -191,58 +191,39 @@ module f_pki {
             })
     }
 
-    def pki_main_listener(pki: PKI_System) : Set[(PKI_Transition)] = {
+    pure def pki_main_listener(pki: PKI_System) : Set[PKI_Transition] = {
         Set(
             pki_register_1(pki),
             pki_register_2(pki),
             pki_register_3(pki),
 
-            // pki_retrieve_1(pki),
-            // pki_retrieve_2(pki),
-            // pki_retrieve_3(pki),
+            pki_retrieve_1(pki),
+            pki_retrieve_2(pki),
+            pki_retrieve_3(pki),
 
             pki_cert_verify_1(pki),   
 
             pki_get_all_1(pki),
             pki_get_all_2(pki),             
 
-            //pki_sim_loses_ctrl(pki)
+            if (pki.params.responsive_simulator) Set() else pki_sim_loses_ctrl(pki)
         ).flatten()
     }
 
-    def pki_process_transitions(sys: PKI_System, transition: PKI_Transition) : PKI_System = {
+    pure def pki_process_transitions(sys: PKI_System, transition: PKI_Transition) : PKI_System = {
         val new_sys = {...sys, state: transition.post_state}
         transition.effects.fold(new_sys, ((a1,a2) => pki_apply_effect(a1,a2)))
     } 
 
-    def pki_apply_effect(sys: PKI_System, eff: PKI_Effect): PKI_System = {
-        match eff {
-        | PKI_LogMessage(msg) => 
-            {...sys, 
-                log: sys.log.setAdd({idx: sys.log.size(), msg: msg})
-            }
-        | PKI_UpdateInput(msgs) => 
-            {...sys, 
-                input: msgs
-            }
-        | PKI_AppendHandle(msg) => 
-            {...sys,
-                SIM_handles: sys.SIM_handles.union(Set(msg)),
-            }
-        | PKI_RemoveHandle(handle_to_remove) =>
-            {...sys,
-                SIM_handles: sys.SIM_handles.exclude(Set(handle_to_remove))
-            }
-        }
-    }        
+      
 
     action pki_step_with(q: (PKI_System) => Set[(PKI_Transition)]): bool = {
         all{
-            val ts = q(pki_s)
+            val ts = q(f_pki_s)
             all {
                 nondet transition = ts.oneOf()
                 all {
-                    pki_s' = pki_process_transitions(pki_s, transition)
+                    f_pki_s' = pki_process_transitions(f_pki_s, transition)
                 }
             }
         }
@@ -252,27 +233,27 @@ module f_pki {
         pki_step_with(pki_main_listener)
     }    
 
-    pure def pki_initial(P: Set[Party], SIDs: Set[SID]) : PKI_System = {
+    pure def pki_initial(x : {P: Set[Party], SIDs: Set[SID], enable_logging: bool, responsive_simulator: bool}) : PKI_System = {
         {
             params : {
-                P: P,
-                SIDs: SIDs,
-
-                //SIM_ALL_CERTS: all_certs
+                P: x.P,
+                SIDs: x.SIDs,
+                enable_logging: x.enable_logging,
+                responsive_simulator: x.responsive_simulator,
             },
-            state: SIDs.mapBy(sid => {
+            state: x.SIDs.mapBy(sid => {
                 Ver: Set(),
                 Reg: Set(),
             }),
             input: Set(),
             nonce: 0, 
             log: Set(),
-            SIM_handles: Set()
+            handles: Set()
         }        
     }    
 
-    action pki_init(P: Set[Party], SIDs: Set[SID]) : bool =  all {
-        pki_s' = pki_initial(P, SIDs)
+    action pki_init(x:{P: Set[Party], SIDs: Set[SID], enable_logging: bool, responsive_simulator: bool}) : bool =  all {
+        f_pki_s' = pki_initial(x)
     }    
 
 }

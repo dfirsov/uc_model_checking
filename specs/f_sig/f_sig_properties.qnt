@@ -48,13 +48,14 @@ module f_sig_properties {
             })
         })
     })
+
+
     // Property: verification results are consistent (no contradictory entries)
       val VerConsistent = sids.forall(sid => {
         val sid_state = f_sig_s.state.get(sid)
         sid_state.Ver.forall(entry => {
             not ({...entry, b : not(entry.b)}.in(sid_state.Ver))
-        })
-      })
+        })})
 
      
     // Completeness: If sign response has signature then later it verifies successfully
@@ -116,14 +117,9 @@ module f_sig_properties {
                                     }
                                 }
                                 | _ => false
-                            }
-                        })
-                    }
-                }
-            }
+                            }})}}}
             | _ => true
-        }
-    })
+        }})
 
     // No signature reuse: A signature that verifies for one message shouldn't verify for a different message (assuming honest VK owner)
     // FAILS

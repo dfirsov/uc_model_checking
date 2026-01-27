@@ -10,8 +10,6 @@ module f_atms_env{
     val sids = Set(1)
     val threshold = 1
 
-    val ALL_VK = 1.to(2)
-    val ALL_AVK = 1.to(2)
     val ALL_DOC = Set(
          {h:1, avk:1},
          {h:1, avk:2},
@@ -19,7 +17,6 @@ module f_atms_env{
          {h:4, avk:4},
          {h:5, avk:5},
     )
-    val ALL_SIG = 1.to(2)
 
     val list_length = 2
 
@@ -67,6 +64,7 @@ module f_atms_env{
             env_ver_reqs(cfg),
             env_asign_reqs(cfg),
             env_aver_reqs(cfg),
+            env_atms_sim_reqs,
         }
     }
 
@@ -83,7 +81,7 @@ module f_atms_env{
     action env_akey_reqs(cfg: MsgConfig) : bool = all {
         // Precondition: input must be empty
         f_atms_s.input.size() == 0,
-        nondet vks = allUpToListSamplingSpace(list_length, ALL_VK).oneOf() 
+        nondet vks = allUpToListSamplingSpace(list_length, ALL_VKS).oneOf() 
         //listSamplingSpace(list_length, ALL_VK).oneOf()
 
         f_atms_s' = {...f_atms_s, 
@@ -96,8 +94,8 @@ module f_atms_env{
         // Precondition: input must be empty
         f_atms_s.input.size() == 0,
 
-        nondet avk = ALL_AVK.oneOf()
-        nondet vks = listSamplingSpace(list_length, ALL_VK).oneOf()
+        nondet avk = ALL_AVKS.oneOf()
+        nondet vks = listSamplingSpace(list_length, ALL_VKS).oneOf()
 
         f_atms_s' = {...f_atms_s, 
             input: Set(ACheckRequest({cfg: cfg, avk: avk, vks: vks})),
@@ -116,12 +114,23 @@ module f_atms_env{
         }
     }
 
+    action env_atms_sim_reqs : bool = all {
+        f_atms_s.input.size() == 0,
+        f_atms_s.handles.size() > 0,
+
+        f_atms_s' = {...f_atms_s, 
+            input: Set(SIMControl),
+            nonce: f_atms_s.nonce + 1
+        },
+    }
+
+
     action env_ver_reqs(cfg: MsgConfig) : bool = all {
         // Precondition: input must be empty
         f_atms_s.input.size() == 0,
         nondet m = ALL_DOC.oneOf()
-        nondet sig = ALL_SIG.oneOf()
-        nondet vk  = ALL_VK.oneOf()
+        nondet sig = ALL_SIGS.oneOf()
+        nondet vk  = ALL_VKS.oneOf()
 
         f_atms_s' = {...f_atms_s, 
             input: Set(VerifyRequest({cfg: cfg, vk: vk, m: m, sig: sig})),
@@ -133,9 +142,9 @@ module f_atms_env{
         // Precondition: input must be empty
         f_atms_s.input.size() == 0,
         nondet m = ALL_DOC.oneOf()
-        nondet vks = listSamplingSpace(list_length, ALL_VK).oneOf()
-        nondet vks_tozip = listSamplingSpace(list_length, ALL_VK).oneOf()
-        nondet sigs_tozip = listSamplingSpace(list_length, ALL_VK).oneOf()
+        nondet vks = listSamplingSpace(list_length, ALL_VKS).oneOf()
+        nondet vks_tozip = listSamplingSpace(list_length, ALL_VKS).oneOf()
+        nondet sigs_tozip = listSamplingSpace(list_length, ALL_VKS).oneOf()
         val S = vks_tozip.indices().map(i => {vk: vks_tozip[i], sig: sigs_tozip[i]}).setToList()
 
         f_atms_s' = {...f_atms_s, 
@@ -148,8 +157,8 @@ module f_atms_env{
         // Precondition: input must be empty
         f_atms_s.input.size() == 0,
         nondet m = ALL_DOC.oneOf()
-        nondet sig = ALL_SIG.oneOf()
-        nondet avk = ALL_AVK.oneOf()
+        nondet sig = ALL_SIGS.oneOf()
+        nondet avk = ALL_AVKS.oneOf()
 
         f_atms_s' = {...f_atms_s, 
             input: Set(AVerifyRequest({cfg: cfg, avk: avk, m: m, sig: sig})),
@@ -163,6 +172,8 @@ module f_atms_env{
             C: Corrupted,
             SIDs: sids,
             t: threshold,
+            responsive_simulator: true,
+            enable_logging: true,
             // ALL_VKS: ALL_VK,
             // ALL_SIGS: ALL_SIG,
             // ALL_AVKS: ALL_AVK,

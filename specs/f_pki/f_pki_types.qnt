@@ -32,6 +32,9 @@ module f_pki_types {
         P : Set[Party], // parties who can use the functionality
         SIDs: Set[SID], // TODO: is this correct?
 
+        enable_logging: bool,
+        responsive_simulator: bool,
+
         //SIM_ALL_CERTS: Set[Certificate], // for the simulator: all possible certificates
     }
 
@@ -47,7 +50,7 @@ module f_pki_types {
         input : Set[PKI_Message], // always not more than 1 message in the system
         nonce : Nonce,        // to be able to match requests and responses in the trace
         log : Set[{idx: int, msg: PKI_Message, }], // state: PKI_StateVars
-        SIM_handles : Set[PKI_Message],
+        handles : Set[PKI_Message],
     }  
 
     type PKI_Effect = 
@@ -60,6 +63,28 @@ module f_pki_types {
         post_state: PKI_StateVars,
         effects: Set[PKI_Effect]
     }    
+
+    pure def pki_apply_effect(sys: PKI_System, eff: PKI_Effect): PKI_System = {
+        match eff {
+        | PKI_LogMessage(msg) => 
+            {...sys, 
+                log: if (sys.params.enable_logging) sys.log.setAdd({idx: sys.log.size(), msg: msg}) else sys.log
+            }
+        | PKI_UpdateInput(msgs) => 
+            {...sys, 
+                input: msgs,
+                log: if (msgs.pki_get_all_response_messages().size() == 1 and sys.params.enable_logging) sys.log.setAdd({idx: sys.log.size(), msg: msgs.pickSome()}) else sys.log
+            }
+        | PKI_AppendHandle(msg) => 
+            {...sys,
+                handles: sys.handles.union(Set(msg)),
+            }
+        | PKI_RemoveHandle(handle_to_remove) =>
+            {...sys,
+                handles: sys.handles.exclude(Set(handle_to_remove))
+            }
+        }
+    }      
 
     pure def pki_get_get_all_request_messages(messages: Set[PKI_Message]): Set[{cfg: MsgConfig}] = {
             messages.filterMap(m => {

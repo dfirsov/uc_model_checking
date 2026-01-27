@@ -9,6 +9,8 @@ module common {
     type SID = int
     type Counter = int    
 
+    val UNIVERSE_SIZE = 10
+
 
     type MsgConfig = {
         party: Party,
@@ -87,6 +89,10 @@ module common {
         | None => acc
       }
     })
-  }  
+  }
+
+  pure def pickSome(inp : Set[a]) : a = {
+    inp.find(x => true).unwrap()
+  }    
 
 }

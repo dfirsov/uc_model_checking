@@ -26,8 +26,8 @@ module p_bridge_led2{
 
 
 
-    import f_diff_types.* from "../f_diff/f_diff_types"    
-    import f_diff.* from "../f_diff/f_diff"        
+    import f_dif_types.* from "../f_dif/f_dif_types"    
+    import f_dif.* from "../f_dif/f_dif"        
 
     import p_bridge_bkgen.* from "./p_bridge_bkgen"     
     import p_bridge_rot.* from "./p_bridge_rot"

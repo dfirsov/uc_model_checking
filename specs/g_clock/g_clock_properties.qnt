@@ -18,7 +18,7 @@ module g_clock_properties {
     }
 
     action init = {
-        gc_init(C,0,Set())
+        gc_init({C: C, time: 0, Reg: Set(), responsive_sim: true, enable_logging: true})
     }
  
 
@@ -61,7 +61,6 @@ module g_clock_properties {
          {
             post_state : sys.state,
             effects : Set(
-                GC_LogMessage(msg_log),
                 GC_UpdateInput(Set())
             )
          })
@@ -93,7 +92,7 @@ val TimeAdvances = g_clock_s.state.TIME < 7
 
 // must fail
 val HandlesLiveness = 
-    g_clock_s.SIM_handles.size() < 7
+    g_clock_s.handles.size() < 7
 
 
 // system is well-defined

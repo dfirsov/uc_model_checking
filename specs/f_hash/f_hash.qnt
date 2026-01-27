@@ -9,7 +9,7 @@ module f_hash {
 
     var f_hash_s : HASH_System
 
-    val HASH_ALL_HASHES = 50.to(150)
+    val ALL_HASHES = 50.to(50 + UNIVERSE_SIZE)
 
 
     pure def hash_hash_1(f_hash: HASH_System) : Set[HASH_Transition] = {
@@ -27,7 +27,7 @@ module f_hash {
     
     action hash_hash_2_act : bool = {
         all{
-            nondet sim_h = HASH_ALL_HASHES.oneOf()
+            nondet sim_h = ALL_HASHES.oneOf()
             val ts = hash_hash_2(f_hash_s, sim_h)
             all {
                 nondet transition = ts.oneOf()
@@ -56,7 +56,7 @@ module f_hash {
         if(clean_hash(h, f_hash_s.state.get(sid).hash_map)){
             Some(h)
         } else {
-            HASH_ALL_HASHES.find(hh => clean_hash(hh, f_hash_s.state.get(sid).hash_map))
+            ALL_HASHES.find(hh => clean_hash(hh, f_hash_s.state.get(sid).hash_map))
         }
     }
 
@@ -84,7 +84,7 @@ module f_hash {
                     {
                         post_state: f_hash.state,
                         effects: Set(
-                            HASH_UpdateInput(Set()) // 
+                            HASH_UpdateInput(Set()) // TODO: consider error message
                         )
                     }
                 }else{
@@ -107,15 +107,15 @@ module f_hash {
                 post_state : hash.state,
                 effects : Set(
                     HASH_UpdateInput(Set()),
-                    )
+                )
             })
     }    
 
-    def hash_main_listener(crs: HASH_System) : Set[(HASH_Transition)] = {
+    def hash_main_listener(hash: HASH_System) : Set[(HASH_Transition)] = {
         Set(
-            hash_hash_1(crs),
-            hash_hash_3(crs),
-            //hash_sim_loses_ctrl(crs)
+            hash_hash_1(hash),
+            hash_hash_3(hash),
+            if (hash.params.responsive_simulator) Set() else hash_sim_loses_ctrl(hash)
         ).flatten()
     }     
 
@@ -128,7 +128,6 @@ module f_hash {
         all{
             val ts = q(f_hash_s)
             all {
-                ts.size() > 0,
                 nondet transition = ts.oneOf()
                 all {
                     f_hash_s' = hash_process_transitions(f_hash_s, transition)
@@ -144,13 +143,15 @@ module f_hash {
     }        
 
 
-    pure def hash_initial(P: Set[Party], SIDs: Set[SID]) : HASH_System = {
+    pure def hash_initial(x : {P: Set[Party], SIDs: Set[SID], responsive_simulator: bool, enable_logging: bool}) : HASH_System = {
         {
             params : {
-                P: P,
-                SIDs: SIDs,
+                P: x.P,
+                SIDs: x.SIDs,
+                responsive_simulator: x.responsive_simulator,
+                enable_logging: x.enable_logging,   
             },
-            state: SIDs.mapBy(sid => {
+            state: x.SIDs.mapBy(sid => {
                 hash_map: Map(),
             }),
             input: Set(),
@@ -160,8 +161,8 @@ module f_hash {
         }
     }
 
-    action hash_init(P: Set[Party], SIDs: Set[SID]) : bool = all {
-        f_hash_s' = hash_initial(P, SIDs)
+    action hash_init(x : {P: Set[Party], SIDs: Set[SID], responsive_simulator: bool, enable_logging: bool}) : bool = all {
+        f_hash_s' = hash_initial(x)
     }   
 
 }

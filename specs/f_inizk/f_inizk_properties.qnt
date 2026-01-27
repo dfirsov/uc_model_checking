@@ -35,11 +35,11 @@ module f_inizk_properties{
     // Verify must follow prove (can't verify without a proof being generated)
     val VerifyAfterProve = f_nizk_s.log.forall(log => {
         match log.msg {
-            | VerifyResponse(vr) => {
+            | NIZK_VerifyResponse(vr) => {
                 (vr.b == true) implies {
                     f_nizk_s.log.exists(log2 => {
                         match log2.msg {
-                            | ProveResponse(pr) => {
+                            | NIZK_ProveResponse(pr) => {
                                 and {
                                     log2.idx < log.idx,
                                     pr.cfg.sid == vr.cfg.sid,
@@ -55,16 +55,16 @@ module f_inizk_properties{
             | _ => true
         }
     })
-
+ 
     
     // Handles are properly managed (no invalid handles)
     val NoOrphanedHolds = f_nizk_s.handles.forall(h => {
         match h {
-            | SIMProveHold(_) => true
-            | SIMVerifyHold(_) => true
-            | VerifyRelWait(_) => true
-            | ProveRelWait(_) => true
-            | RelRequestWait(_) => true
+            | NIZK_SIMProveHold(_) => true
+            | NIZK_SIMVerifyHold(_) => true
+            | NIZK_VerifyRelWait(_) => true
+            | NIZK_ProveRelWait(_) => true
+            | NIZK_RelRequestWait(_) => true
             | _ => false
         }
     })
@@ -76,10 +76,10 @@ module f_inizk_properties{
     // If the relation doesn't hold, prove returns None
     val ProveSoundness = f_nizk_s.log.forall(log => {
         match log.msg {
-            | ProveResponse(pr) => {
+            | NIZK_ProveResponse(pr) => {
                 sids.forall(sid => {
                     val sid_state = f_nizk_s.state.get(sid)
-                    (not(sid_state.Rel.contains((pr.x, pr.w)))) implies (pr.pi == None)
+                    (not(nizk_Rel_sat(pr.x, pr.w))) implies (pr.pi == None)
                 })
             }
             | _ => true
@@ -90,9 +90,9 @@ module f_inizk_properties{
     // If no witness exists in the relation for statement x, then verification must fail
     val VerifySoundness = f_nizk_s.log.forall(log => {
         match log.msg {
-            | VerifyResponse(vr) => {
+            | NIZK_VerifyResponse(vr) => {
                 val sid_state = f_nizk_s.state.get(vr.cfg.sid)
-                val no_witness_exists = sid_state.Rel.forall(pair => pair._1 != vr.x)
+                val no_witness_exists = ALL_WITNESSES.forall(w => not(nizk_Rel_sat(vr.x, w)))
                 no_witness_exists implies (vr.b == false)
             }
             | _ => true
@@ -103,10 +103,10 @@ module f_inizk_properties{
     // If prove succeeds with proof π, then verify(x, π) must return true
     val Completeness = f_nizk_s.log.forall(log1 => {
         match log1.msg {
-            | ProveResponse(pr) => {
+            | NIZK_ProveResponse(pr) => {
                 f_nizk_s.log.forall(log2 => {
                     match log2.msg {
-                        | VerifyResponse(vr) => {
+                        | NIZK_VerifyResponse(vr) => {
                             and {
                                 log1.idx < log2.idx,  // prove comes before verify
                                 pr.cfg.sid == vr.cfg.sid,
@@ -129,7 +129,7 @@ module f_inizk_properties{
         val sid_state = f_nizk_s.state.get(sid)
         sid_state.Ver.forall(entry => {
             (entry.b == true) implies {
-                sid_state.Rel.exists(pair => pair._1 == entry.x)
+                ALL_WITNESSES.exists(w => nizk_Rel_sat(entry.x, w))
             }
         })
     })

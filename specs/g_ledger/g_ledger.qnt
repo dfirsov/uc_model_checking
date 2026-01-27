@@ -9,17 +9,7 @@ module g_ledger{
     
  
     var g_ledger_s : LED_System
-    //const instance : int
 
-
-    pure def led_skip_trans(led: LED_System) : LED_Transition = {
-        {
-            post_state: led.state,
-            effects : Set(
-                LED_UpdateInput(Set())
-            )
-        }
-    }    
 
     // SIM gives control back to the environment
     pure def led_sim_loses_ctrl(led: LED_System, clock: GC_System) : Set[(LED_Transition, GC_Transition)] = {
@@ -346,40 +336,22 @@ module g_ledger{
         Set(
             led_ok_1(led, clock),
             led_ok_2(led, clock),
+
             led_submit_1(led, clock),
             led_submit_2(led, clock),
             led_submit_3(led, clock),
             led_submit_4(led, clock),
+            
             //led_read_1(led, clock),
             //led_read_2(led, clock), // a direct action instead
             //led_read_3(led, clock),
             //led_read_4(led, clock),
 
-            //led_sim_loses_ctrl(led, clock) // wrong place
+            if (led.params.responsive_simulator) Set() else led_sim_loses_ctrl(led, clock) 
         ).flatten()
     }    
  
 
-    pure def led_apply_effect(sys: LED_System, clock: GC_System, eff: LED_Effect): LED_System = {
-        match eff {
-        | LED_LogMessage(msg) => 
-            {...sys, 
-                log: sys.log.setAdd({idx: sys.log.size(), msg: msg,  time: clock.state.TIME, state: sys.state}) 
-            }
-        | LED_UpdateInput(msgs) => 
-            {...sys, 
-                input: msgs
-            }
-        | LED_AppendHandle(msg) => 
-            {...sys,
-                handles: sys.handles.union(Set(msg)),
-            }
-        | LED_RemoveHandle(handle_to_remove) =>
-            {...sys,
-                handles: sys.handles.exclude(Set(handle_to_remove))
-            }
-        }
-    }
 
     pure def led_process_transitions(sys: LED_System, clock: GC_System, transition: LED_Transition) : LED_System = {
         val new_sys = {...sys, state: transition.post_state}
@@ -390,7 +362,6 @@ module g_ledger{
         all{
             val ts = q(g_ledger_s, g_clock_s)
             all {
-                ts.size() > 0,
                 nondet transition = ts.oneOf()
                 all {
                     g_ledger_s' = led_process_transitions(g_ledger_s, g_clock_s, transition._1),
@@ -405,7 +376,7 @@ module g_ledger{
         //led_read_2_act,
     }    
 
-    pure def led_initial(x : {P: Set[Party], C: Set[Party], SIDs: Set[SID], delta_latency: Time, delta_slack: Time, delta_apl: Time, Val: LED_ValidatorState, comsel_a: int, comsel_b: int, comsel_c: int}) : LED_System = {
+    pure def led_initial(x : {P: Set[Party], C: Set[Party], SIDs: Set[SID], delta_latency: Time, delta_slack: Time, delta_apl: Time, Val: LED_ValidatorState, comsel_a: int, comsel_b: int, comsel_c: int, responsive_simulator: bool, enable_logging: bool}) : LED_System = {
         {
             params : {
                 P : x.P,
@@ -418,6 +389,9 @@ module g_ledger{
                 comsel_a: x.comsel_a,
                 comsel_b: x.comsel_b,
                 comsel_c: x.comsel_c,  
+
+                responsive_simulator: x.responsive_simulator,
+                enable_logging: x.enable_logging,
             },
             state : 
                 {
@@ -438,8 +412,8 @@ module g_ledger{
         }        
     }
 
-    action led_init(P: Set[Party], C: Set[Party], SIDs: Set[SID], delta_latency: Time, delta_slack: Time, delta_apl: Time, Val: LED_ValidatorState, comsel_a: int, comsel_b: int, comsel_c: int) : bool =  all {
-        g_ledger_s' = led_initial({P: P, C: C, SIDs: SIDs, delta_latency: delta_latency, delta_slack: delta_slack, delta_apl: delta_apl, Val: Val, comsel_a: comsel_a, comsel_b: comsel_b, comsel_c: comsel_c})
+    action led_init(x : {P: Set[Party], C: Set[Party], SIDs: Set[SID], delta_latency: Time, delta_slack: Time, delta_apl: Time, Val: LED_ValidatorState, comsel_a: int, comsel_b: int, comsel_c: int, responsive_simulator: bool, enable_logging: bool}) : bool =  all {
+        g_ledger_s' = led_initial(x)
     }
 
 }

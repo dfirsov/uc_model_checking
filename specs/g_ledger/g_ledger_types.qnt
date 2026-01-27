@@ -1,6 +1,7 @@
 module g_ledger_types{
     
     import basicSpells.* from "../../spells/basicSpells"
+    import g_clock_types.* from "../g_clock/g_clock_types"  
     import common.* from "../common"
 
     // define types of the system  
@@ -73,6 +74,9 @@ module g_ledger_types{
         comsel_a: int,
         comsel_b: int,
         comsel_c: int,  
+
+        enable_logging: bool,
+        responsive_simulator: bool,
     }    
 
 
@@ -116,10 +120,41 @@ module g_ledger_types{
         effects : Set(),
     } 
 
+    pure def led_skip_trans(led: LED_System) : LED_Transition = {
+        {
+            post_state: led.state,
+            effects : Set(
+                LED_UpdateInput(Set())
+            )
+        }
+    }        
+
     pure def led_access_check(cfg: MsgConfig, params: LED_SystemParams): bool = {
             cfg.party.in(params.P) and cfg.sid.in(params.SIDs)
     }    
 
+
+    pure def led_apply_effect(sys: LED_System, clock: GC_System, eff: LED_Effect): LED_System = {
+        match eff {
+        | LED_LogMessage(msg) => 
+            {...sys, 
+                log: if (sys.params.enable_logging) sys.log.setAdd({idx: sys.log.size(), msg: msg,  time: clock.state.TIME, state: sys.state}) else sys.log
+            }
+        | LED_UpdateInput(msgs) => 
+            {...sys, 
+                input: msgs,
+                log: if (sys.params.enable_logging and msgs.led_get_all_response_messages().size() == 1) sys.log.setAdd({idx: sys.log.size(), msg: msgs.pickSome(), time: clock.state.TIME, state: sys.state}) else sys.log
+            }
+        | LED_AppendHandle(msg) => 
+            {...sys,
+                handles: sys.handles.union(Set(msg)),
+            }
+        | LED_RemoveHandle(handle_to_remove) =>
+            {...sys,
+                handles: sys.handles.exclude(Set(handle_to_remove))
+            }
+        }
+    }
 
     pure def led_get_all_response_messages(messages: Set[LED_Message]): Set[LED_Message] = {
         messages.filterMap(m => {
