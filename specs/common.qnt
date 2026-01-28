@@ -9,8 +9,19 @@ module common {
     type SID = int
     type Counter = int    
 
-    val UNIVERSE_SIZE = 10
+    // use for simulation
+    // val UNIVERSE_SIZE = 10
+    // val PARTY_SIZE = 3
+    // val CORRUPTED_PARTY_SIZE = 1
+    // val SID_SIZE = 2
+    // val MAX_LOG_SIZE = 5000
 
+    // use for verification
+    val UNIVERSE_SIZE = 2
+    val PARTY_SIZE = 2
+    val CORRUPTED_PARTY_SIZE = 1
+    val SID_SIZE = 1
+    val MAX_LOG_SIZE = 4
 
     type MsgConfig = {
         party: Party,

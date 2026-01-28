@@ -7,7 +7,7 @@ source "$SCRIPT_DIR/common.sh" || { echo "Error: Could not load common.sh"; exit
 # Default configurations
 # apalache-dist-0.51.1
 APALACHE_JAR="$HOME/.quint/apalache-dist-0.51.1/apalache/lib/apalache.jar"
-JAVA_OPTS="-Xmx8G -Xss515m"
+JAVA_OPTS="-Xmx16G -Xss4G"
 
 FILE=""  # Mandatory: User must specify a file
 MAIN=""  # Optional: Main module name
@@ -157,7 +157,7 @@ run_tlc() {
     fi
 
     echo -e "java $JAVA_OPTS -cp \"$APALACHE_JAR\" tlc2.TLC $dfid_option -deadlock -workers \"$WORKERS\" \"$tla_file\""
-    if ! java $JAVA_OPTS -cp "$APALACHE_JAR" tlc2.TLC  $dfid_option -deadlock -workers "$WORKERS" "$tla_file" 2>&1 | tee "$output_file"; then
+    if ! java $JAVA_OPTS -cp "$APALACHE_JAR" tlc2.TLC  $dfid_option -deadlock -workers "$WORKERS" "$tla_file" 2>&1  | tee "$output_file"; then
         err_and_exit "TLC execution failed for $tla_file"
     fi
 

@@ -8,10 +8,10 @@ module f_atms{
     
     var f_atms_s : ATMS_System
 
-    val ALL_VKS: Set[ATMS_VK] = 1.to(5)
-    val ALL_SIGS: Set[ATMS_Signature] = 1.to(5)
-    val ALL_AVKS: Set[ATMS_AVK] = 1.to(10)
-    val ALL_ASIGS: Set[ATMS_ASignature] = 1.to(5)  
+    val ALL_VKS: Set[ATMS_VK] = 1.to(UNIVERSE_SIZE)
+    val ALL_SIGS: Set[ATMS_Signature] = 1.to(UNIVERSE_SIZE)
+    val ALL_AVKS: Set[ATMS_AVK] = 1.to(UNIVERSE_SIZE)
+    val ALL_ASIGS: Set[ATMS_ASignature] = 1.to(UNIVERSE_SIZE)  
 
     // SIM gives control back to the environment
     pure def atms_sim_loses_ctrl(atms: ATMS_System) : Set[ATMS_Transition] = {

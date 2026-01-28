@@ -6,8 +6,8 @@ module f_pki_properties {
     import f_pki_types.*   from "./f_pki_types"
     import f_pki.*  from "./f_pki"
 
-    val Parties = Set(1,2,3)
-    val sids = Set(4,5)
+    val Parties = 1.to(PARTY_SIZE)
+    val sids = 1.to(SID_SIZE)
 
     action step : bool = any {
         pki_step,  
@@ -103,7 +103,7 @@ module f_pki_properties {
 
 
     // one entry per party in Reg and Ver lists
-    val OEPP = Parties.forall(p => sids.forall({sid =>
+    val OneEntryPerPartyInRegAndVerLists = Parties.forall(p => sids.forall({sid =>
         and { 
             f_pki_s.state.get(sid).Ver.filter(x => x.party == p).size() <= 1,
             f_pki_s.state.get(sid).Reg.filter(x => x.party == p).size() <= 1
@@ -111,7 +111,7 @@ module f_pki_properties {
     }))
     
     // RetrieveSucceedsForRegistered
-    val RSFR = f_pki_s.log.forall(entry1 => {
+    val RetrieveSucceedsForRegistered = f_pki_s.log.forall(entry1 => {
         match entry1.msg {
         | PKI_RegisterResponse(reg_resp) =>
             f_pki_s.log.forall(entry2 => {
@@ -135,7 +135,7 @@ module f_pki_properties {
     })
 
     // RetrieveFailsForUnregistered
-    val RFFU = f_pki_s.log.forall(entry1 => {
+    val RetrieveFailsForUnregistered = f_pki_s.log.forall(entry1 => {
         match entry1.msg {
         | PKI_RetrieveResponse(ret_resp) => {
             
@@ -163,7 +163,7 @@ module f_pki_properties {
         }
     })    
 
-    val VFFU = f_pki_s.log.forall(entry1 => {
+    val CertVerifySucceedsForRegistered = f_pki_s.log.forall(entry1 => {
         match entry1.msg {
         | PKI_CertVerifyResponse(ver_resp) => {
             
@@ -195,10 +195,10 @@ module f_pki_properties {
 
 
     val AllProps = all {
-        OEPP,
-        RSFR,
-        RFFU,
-        VFFU
+        OneEntryPerPartyInRegAndVerLists,
+        RetrieveSucceedsForRegistered,
+        RetrieveFailsForUnregistered,
+        CertVerifySucceedsForRegistered,
     }
 
 }

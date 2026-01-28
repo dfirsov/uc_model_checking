@@ -5,29 +5,51 @@ module g_ledger_env {
     import g_ledger.* from "./g_ledger"
     import g_ledger_comsel.* from "./g_ledger_comsel" 
     import g_ledger_apl.* from "./g_ledger_apl" 
+    import g_ledger_ival.* from "./g_ledger_ival" 
+    import f_atms.* from "../f_atms/f_atms"
+    import f_atms_types.* from "../f_atms/f_atms_types"        
     import g_ledger_genesis.* from "./g_ledger_genesis" 
     import g_clock_types.* from "../g_clock/g_clock_types"
     import g_clock.* from "../g_clock/g_clock"
     import common.* from "../common"    
 
-   val ALL_TXS = 1.to(5).map(x => Normal({b: true, tx: x})).union(
-       1.to(5).map(x => Normal({b: false, tx: x})) )
+   val ALL_TXS = 1.to(UNIVERSE_SIZE).map(x => Normal({b: true, tx: x})).union(
+       1.to(UNIVERSE_SIZE).map(x => Normal({b: false, tx: x})) )
 
-   val Parties = Set(1,2)
-   val C = Set()
-   val sids = Set(1)
+   val Parties = 1.to(PARTY_SIZE)
+   val C = 1.to(CORRUPTED_PARTY_SIZE)
+   val sids = 1.to(SID_SIZE)
+
    val delta_latency = 1
    val delta_slack = 1
    val delta_apl = 1
+   val atms_t = 0
 
-    action step : bool = any {
-        led_step,  
-        led_step_comsel,
-        led_step_apl,
-        led_step_genesis,
-        gc_step_led_wait,
-        // env_led_send_all_reqs,
-        env_consume_responses,
+    action step : bool =  {
+        if(g_ledger_s.log.size() < MAX_LOG_SIZE){
+            any {
+                all {
+                    any {
+                        led_step,  
+                        led_step_comsel,
+                        led_step_apl,
+                        led_step_genesis,
+                        gc_step_led_wait,
+                        env_led_send_all_reqs,
+                        env_consume_responses,
+                    },
+                    f_atms_s' = f_atms_s
+                },
+                all {
+                    led_step_ival,
+                }
+            }
+        }else{
+            all {
+                env_consume_responses,  
+                f_atms_s' = f_atms_s
+            }
+        }
     }
 
     action gc_step_led_wait : bool =  all {
@@ -63,7 +85,13 @@ module g_ledger_env {
   
     action init = all {
         led_init({P: Parties, C: C, SIDs: sids, delta_latency: delta_latency, delta_slack: delta_slack, delta_apl: delta_apl, Val:  true, comsel_a: 1, comsel_b: 1, comsel_c: 2, responsive_simulator: true, enable_logging: true}),
-        gc_init({C: C,time: 0, Reg: Parties.map(x => sids.map(y => {party: x, sid: y})).flatten(), responsive_sim: true, enable_logging: false} ),
+        gc_init({C: C,time: 0, Reg: Parties.map(x => sids.map(y => {party: x, sid: y})).flatten(), responsive_simulator: true, enable_logging: false} ),
+        atms_init({P : Parties, 
+        C : C, 
+        SIDs: sids, 
+        t: atms_t,
+        responsive_simulator: true,
+        enable_logging: false,}),
     }
 
     action env_led_send_all_reqs : bool = all {

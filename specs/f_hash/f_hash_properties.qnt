@@ -6,8 +6,8 @@ module f_hash_properties{
     import f_hash.*  from "./f_hash"
     import g_ledger_types.* from "../g_ledger/g_ledger_types" 
 
-    val Parties = Set(1,2,3)
-    val sids = Set(4,5)
+    val Parties = 1.to(PARTY_SIZE)
+    val sids = 1.to(SID_SIZE)
     
 
     action step : bool = any {

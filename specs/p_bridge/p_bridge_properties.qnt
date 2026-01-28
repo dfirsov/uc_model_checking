@@ -37,11 +37,11 @@ module p_bridge_properties{
      import p_bridge_env.* from "./p_bridge_env" 
    
 
-    val Parties = Set(1,2)
-    val C = Set()
-    val SIDs = Set(1)
-    val P1 = Set(1,2)
-    val P2 = Set(1,2)   
+    val Parties = 1.to(PARTY_SIZE)
+    val C = 1.to(CORRUPTED_PARTY_SIZE)
+    val SIDs = 1.to(SID_SIZE)
+    val P1 = Parties
+    val P2 = Parties   
 
     action init = all {
         p_bridge_env_init({
@@ -61,15 +61,21 @@ module p_bridge_properties{
     }
 
     action step = {
-        val x = {Parties: Parties, SIDs: SIDs}
-
-        any { 
-            p_bridge_env_step(x),
-            p_bridge_consume_responses,
-            g_ledger1_response_messages,
-            p_bridge_request_messages(x),
-            g_ledger1_request_messages(x),        
+        if(p_bridge_s.log.size() < MAX_LOG_SIZE){
+            val  x = {Parties: Parties, SIDs: SIDs}
+            any { 
+                p_bridge_env_step(x),
+                p_bridge_consume_responses,
+                g_ledger1_response_messages,
+                p_bridge_request_messages(x),
+                g_ledger1_request_messages(x),        
+            }
+        }else{
+            all {
+                p_bridge_consume_responses,
+            }
         }
+
     }
 
     val Q1 = p_bridge_s.log.size() <= 1
@@ -225,5 +231,14 @@ module p_bridge_properties{
 
     })
 })
+
+    val AllProps = all {
+        Bridge_State_Consistency,
+        Bridge_Liveness,
+        Bridge_Aux_Update,
+        //Bridge_Democracy,
+        Bridge_State_Persistence,
+        Bridge_Soundness,
+    }
 
 }

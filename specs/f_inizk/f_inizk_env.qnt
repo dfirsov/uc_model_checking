@@ -10,34 +10,30 @@ module f_inizk_env{
     import common.* from "../common"    
 
    
-   val Parties = Set(1,2,3)
-   val Corrupted = Set(3)
-   val sids = Set(1)
-
-   val ALL_STATEMENTS = Set(
-       {x: Normal({b: true, tx: 1}), h: 1}, 
-       {x: Normal({b: true, tx: 1}), h: 2},
-       {x: Normal({b: true, tx: 1}), h: 3},
-       {x: Normal({b: true, tx: 1}), h: 4},
-       {x: Normal({b: true, tx: 1}), h: 5},
-    )
-    
-    val ALL_WITNESSES = Set(
-         List(Normal({b: true, tx: 1})),
-         List(Normal({b: true, tx: 2})),
-         List(Normal({b: true, tx: 3})),
-     )
+   val Parties = 1.to(PARTY_SIZE)
+   val Corrupted = 1.to(CORRUPTED_PARTY_SIZE)
+   val sids = 1.to(SID_SIZE)
 
 
-    action step : bool = any {
-        nizk_step,  
-        all{
-            hash_step,
-            f_nizk_s' = f_nizk_s
-        },
-        env_send_all_reqs,
-        env_consume_responses,
+  val ALL_STATEMENTS = 1.to(UNIVERSE_SIZE).map(x => { x : Normal({b: true, tx: x}), h : x }) 
+  val ALL_WITNESSES = 1.to((UNIVERSE_SIZE + 1) / 2).map(x => { List(Normal({b: true, tx: x})) })
+
+    action step : bool = {
+        if(f_nizk_s.log.size() < MAX_LOG_SIZE){
+            any {
+                nizk_step,  
+                all{
+                    hash_step,
+                    f_nizk_s' = f_nizk_s
+                },
+                env_send_all_reqs,
+                env_consume_responses,
+            }
+        } else {
+            env_consume_responses
+        }
     }
+
 
     pure def env_consume_response(sys: NIZK_System) : Set[NIZK_Transition] = {
          sys.input.nizk_get_all_response_messages().map(msg_log =>

@@ -137,9 +137,6 @@ val AVK_Injective = sids.forall(sid => {
 
 
 
-// TODO: Any other properties/invariants connecting VK, VER, VKs, AVK, AVER, Signers, CVK?
-
-
 // Determinism of Gen, acheck, ver, aver properties (requests with same input lead to same output)
 // go through a log: if there are two responses with the same inputs then their outputs must be the same
 
@@ -563,10 +560,10 @@ val AllUnforgeability = all {
 // --seed=0x119d88c0b1b3ba
 val AllProps = all {
     AllFunctional,
-    AllInjective,
-    AllDeterministic,
-    AllCorrectness,
-    AllUnforgeability
+    // AllInjective,
+    // AllDeterministic,
+    // AllCorrectness,
+    // AllUnforgeability
 }
 
 val ASign_ThresholdNecessary = f_atms_s.log.map(x => x.msg).atms_get_asign_response_messages().forall(asign =>

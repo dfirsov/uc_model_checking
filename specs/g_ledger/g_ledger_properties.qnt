@@ -145,7 +145,7 @@ val LED_AgreedPrefix = g_ledger_s.log.forall(log_entry1 => {
 })
 
 
-val AllProps = all {
+val LED_AllProps = all {
     LED_Liveness,
     LED_Consistency,
     LED_Validity,
@@ -182,6 +182,7 @@ val ComSel_c_Correctness = g_ledger_s.log.map(x => x.msg).led_get_comsel_respons
     }
 })
 
+
 //(a/b)-Security: For all ComSel responses whihc propose committee Com the following is true:  b * |Com ⋂ C| ≤ a * |Com|
 val ComSel_ab_Security = g_ledger_s.log.map(x => x.msg).led_get_comsel_response_messages().forall(comsel_resp => {
     // Count |Com ⋂ C| - number of corrupt parties in the committee
@@ -212,6 +213,12 @@ val ComSel_Agreement = g_ledger_s.log.forall(log_entry1 => {
         | _ => true
     }
 })
+
+val ComSel_AllProps = all {
+    ComSel_c_Correctness,
+    ComSel_ab_Security,
+    ComSel_Agreement,
+}
 
 // ========== APL properties ===========
 
@@ -286,7 +293,7 @@ val APL_DeltaGrowth = g_ledger_s.log.forall(log_entry1 => {
 })
 
 
-val AllAPLProps = all {
+val APL_AllProps = all {
     APL_Agreement,
     //APL_DeltaGrowth,
     APL_Monotonicity,
@@ -303,6 +310,13 @@ val Genesis_Correctness = g_ledger_s.log.forall(log_entry => {
         | _ => true
     }
 })
+
+val AllProps = all {
+    LED_AllProps,
+    ComSel_AllProps,
+    APL_AllProps,
+    Genesis_Correctness,
+}
 
 
 }

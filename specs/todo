@@ -6,7 +6,7 @@
 
 * Decide which functionalities might have "non-responsive" simulator and recheck the properties.
 
-* add
++ add
    - dynamic logging
    - dynamic simulator
 

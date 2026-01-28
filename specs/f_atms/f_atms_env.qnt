@@ -5,9 +5,9 @@ module f_atms_env{
     import f_atms.* from "./f_atms"
     import common.* from "../common"    
 
-    val Parties = Set(1,2,3)
-    val Corrupted = Set(3)
-    val sids = Set(1)
+    val Parties = 1.to(PARTY_SIZE)
+    val Corrupted = 1.to(CORRUPTED_PARTY_SIZE)
+    val sids = 1.to(SID_SIZE)
     val threshold = 1
 
     val ALL_DOC = Set(
@@ -20,10 +20,16 @@ module f_atms_env{
 
     val list_length = 2
 
-   action step : bool = any {
-        atms_step,  
-        env_send_all_reqs,
-        env_consume_responses,
+   action step : bool =  {
+        if(f_atms_s.log.size() <= MAX_LOG_SIZE){
+            any {
+                atms_step,  
+                env_send_all_reqs,
+                env_consume_responses,
+            }
+        }else{
+            f_atms_s' = f_atms_s
+        }
     }
 
 

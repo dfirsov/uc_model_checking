@@ -2,14 +2,16 @@
 module g_clock_properties {
 
     import basicSpells.* from "../../spells/basicSpells"
-    //import uc.* from "../uc"
+
     import g_clock_types.* from "./g_clock_types" 
     import g_clock.* from "./g_clock"
 
+    import common.* from "../common"
 
-    val P = Set(1, 2, 3)
-    val C = Set(3)
-    val SIDS = Set(1, 2)
+
+    val P = 1.to(PARTY_SIZE)  // set of parties
+    val C = 1.to(CORRUPTED_PARTY_SIZE)
+    val SIDs = 1.to(SID_SIZE)
 
     action step : bool = any {
         gc_step,  // internal dynamics of the g_clock
@@ -18,7 +20,7 @@ module g_clock_properties {
     }
 
     action init = {
-        gc_init({C: C, time: 0, Reg: Set(), responsive_sim: true, enable_logging: true})
+        gc_init({C: C, time: 0, Reg: Set(), responsive_simulator: true, enable_logging: true})
     }
  
 
@@ -29,7 +31,7 @@ module g_clock_properties {
         
         // Non-deterministically choose a party and SID
         nondet party = P.oneOf()
-        nondet sid = SIDS.oneOf()
+        nondet sid = SIDs.oneOf()
         val partySID = {party: party, sid: sid}
         val cfg = {nonce: g_clock_s.nonce, party: party, sid: sid}
         
@@ -80,20 +82,21 @@ module g_clock_properties {
 
 
 
-// must fail
+// ======================= Co-Properties (must fail) =======================
+
 val LogGrows = 
     (g_clock_s.log.size() < 5)
 
-// must fail
+
 val RegSize = g_clock_s.state.Reg.size() < 2
 
-// must fail
 val TimeAdvances = g_clock_s.state.TIME < 7
 
-// must fail
 val HandlesLiveness = 
     g_clock_s.handles.size() < 7
 
+
+// ======================= PROPERTIES (must hold) =======================
 
 // system is well-defined
 val OneMsg = 
@@ -179,5 +182,12 @@ val TimeSoundness = g_clock_s.log.forall(r1 =>
             } 
           )
   )  
-    
+
+  val AllProps = and {
+    OneMsg,
+    TimeAgreement,
+    TimeLiveness,
+    TimeSoundness,
+  }
+
 }
