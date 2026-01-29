@@ -57,58 +57,17 @@ quint verify <spec_file> [--invariant=<property>]
 - **Custom effects**: Message exclusion and event logging for protocol control flow
 - **Property checking**: Invariant verification via Apalache, TLC, and simulation
 
-### Properties Verified
-
-#### F-ATMS (Advanced Threshold Multi-Signature) - [f_atms_properties.qnt](specs/f_atms/f_atms_properties.qnt)
-- **Functionality**: VK, VER, VKs, AVK, AVER are functional (deterministic mappings)
-- **Injectivity**: VK, VKs, AVK are injective (unique keys identify parties/key sets)
-- **Determinism**: Gen, ACheck, Verify, AVerify produce consistent outputs for same inputs
-- **Non-bottom responses**: Sign returns valid signature when party has generated VK
-- **Completeness**: Properly formed signatures successfully verify
-- **Unforgeability**: Cannot verify aggregate signature without sufficient honest signatures
-- **Handle management**: No orphaned simulation holds in the system
-
-
-
-#### F-PKI (Public Key Infrastructure) - [f_pki_properties.qnt](specs/f_pki/f_pki_properties.qnt)
-- **One entry per party**: Each party has at most one registration and verification entry per SID
-- **Retrieve succeeds for registered**: Retrieval returns correct VK for registered parties
-- **Retrieve fails for unregistered**: Retrieval returns None for unregistered parties
-- **Certificate verification**: Cert verification succeeds iff party registered with matching (vk, cert) pair
-
-#### F-Hash (Collision-Resistant Hash) - [f_hash_properties.qnt](specs/f_hash/f_hash_properties.qnt)
-- **Correctness**: All parties get same hash for same input (P.Hash(x) = Q.Hash(x))
-- **Collision resistance**: Different inputs produce different hashes (x ≠ y ⇒ Hash(x) ≠ Hash(y))
-
-#### F-NIZK (Non-Interactive Zero-Knowledge) - [f_nizk_properties.qnt](specs/f_nizk/f_nizk_properties.qnt)
-- **Prove soundness**: R(x,w) = 0 ⇒ Prove(x,w) = ⊥ (cannot prove false statements)
-- **Verify soundness**: If no witness exists for x, then Verify(x,π) = false
-- **Completeness**: R(x,w) = 1 ∧ Prove(x,w) = π ⇒ Verify(x,π) = true
-- **Verify after prove**: Successful verification implies proof was previously generated
-- **Proof non-malleability**: Same proof cannot verify different statements
-- **Handle management**: Proper management of prove/verify simulation holds
+### Properties 
 
 
 
 
-#### F-Diffuse (Message Diffusion) - [f_dif_properties.qnt](specs/f_dif/f_dif_properties.qnt)
-- **No duplication**: Message delivered at most once per party per time
-- **Delta-delayed liveness**: Message diffused at time t is fetchable by time t + δ
-- **Broadcast property**: If message diffused to multiple parties, eventually available to all
 
-#### G-Clock (Global Clock) - [g_clock_properties.qnt](specs/g_clock/g_clock_properties.qnt)
-- **Time monotonicity**: Clock time advances monotonically
-- **Registration tracking**: Parties must register before using clock
-- **Synchronization**: All registered parties see consistent time values
-- **Handle management**: Proper management of clock simulation holds
 
-#### G-Ledger (Global Ledger) - [g_ledger_properties.qnt](specs/g_ledger/g_ledger_properties.qnt)
-- **Liveness**: Transaction submitted at time t appears in all party logs by time t + Δ_latency + Δ_slack
-- **Consistency**: For any two parties P and Q, log_P is prefix of log_Q or vice versa
-- **Validity**: All transactions in honest party's log satisfy validity predicate
-- **Committee selection**: Committee members selected according to protocol rules
-- **APL (Availability Proof Line)**: Availability proofs required for block inclusion
-- **Integrity**: Ledger state remains consistent across all operations
+
+
+
+
 
 #### P-Bridge (Cross-Chain Bridge Protocol) - [p_bridge_properties.qnt](specs/p_bridge/p_bridge_properties.qnt)
 - **RoT agreement**: All parties agree on Rotation-of-Trust aggregate verification key

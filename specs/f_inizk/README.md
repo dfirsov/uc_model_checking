@@ -26,7 +26,7 @@ F-iNIZK provides a formal specification of non-interactive zero-knowledge proofs
 
 ## Functionality
 
-![f-sig](pic.png?raw=true)
+![f-inizk](pic.png?raw=true)
 
 ## Verified Properties
 

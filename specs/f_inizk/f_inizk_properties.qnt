@@ -14,8 +14,8 @@ module f_inizk_properties{
     val P1 = sids.forall(sid => 
         f_nizk_s.state.get(sid).Ver.size() <= 4
     )
-    val P2 = f_nizk_s.log.map(x => x.msg).nizk_get_prove_response_messages().size() <= 5
-    val P3 = f_nizk_s.log.map(x => x.msg).nizk_get_verify_response_messages().size() <= 5
+    // val P2 = f_nizk_s.log.map(x => x.msg).nizk_get_prove_response_messages().size() <= 5
+    // val P3 = f_nizk_s.log.map(x => x.msg).nizk_get_verify_response_messages().size() <= 5
     
     // ProofNonMalleability: The same proof shouldn't verify different statements
     // (unless relation allows it - but this would be suspicious)

@@ -48,7 +48,6 @@ G-Ledger (Global Ledger) provides a formal specification of a distributed ledger
 ## Functionality
 ![g_ledger](pic.png?raw=true)
 
-
 ## Properties [g_ledger_properties.qnt](g_ledger_properties.qnt)
 - **Liveness**: Transaction submitted at time t appears in all party logs by time t + Δ_latency + Δ_slack
 - **Consistency**: For any two parties P and Q, log_P is prefix of log_Q or vice versa
