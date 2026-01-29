@@ -13,7 +13,7 @@ module p_bridge_inizk{
     import p_bridge_types.* from "./p_bridge_types"    
     import p_bridge.* from "./p_bridge"    
 
-    import f_inizk_types.* from "../f_inizk/f_inizk_types" 
+    import f_inizk_types.* from "../f_inizk/f_inizk_types"  
 
     pure def brd_certify_1(sys: BRD_CSystem) : Set[BRD_CTransition] = {
         sys.brd.input.brd_get_certify_request_messages().map(p => {
@@ -137,7 +137,7 @@ module p_bridge_inizk{
     }
 
     pure def brd_certify_5(sys : BRD_CSystem) : Set[BRD_CTransition] = {
-        sys.nizk.input.nizk_get_prove_response_messages().map(p => {
+        sys.nizk.input.filterMap(z => match z { | NIZK_ProveResponse(p) => Some(p) | _ => None }).map(p => {
             sys.brd.handles.filterMap(z => match z {
                 | CertifyProveWait(q) => Some(q)
                 | _ => None
@@ -200,7 +200,7 @@ module p_bridge_inizk{
     }
 
     pure def brd_verify_2(sys : BRD_CSystem) : Set[BRD_CTransition] = {
-        sys.nizk.input.nizk_get_verify_response_messages().map(p => {
+        sys.nizk.input.filterMap(z => match z { | NIZK_VerifyResponse(p) => Some(p) | _ => None }).map(p => {
             sys.brd.handles.filterMap(z => match z {
                 | BRD_VerifyNIZKVerifyWait(q) => Some(q)
                 | _ => None

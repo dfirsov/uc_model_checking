@@ -109,111 +109,111 @@ module f_inizk_types{
         })
    }    
 
-    pure def nizk_get_sim_control_messages(messages: Set[NIZK_Message]): Set[NIZK_Message] = {
-        messages.filter(m => {
-        match m {
-            | NIZK_SIMControl => true
-            | _ => false
-        }
-        })
-    }          
+    // pure def nizk_get_sim_control_messages(messages: Set[NIZK_Message]): Set[NIZK_Message] = {
+    //     messages.filter(m => {
+    //     match m {
+    //         | NIZK_SIMControl => true
+    //         | _ => false
+    //     }
+    //     })
+    // }          
 
-    pure def nizk_get_prove_request_messages(messages: Set[NIZK_Message]): Set[{cfg: MsgConfig, x: NIZK_Statement, w: NIZK_Witness}] = {
-        messages.filterMap(m => {
-        match m {
-            | NIZK_ProveRequest(p) => Some(p)
-            | _ => None
-        }
-        })
-    }   
-    pure def nizk_get_rel_request_messages(messages: Set[NIZK_Message]): Set[{cfg: MsgConfig, x: NIZK_Statement, w: NIZK_Witness}] = {
-        messages.filterMap(m => {
-        match m {
-            | NIZK_RelRequest(p) => Some(p)
-            | _ => None
-        }
-        })
-    }
+    // pure def nizk_get_prove_request_messages(messages: Set[NIZK_Message]): Set[{cfg: MsgConfig, x: NIZK_Statement, w: NIZK_Witness}] = {
+    //     messages.filterMap(m => {
+    //     match m {
+    //         | NIZK_ProveRequest(p) => Some(p)
+    //         | _ => None
+    //     }
+    //     })
+    // }   
+    // pure def nizk_get_rel_request_messages(messages: Set[NIZK_Message]): Set[{cfg: MsgConfig, x: NIZK_Statement, w: NIZK_Witness}] = {
+    //     messages.filterMap(m => {
+    //     match m {
+    //         | NIZK_RelRequest(p) => Some(p)
+    //         | _ => None
+    //     }
+    //     })
+    // }
 
-    pure def nizk_get_rel_request_wait_messages(messages: Set[NIZK_Message]): Set[{cfg: MsgConfig, x: NIZK_Statement, w: NIZK_Witness}] = {
-        messages.filterMap(m => {
-        match m {
-            | NIZK_RelRequestWait(p) => Some(p)
-            | _ => None
-        }
-        })
-    }
+    // pure def nizk_get_rel_request_wait_messages(messages: Set[NIZK_Message]): Set[{cfg: MsgConfig, x: NIZK_Statement, w: NIZK_Witness}] = {
+    //     messages.filterMap(m => {
+    //     match m {
+    //         | NIZK_RelRequestWait(p) => Some(p)
+    //         | _ => None
+    //     }
+    //     })
+    // }
 
-    pure def nizk_get_rel_response_messages(messages: Set[NIZK_Message]): Set[{cfg: MsgConfig, x: NIZK_Statement, w: NIZK_Witness, b: bool}] = {
-        messages.filterMap(m => {
-        match m {
-            | NIZK_RelResponse(p) => Some(p)
-            | _ => None
-        }
-        })
-    }
-    pure def nizk_get_sim_prove_hold_messages(messages: Set[NIZK_Message]): Set[{cfg: MsgConfig, x: NIZK_Statement, w: NIZK_Witness}] = {
-        messages.filterMap(m => {
-        match m {
-            | NIZK_SIMProveHold(p) => Some(p)
-            | _ => None
-        }
-        })
-    }
+    // pure def nizk_get_rel_response_messages(messages: Set[NIZK_Message]): Set[{cfg: MsgConfig, x: NIZK_Statement, w: NIZK_Witness, b: bool}] = {
+    //     messages.filterMap(m => {
+    //     match m {
+    //         | NIZK_RelResponse(p) => Some(p)
+    //         | _ => None
+    //     }
+    //     })
+    // }
+    // pure def nizk_get_sim_prove_hold_messages(messages: Set[NIZK_Message]): Set[{cfg: MsgConfig, x: NIZK_Statement, w: NIZK_Witness}] = {
+    //     messages.filterMap(m => {
+    //     match m {
+    //         | NIZK_SIMProveHold(p) => Some(p)
+    //         | _ => None
+    //     }
+    //     })
+    // }
 
-    pure def nizk_get_sim_prove_release_messages(messages: Set[NIZK_Message]): Set[{cfg: MsgConfig, x: NIZK_Statement, w: NIZK_Witness, pi: NIZK_Proof}] = {
-        messages.filterMap(m => {
-        match m {
-            | NIZK_SIMProveRelease(p) => Some(p)
-            | _ => None
-        }
-        })
-    }
+    // pure def nizk_get_sim_prove_release_messages(messages: Set[NIZK_Message]): Set[{cfg: MsgConfig, x: NIZK_Statement, w: NIZK_Witness, pi: NIZK_Proof}] = {
+    //     messages.filterMap(m => {
+    //     match m {
+    //         | NIZK_SIMProveRelease(p) => Some(p)
+    //         | _ => None
+    //     }
+    //     })
+    // }
 
-    pure def nizk_get_prove_response_messages(messages: Set[NIZK_Message]): Set[{cfg: MsgConfig, x: NIZK_Statement, w: NIZK_Witness, pi: Option[NIZK_Proof]}] = {
-        messages.filterMap(m => {
-        match m {
-            | NIZK_ProveResponse(p) => Some(p)
-            | _ => None
-        }
-        })
-    }
+    // pure def nizk_get_prove_response_messages(messages: Set[NIZK_Message]): Set[{cfg: MsgConfig, x: NIZK_Statement, w: NIZK_Witness, pi: Option[NIZK_Proof]}] = {
+    //     messages.filterMap(m => {
+    //     match m {
+    //         | NIZK_ProveResponse(p) => Some(p)
+    //         | _ => None
+    //     }
+    //     })
+    // }
 
-    pure def nizk_get_verify_request_messages(messages: Set[NIZK_Message]): Set[{cfg: MsgConfig, x: NIZK_Statement, pi: NIZK_Proof}] = {
-        messages.filterMap(m => {
-        match m {
-            | NIZK_VerifyRequest(p) => Some(p)
-            | _ => None
-        }
-        })
-    }
+    // pure def nizk_get_verify_request_messages(messages: Set[NIZK_Message]): Set[{cfg: MsgConfig, x: NIZK_Statement, pi: NIZK_Proof}] = {
+    //     messages.filterMap(m => {
+    //     match m {
+    //         | NIZK_VerifyRequest(p) => Some(p)
+    //         | _ => None
+    //     }
+    //     })
+    // }
 
-    pure def nizk_get_sim_verify_hold_messages(messages: Set[NIZK_Message]): Set[{cfg: MsgConfig, x: NIZK_Statement, pi: NIZK_Proof}] = {
-        messages.filterMap(m => {
-        match m {
-            | NIZK_SIMVerifyHold(p) => Some(p)
-            | _ => None
-        }
-        })
-    }
+    // pure def nizk_get_sim_verify_hold_messages(messages: Set[NIZK_Message]): Set[{cfg: MsgConfig, x: NIZK_Statement, pi: NIZK_Proof}] = {
+    //     messages.filterMap(m => {
+    //     match m {
+    //         | NIZK_SIMVerifyHold(p) => Some(p)
+    //         | _ => None
+    //     }
+    //     })
+    // }
 
-    pure def nizk_get_sim_verify_release_messages(messages: Set[NIZK_Message]): Set[{cfg: MsgConfig, x: NIZK_Statement, pi: NIZK_Proof, w: NIZK_Witness}] = {
-        messages.filterMap(m => {
-        match m {
-            | NIZK_SIMVerifyRelease(p) => Some(p)
-            | _ => None
-        }
-        })
-    }
+    // pure def nizk_get_sim_verify_release_messages(messages: Set[NIZK_Message]): Set[{cfg: MsgConfig, x: NIZK_Statement, pi: NIZK_Proof, w: NIZK_Witness}] = {
+    //     messages.filterMap(m => {
+    //     match m {
+    //         | NIZK_SIMVerifyRelease(p) => Some(p)
+    //         | _ => None
+    //     }
+    //     })
+    // }
 
-    pure def nizk_get_verify_response_messages(messages: Set[NIZK_Message]): Set[{cfg: MsgConfig, x: NIZK_Statement, pi: NIZK_Proof, b: bool}] = {
-        messages.filterMap(m => {
-        match m {
-            | NIZK_VerifyResponse(p) => Some(p)
-            | _ => None
-        }
-        })
-    }
+    // pure def nizk_get_verify_response_messages(messages: Set[NIZK_Message]): Set[{cfg: MsgConfig, x: NIZK_Statement, pi: NIZK_Proof, b: bool}] = {
+    //     messages.filterMap(m => {
+    //     match m {
+    //         | NIZK_VerifyResponse(p) => Some(p)
+    //         | _ => None
+    //     }
+    //     })
+    // }
 
     def nizk_apply_effect(sys: NIZK_System, eff: NIZK_Effect): NIZK_System = {
         match eff {

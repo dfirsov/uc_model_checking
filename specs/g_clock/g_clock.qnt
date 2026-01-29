@@ -81,10 +81,10 @@ module g_clock{
                 | OkayRequest(msg) => Set({
                     if(clock.state.Reg.contains(({party: msg.cfg.party, sid: msg.cfg.sid}))) {
                         // Check if all registered parties are ready (including this one)
-                        val flag = clock.state.Reg.forall(rp => or {
+                        val flag = clock.state.Reg.filter(x => x.party.in(clock.params.C) == false).forall(rp => or {
                              clock.state.ok.contains(rp), 
                              rp == ({party: msg.cfg.party, sid: msg.cfg.sid}),
-                             (msg.cfg.party).in(clock.params.C)
+                             //(msg.cfg.party).in(clock.params.C)
                         })
                         val new_time = if (flag) clock.state.TIME + 1 else clock.state.TIME
                         // for whatever reason we are keeping corrupted parties in the ok set
