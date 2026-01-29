@@ -12,11 +12,9 @@ module f_hash {
     val ALL_HASHES = 50.to(50 + UNIVERSE_SIZE)
 
 
+    // sending hash requests
     pure def hash_hash_1(f_hash: HASH_System) : Set[HASH_Transition] = {
-        f_hash.input.filterMap(m => match m {
-            | HashRequest(p) => Some(p)
-            | _ => None
-        }).map(p => {
+        f_hash.input.filterMap(m => match m { | HashRequest(p) => Some(p) | _ => None}).map(p => {
                 {
                 post_state: f_hash.state,
                 effects: Set(

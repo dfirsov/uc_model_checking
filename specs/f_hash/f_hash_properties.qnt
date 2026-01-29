@@ -9,7 +9,7 @@ module f_hash_properties{
     val Parties = 1.to(PARTY_SIZE)
     val sids = 1.to(SID_SIZE)
     
-
+    // STEP function
     action step : bool = any {
         hash_step,  
         env_hash_send_all_reqs,
@@ -17,11 +17,12 @@ module f_hash_properties{
         env_hash_sim_reqs,
     }    
 
-
+    // INIT function
     action init = all {
         hash_init({P: Parties, SIDs: sids, responsive_simulator: true, enable_logging: true}),
     }
 
+    // environment gives control to the simulator
     action env_hash_sim_reqs : bool = all {
         f_hash_s.input.size() == 0, 
         f_hash_s.handles.size() > 0,
@@ -31,6 +32,7 @@ module f_hash_properties{
         }
     }       
 
+    // environment sends requests to the functionality
     action env_hash_send_all_reqs : bool = all {
         // Precondition: input must be empty
         f_hash_s.input.size() == 0,
@@ -51,6 +53,7 @@ module f_hash_properties{
         }
     }
 
+    // environment consumes response messages from the functionality
     pure def env_consume_response(sys: HASH_System) : Set[HASH_Transition] = {
          sys.input.hash_get_all_response_messages().map(msg_log =>
          {
@@ -94,6 +97,8 @@ module f_hash_properties{
             }
         })
     }
+
+    // =======================  Properties  ================================
 
     // Collision resistance: For all x and y and all P and Q we have that if x ≠ y ⇒ P.Hash(x) ≠ Q.Hash(y).
     // This property checks that different inputs produce different hashes

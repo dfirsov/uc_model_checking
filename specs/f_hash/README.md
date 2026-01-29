@@ -20,11 +20,8 @@ F-Hash provides a formal specification of an idealized collision-resistant hash 
   - Three-phase hash operation with simulator control (`hash_hash_1`, `hash_hash_2`, `hash_hash_3`)
   - Sanity checking: `san_hash` validates hash candidates against collision resistance
   - Clean hash check: `clean_hash` ensures no collisions in the hash map
-  - Simulator loss: `hash_sim_loses_ctrl` handles simulator state loss
+  - Simulator control loss: `hash_sim_loses_ctrl` handles simulator loss of control
 
-- **[f_hash_properties.qnt](f_hash_properties.qnt)**: Formal property specifications
-  - Correctness: All parties get same hash for same input
-  - Collision resistance: Different inputs produce different hashes
 
 ## Functionality
 ![f-hash](pic.png?raw=true)
