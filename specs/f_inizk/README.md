@@ -4,7 +4,7 @@
 F-iNIZK provides a formal specification of non-interactive zero-knowledge proofs with support for interactive relations. This module models a UC ideal functionality that allows parties to prove knowledge of witnesses for statements without revealing the witnesses.
 
 ## Module Structure
-
+ 
 ### Core Files
 
 - **[f_inizk_types.qnt](f_inizk_types.qnt)**: Type definitions and data structures

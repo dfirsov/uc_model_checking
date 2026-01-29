@@ -88,13 +88,7 @@ quint verify <spec_file> [--invariant=<property>]
 - **Proof non-malleability**: Same proof cannot verify different statements
 - **Handle management**: Proper management of prove/verify simulation holds
 
-#### F-iNIZK (NIZK with Interactive Rels) - [f_inizk_properties.qnt](specs/f_inizk/f_inizk_properties.qnt)
-- **Prove soundness**: R(x,w) = 0 ⇒ Prove(x,w) = ⊥
-- **Verify soundness**: ∀x: (∀w: R(x,w) = 0) ⇒ ∀Q,π: Verify(x,π) = 0
-- **Completeness**: Valid witness guarantees successful proof and verification
-- **Verify after prove**: Verification requires prior proof generation
-- **Proof non-malleability**: Same proof verifies only one statement
-- **Handle management**: Proper management of prove/verify/relation holds
+
 
 
 #### F-Diffuse (Message Diffusion) - [f_dif_properties.qnt](specs/f_dif/f_dif_properties.qnt)
