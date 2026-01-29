@@ -57,7 +57,6 @@ quint verify <spec_file> [--invariant=<property>]
 - **Custom effects**: Message exclusion and event logging for protocol control flow
 - **Property checking**: Invariant verification via Apalache, TLC, and simulation
 
-### Properties 
 
 
 
@@ -65,19 +64,6 @@ quint verify <spec_file> [--invariant=<property>]
 
 
 
-
-
-
-
-#### P-Bridge (Cross-Chain Bridge Protocol) - [p_bridge_properties.qnt](specs/p_bridge/p_bridge_properties.qnt)
-- **RoT agreement**: All parties agree on Rotation-of-Trust aggregate verification key
-- **Bridge state consistency**: All parties agree on core bridge state (rot, cID, h, avk', aux, aux')
-- **Aux update**: Auxiliary state updates correctly every R rounds (bst.aux @ (r+R) = bst.aux' @ r)
-- **Bridge democracy**: Committee can change between rotation periods (may be violated)
-- **State persistence**: Bridge state remains stable during non-rotation phases (within Δ+1 rounds)
-- **Cross-chain message integrity**: Messages verified across chains maintain integrity
-- **Key generation correctness**: Bridge validator keys generated and aggregated correctly
-- **Rotation protocol safety**: Key rotation executes safely without disrupting ongoing operations
 
 
 

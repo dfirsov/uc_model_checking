@@ -8,13 +8,13 @@ module f_atms_properties{
    
 
     val P1 = f_atms_s.log.size() <= 10
-    // val P2 = f_atms_s.log.map(x => x.msg).atms_get_gen_response_messages().size() <= 2
-    // val P3 = f_atms_s.log.map(x => x.msg).atms_get_akey_response_messages().size() <= 2
-    // val P4 = f_atms_s.log.map(x => x.msg).atms_get_acheck_response_messages().size() <= 2
-    // val P5 = f_atms_s.log.map(x => x.msg).atms_get_sign_response_messages().size() <= 2
-    // val P6 = f_atms_s.log.map(x => x.msg).atms_get_verify_response_messages().size() <= 2
-    // val P7 = f_atms_s.log.map(x => x.msg).atms_get_asign_response_messages().size() <= 2
-    // val P8 = f_atms_s.log.map(x => x.msg).atms_get_averify_response_messages().size() <= 2
+    val P2 = f_atms_s.log.map(x => x.msg).atms_get_gen_response_messages().size() <= 2
+    val P3 = f_atms_s.log.map(x => x.msg).atms_get_akey_response_messages().size() <= 2
+    val P4 = f_atms_s.log.map(x => x.msg).atms_get_acheck_response_messages().size() <= 2
+    val P5 = f_atms_s.log.map(x => x.msg).atms_get_sign_response_messages().size() <= 2
+    val P6 = f_atms_s.log.map(x => x.msg).atms_get_verify_response_messages().size() <= 2
+    val P7 = f_atms_s.log.map(x => x.msg).atms_get_asign_response_messages().size() <= 2
+    val P8 = f_atms_s.log.map(x => x.msg).atms_get_averify_response_messages().size() <= 2
 
 
     // Handles are properly managed (no orphaned holds)
@@ -149,7 +149,7 @@ val Gen_Deterministic = f_atms_s.log.map(x => x.msg).atms_get_gen_response_messa
         }) implies (msg1.vk == msg2.vk)
     })
 })
-
+ 
 val ACheck_Deterministic = f_atms_s.log.map(x => x.msg).atms_get_acheck_response_messages().forall(msg1 => {
     f_atms_s.log.map(x => x.msg).atms_get_acheck_response_messages().forall(msg2 => {
         (and {
@@ -187,7 +187,7 @@ val AVerify_Deterministic = f_atms_s.log.map(x => x.msg).atms_get_averify_respon
 
 // Non-bottom responses: True for Gen and Ver by typing.
 // Sign non-bottom response: Sign Response is non-bottom if the party has entry in VK
-
+ 
 val Sign_NonBottom_Response = f_atms_s.log.map(x => x.msg).atms_get_sign_response_messages().forall(sign_resp => {
     // Check if this party has generated a VK (has a Gen response in the log)
     val has_vk = f_atms_s.log.map(x => x.msg).atms_get_gen_response_messages().exists(gen =>
@@ -560,10 +560,10 @@ val AllUnforgeability = all {
 // --seed=0x119d88c0b1b3ba
 val AllProps = all {
     AllFunctional,
-    // AllInjective,
-    // AllDeterministic,
-    // AllCorrectness,
-    // AllUnforgeability
+    AllInjective,
+    AllDeterministic,
+    AllCorrectness,
+    AllUnforgeability
 }
 
 val ASign_ThresholdNecessary = f_atms_s.log.map(x => x.msg).atms_get_asign_response_messages().forall(asign =>

@@ -164,14 +164,14 @@ module f_atms_types {
     //     })
     // }
 
-    // pure def atms_get_gen_response_messages(messages: Set[ATMS_Message]): Set[{cfg: MsgConfig, vk: ATMS_VK}] = {
-    //     messages.filterMap(m => {
-    //     match m {
-    //         | GenResponse(p) => Some(p)
-    //         | _ => None
-    //     }
-    //     })
-    // }
+    pure def atms_get_gen_response_messages(messages: Set[ATMS_Message]): Set[{cfg: MsgConfig, vk: ATMS_VK}] = {
+        messages.filterMap(m => {
+        match m {
+            | GenResponse(p) => Some(p)
+            | _ => None
+        }
+        })
+    }
 
     // pure def atms_get_akey_request_messages(messages: Set[ATMS_Message]): Set[{cfg: MsgConfig, vks: List[ATMS_VK]}] = {
     //     messages.filterMap(m => {
@@ -200,14 +200,14 @@ module f_atms_types {
     //     })
     // }
 
-    // pure def atms_get_akey_response_messages(messages: Set[ATMS_Message]): Set[{cfg: MsgConfig, vks: List[ATMS_VK], avk: Option[ATMS_AVK]}] = {
-    //     messages.filterMap(m => {
-    //     match m {
-    //         | AKeyResponse(p) => Some(p)
-    //         | _ => None
-    //     }
-    //     })
-    // }
+    pure def atms_get_akey_response_messages(messages: Set[ATMS_Message]): Set[{cfg: MsgConfig, vks: List[ATMS_VK], avk: Option[ATMS_AVK]}] = {
+        messages.filterMap(m => {
+        match m {
+            | AKeyResponse(p) => Some(p)
+            | _ => None
+        }
+        })
+    }
 
     // pure def atms_get_acheck_request_messages(messages: Set[ATMS_Message]): Set[{cfg: MsgConfig, vks: List[ATMS_VK], avk: ATMS_AVK}] = {
     //     messages.filterMap(m => {
@@ -236,14 +236,14 @@ module f_atms_types {
     //     })
     // }
 
-    // pure def atms_get_acheck_response_messages(messages: Set[ATMS_Message]): Set[{cfg: MsgConfig, vks: List[ATMS_VK], avk: ATMS_AVK, b: bool}] = {
-    //     messages.filterMap(m => {
-    //     match m {
-    //         | ACheckResponse(p) => Some(p)
-    //         | _ => None
-    //     }
-    //     })
-    // }
+    pure def atms_get_acheck_response_messages(messages: Set[ATMS_Message]): Set[{cfg: MsgConfig, vks: List[ATMS_VK], avk: ATMS_AVK, b: bool}] = {
+        messages.filterMap(m => {
+        match m {
+            | ACheckResponse(p) => Some(p)
+            | _ => None
+        }
+        })
+    }
 
     // pure def atms_get_sign_request_messages(messages: Set[ATMS_Message]): Set[{cfg: MsgConfig, m: ATMS_Document}] = {
     //     messages.filterMap(m => {
@@ -272,14 +272,14 @@ module f_atms_types {
     //     })
     // }
 
-    // pure def atms_get_sign_response_messages(messages: Set[ATMS_Message]): Set[{cfg: MsgConfig, m: ATMS_Document, sig: Option[ATMS_Signature]}] = {
-    //     messages.filterMap(m => {
-    //     match m {
-    //         | SignResponse(p) => Some(p)
-    //         | _ => None
-    //     }
-    //     })
-    // }
+    pure def atms_get_sign_response_messages(messages: Set[ATMS_Message]): Set[{cfg: MsgConfig, m: ATMS_Document, sig: Option[ATMS_Signature]}] = {
+        messages.filterMap(m => {
+        match m {
+            | SignResponse(p) => Some(p)
+            | _ => None
+        }
+        })
+    }
 
     // pure def atms_get_verify_request_messages(messages: Set[ATMS_Message]): Set[{cfg: MsgConfig, vk: ATMS_VK, m: ATMS_Document, sig: ATMS_Signature}] = {
     //     messages.filterMap(m => {
@@ -308,14 +308,14 @@ module f_atms_types {
     //     })
     // }
 
-    // pure def atms_get_verify_response_messages(messages: Set[ATMS_Message]): Set[{cfg: MsgConfig, vk: ATMS_VK, m: ATMS_Document, sig: ATMS_Signature, b: bool}] = {
-    //     messages.filterMap(m => {
-    //     match m {
-    //         | VerifyResponse(p) => Some(p)
-    //         | _ => None
-    //     }
-    //     })
-    // }
+    pure def atms_get_verify_response_messages(messages: Set[ATMS_Message]): Set[{cfg: MsgConfig, vk: ATMS_VK, m: ATMS_Document, sig: ATMS_Signature, b: bool}] = {
+        messages.filterMap(m => {
+        match m {
+            | VerifyResponse(p) => Some(p)
+            | _ => None
+        }
+        })
+    }
 
     // pure def atms_get_asign_request_messages(messages: Set[ATMS_Message]): Set[{cfg: MsgConfig, m: ATMS_Document, vks: List[ATMS_VK], S: List[{vk:ATMS_VK, sig: ATMS_Signature}]}] = {
     //     messages.filterMap(m => {
@@ -344,14 +344,14 @@ module f_atms_types {
     //     })
     // }
 
-    // pure def atms_get_asign_response_messages(messages: Set[ATMS_Message]): Set[{cfg: MsgConfig, m: ATMS_Document, vks: List[ATMS_VK], S: List[{vk:ATMS_VK, sig: ATMS_Signature}], avk: Option[ATMS_AVK], bs : List[bool], tau: Option[ATMS_ASignature]}] = {
-    //     messages.filterMap(m => {
-    //     match m {
-    //         | ASignResponse(p) => Some(p)
-    //         | _ => None
-    //     }
-    //     })
-    // }
+    pure def atms_get_asign_response_messages(messages: Set[ATMS_Message]): Set[{cfg: MsgConfig, m: ATMS_Document, vks: List[ATMS_VK], S: List[{vk:ATMS_VK, sig: ATMS_Signature}], avk: Option[ATMS_AVK], bs : List[bool], tau: Option[ATMS_ASignature]}] = {
+        messages.filterMap(m => {
+        match m {
+            | ASignResponse(p) => Some(p)
+            | _ => None
+        }
+        })
+    }
 
     // pure def atms_get_averify_request_messages(messages: Set[ATMS_Message]): Set[{cfg: MsgConfig, avk: ATMS_AVK, m: ATMS_Document, sig: ATMS_ASignature}] = {
     //     messages.filterMap(m => {
@@ -380,14 +380,14 @@ module f_atms_types {
     //     })
     // } 
 
-    // pure def atms_get_averify_response_messages(messages: Set[ATMS_Message]): Set[{cfg: MsgConfig, avk: ATMS_AVK, m: ATMS_Document, sig: ATMS_ASignature, b: bool}] = {
-    //     messages.filterMap(m => {
-    //     match m {
-    //         | AVerifyResponse(p) => Some(p)
-    //         | _ => None
-    //     }
-    //     })
-    // }
+    pure def atms_get_averify_response_messages(messages: Set[ATMS_Message]): Set[{cfg: MsgConfig, avk: ATMS_AVK, m: ATMS_Document, sig: ATMS_ASignature, b: bool}] = {
+        messages.filterMap(m => {
+        match m {
+            | AVerifyResponse(p) => Some(p)
+            | _ => None
+        }
+        })
+    }
 
     // pure def atms_get_sim_control_messages(messages: Set[ATMS_Message]): Set[ATMS_Message] = {
     //     messages.filter(m => {

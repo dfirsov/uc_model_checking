@@ -3,13 +3,14 @@ module p_bridge_types {
     import basicSpells.* from "../../spells/basicSpells"
     import common.* from "../common"
 
+
     import f_atms.* from "../f_atms/f_atms"    
     import g_clock.* from "../g_clock/g_clock"    
     import f_atms_types.* from "../f_atms/f_atms_types"    
     import g_clock_types.* from "../g_clock/g_clock_types"    
     import g_ledger_types.* from "../g_ledger/g_ledger_types" 
     import f_dif_types.* from "../f_dif/f_dif_types" 
-    import f_sig_types.* from "../f_sig/f_sig_types" 
+    //import f_sig_types.* from "../f_sig/f_sig_types" 
     import f_pki_types.* from "../f_pki/f_pki_types"
     import f_hash_types.* from "../f_hash/f_hash_types"
     import f_inizk_types.* from "../f_inizk/f_inizk_types"
@@ -17,12 +18,12 @@ module p_bridge_types {
     type BRD_BVK = ATMS_VK 
     type BRD_ROT = ATMS_AVK 
     type BRD_AUX = {bvks: List[BRD_BVK], com: Committee}  
-    type BRD_BR_Args = {r: Time, ms: Set[{party: Party, avk: ATMS_AVK, sig: SIG_Signature}], L1: List[LED_Tx], L2: List[LED_Tx]}
+    type BRD_BR_Args = {r: Time, ms: Set[{party: Party, avk: ATMS_AVK, sig: int}], L1: List[LED_Tx], L2: List[LED_Tx]}
     type BRD_BST_Entry = {
                 bvk: Option[BRD_BVK],
                 rot: Option[BRD_ROT],
                 cID: Option[int],
-                m: Set[{party: Party, avk: ATMS_AVK, sig: SIG_Signature}],
+                m: Set[{party: Party, avk: ATMS_AVK, sig: int}],
                 aux_prim: Option[{bvks: Party -> BRD_BVK, com: Committee}],
                 aux: Option[{bvks: Party -> BRD_BVK, com: Committee}],
                 avk_prim: Option[ATMS_AVK],
@@ -32,7 +33,7 @@ module p_bridge_types {
     type BRD_BR_Resp = {
             //btx1: Option[LED_Tx], 
             btx2: Option[LED_Tx], 
-            m: Option[{party: Party, avk: ATMS_AVK, sig: SIG_Signature}], 
+            m: Option[{party: Party, avk: ATMS_AVK, sig: int}], 
             bst: Option[BRD_BST_Entry] }
 
     type BRD_Message =
@@ -51,8 +52,8 @@ module p_bridge_types {
 
         | BridgeRequest({cfg: MsgConfig})
         | BridgeFetchWait({cfg: MsgConfig, r: Time})
-        | BridgeL1ReadWait({cfg: MsgConfig, r: Time, ms: Set[{party: Party, avk: ATMS_AVK, sig: SIG_Signature}]})
-        | BridgeL2ReadWait({cfg: MsgConfig, r: Time, ms: Set[{party: Party, avk: ATMS_AVK, sig: SIG_Signature}], L1: List[LED_Tx]})
+        | BridgeL1ReadWait({cfg: MsgConfig, r: Time, ms: Set[{party: Party, avk: ATMS_AVK, sig: int}]})
+        | BridgeL2ReadWait({cfg: MsgConfig, r: Time, ms: Set[{party: Party, avk: ATMS_AVK, sig: int}], L1: List[LED_Tx]})
         | BridgeBRAlgorithmRequest({cfg: MsgConfig, args: BRD_BR_Args})
         | BridgeBRAlgorithmResponse({cfg: MsgConfig, args: BRD_BR_Args, resp: BRD_BR_Resp})
 
@@ -560,5 +561,6 @@ module p_bridge_types {
             }
         })
     }
-    
+
+   
 }
