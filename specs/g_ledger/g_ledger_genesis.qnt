@@ -10,7 +10,10 @@ module g_ledger_genesis {
 
 
     pure def led_genesis_1(led: LED_System, clock: GC_System) : Set[(LED_Transition, GC_Transition)] = {
-        led.input.led_get_genesis_request_messages().map(p => {
+        led.input.filterMap(m => match m {
+            | GenesisRequest(p) => Some(p)
+            | _ => None
+        }).map(p => {
             if(led_access_check(p.cfg, led.params)){
                 {
                     post_state: led.state,
@@ -33,8 +36,14 @@ module g_ledger_genesis {
 
 
     pure def led_genesis_2(led: LED_System, clock: GC_System) : Set[(LED_Transition, GC_Transition)] = {
-        led.input.led_get_sim_control_messages().map(_ => {
-            led.handles.led_get_genesis_sim_hold_messages().map(p => {
+        led.input.filterMap(m => match m {
+            | LED_SIMControl => Some(m)
+            | _ => None
+        }).map(_ => {
+            led.handles.filterMap(h => match h {
+                | GenesisSIMHold(p) => Some(p)
+                | _ => None
+            }).map(p => {
                 {
                     post_state: led.state,
                     effects: Set(
@@ -48,7 +57,10 @@ module g_ledger_genesis {
  
 
     pure def led_genesis_3(led: LED_System, clock: GC_System) : Set[(LED_Transition, GC_Transition)] = {
-        led.input.led_get_genesis_sim_release_messages().map(p => {
+        led.input.filterMap(m => match m {
+            | GenesisSIMRelease(p) => Some(p)
+            | _ => None
+        }).map(p => {
             {
                 post_state: led.state,
                 effects: Set(

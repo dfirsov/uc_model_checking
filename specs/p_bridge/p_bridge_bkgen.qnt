@@ -20,7 +20,10 @@ module p_bridge_bkgen{
     
 
     pure def brd_bkgen_1(sys: BRD_CSystem) : Set[BRD_CTransition] = {
-        sys.brd.input.brd_get_bkgen_request_messages().map(p => {
+        sys.brd.input.filterMap(z => match z {
+            | BKGenRequest(p) => Some(p)
+            | _ => None
+        }).map(p => {
             if(brd_access_check(p.cfg, sys.brd.params)){
                 val r = sys.clock.state.TIME
                 if(r != sys.brd.params.r0 or sys.brd.state.bkgen_flag.contains(p.cfg.party)){
@@ -63,8 +66,14 @@ module p_bridge_bkgen{
     }
 
     pure def brd_bkgen_2(sys : BRD_CSystem) : Set[BRD_CTransition] = {
-        sys.atms.input.atms_get_gen_response_messages().map(p => {
-            sys.brd.handles.brd_get_bkgen_atm_gen_wait_messages().filter(q => p.cfg == q.cfg).map(q => {
+        sys.atms.input.filterMap(z => match z {
+            | GenResponse(p) => Some(p)
+            | _ => None
+        }).map(p => {
+            sys.brd.handles.filterMap(h => match h {
+                | BKGenATMGenWait(q) => Some(q)
+                | _ => None
+            }).filter(q => p.cfg == q.cfg).map(q => {
                 val brd_trans = {
                     post_state: {...sys.brd.state,
                         //bvk: sys.brd.state.bvk.put(p.cfg.party, p.vk)
@@ -96,8 +105,13 @@ module p_bridge_bkgen{
     }
 
     pure def brd_bkgen_3(sys : BRD_CSystem) : Set[BRD_CTransition] = {
-        sys.pki.input.pki_get_register_response_messages().map(p => {
-            sys.brd.handles.brd_get_bkgen_pki_wait_messages().filter(q => p.cfg == q.cfg).map(q => {
+        sys.pki.input.map(m => {
+            match m {
+                | PKI_RegisterResponse(p) => {
+                    sys.brd.handles.filterMap(h => match h {
+                        | BKGenPKIWait(q) => Some(q)
+                        | _ => None
+                    }).filter(q => p.cfg == q.cfg).map(q => {
                 val brd_trans = {
                     post_state: sys.brd.state,
                     effects: Set(
@@ -113,19 +127,28 @@ module p_bridge_bkgen{
                     )
                 }
 
-                Set({...sys.brd_id_ctrans(),
-                    brd: brd_trans,
-                    clock: clock_trans,
-                    pki: sys.pki.pki_skip_trans()
-                })
+                        Set({...sys.brd_id_ctrans(),
+                            brd: brd_trans,
+                            clock: clock_trans,
+                            pki: sys.pki.pki_skip_trans()
+                        })
 
-            }).flatten()
+                    }).flatten()
+                }
+                | _ => Set()
+            }
         }).flatten()
     }
 
     pure def brd_bkgen_4(sys : BRD_CSystem) : Set[BRD_CTransition] = {
-        sys.clock.input.get_okay_response_messages().map(p => {
-            sys.brd.handles.brd_get_bkgen_ok_wait_messages().filter(q => p.cfg == q.cfg).map(q => {
+        sys.clock.input.filterMap(z => match z {
+            | OkayResponse(q) => Some(q)
+            | _ => None
+        }).map(p => {
+            sys.brd.handles.filterMap(h => match h {
+                | BKGenOKWait(q) => Some(q)
+                | _ => None
+            }).filter(q => p.cfg == q.cfg).map(q => {
                 val brd_trans = {
                     post_state: sys.brd.state,
                     effects: Set(

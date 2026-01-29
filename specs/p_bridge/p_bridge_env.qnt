@@ -208,7 +208,7 @@ module p_bridge_env{
     }
 
    pure def g_ledger1_response_messages_trans(sys: LED_System) : Set[LED_Transition] = {
-         sys.input.led_get_submit_response_messages().map(msg_log =>
+         sys.input.filterMap(z => match z {| SubmitResponse(p) => Some(p) | _ => None}).map(msg_log =>
          {
             post_state : sys.state,
             effects : Set(
@@ -415,7 +415,7 @@ module p_bridge_env{
             atms_init({P : x.P, C : x.C, SIDs: x.SIDs, t: (t-1), enable_logging: false, responsive_simulator: true}),
             g_ledger_s' = led_initial({P: x.P, C: x.C, SIDs: x.SIDs, delta_latency: x.delta_latency, delta_slack: x.delta_slack, delta_apl: x.delta_apl, Val: true, comsel_a: x.comsel_a, comsel_b: x.comsel_b, comsel_c: x.comsel_c, enable_logging: false, responsive_simulator: true}),
             g_ledger_s2' = led_initial({P: x.P, C: x.C, SIDs: x.SIDs, delta_latency: x.delta_latency, delta_slack: x.delta_slack, delta_apl: x.delta_apl, Val: true, comsel_a: x.comsel_a, comsel_b: x.comsel_b, comsel_c: x.comsel_c, enable_logging: false, responsive_simulator: true}),
-            nizk_init({P: x.P, C: x.C, SIDs: x.SIDs, enable_logging: false, responsive_simulator: true}),
+           nizk_init({P: x.P, C: x.C, SIDs: x.SIDs, enable_logging: false, responsive_simulator: true}),
         }
     }
 

@@ -27,7 +27,10 @@ module p_bridge_br{
     
 
     pure def brd_br_1(sys: BRD_CSystem) : Set[BRD_CTransition] = {
-        sys.brd.input.brd_get_bridge_request_messages().map(p => {
+        sys.brd.input.filterMap(z => match z {
+            | BridgeRequest(p) => Some(p)
+            | _ => None
+        }).map(p => {
             if(brd_access_check(p.cfg, sys.brd.params)){
                 val r = sys.clock.state.TIME
                 if(r < sys.brd.params.r0 + 2 or sys.brd.state.bridge_flag.contains((p.cfg.party, r))){
@@ -70,8 +73,14 @@ module p_bridge_br{
     }
 
     pure def brd_br_2(sys : BRD_CSystem) : Set[BRD_CTransition] = {
-        sys.dif.input.dif_get_fetch_response_messages().map(p => {
-            sys.brd.handles.brd_get_bridge_fetch_wait_messages().filter(q => p.cfg == q.cfg).map(q => {
+        sys.dif.input.filterMap(z => match z {
+            | DIF_FetchResponse(p) => Some(p)
+            | _ => None
+        }).map(p => {
+            sys.brd.handles.filterMap(z => match z {
+                | BridgeFetchWait(q) => Some(q)
+                | _ => None
+            }).filter(q => p.cfg == q.cfg).map(q => {
 
                 val brd_trans = {
                     post_state: sys.brd.state,
@@ -98,8 +107,14 @@ module p_bridge_br{
     }
 
     pure def brd_br_3(sys : BRD_CSystem) : Set[BRD_CTransition] = {
-        sys.ledger1.input.led_get_read_response_messages().map(p => {
-            sys.brd.handles.brd_get_bridge_l1_read_wait_messages().filter(q => p.cfg == q.cfg).map(q => {
+        sys.ledger1.input.filterMap(z => match z {
+            | ReadResponse(p) => Some(p)
+            | _ => None
+        }).map(p => {
+            sys.brd.handles.filterMap(z => match z {
+                | BridgeL1ReadWait(q) => Some(q)
+                | _ => None
+            }).filter(q => p.cfg == q.cfg).map(q => {
 
                 val brd_trans = {
                     post_state: sys.brd.state,
@@ -126,8 +141,14 @@ module p_bridge_br{
     }
 
     pure def brd_br_4(sys : BRD_CSystem) : Set[BRD_CTransition] = {
-        sys.ledger2.input.led_get_read_response_messages().map(p => {
-            sys.brd.handles.brd_get_bridge_l2_read_wait_messages().filter(q => p.cfg == q.cfg).map(q => {
+        sys.ledger2.input.filterMap(z => match z {
+            | ReadResponse(p) => Some(p)
+            | _ => None
+        }).map(p => {
+            sys.brd.handles.filterMap(z => match z {
+                | BridgeL2ReadWait(q) => Some(q)
+                | _ => None
+            }).filter(q => p.cfg == q.cfg).map(q => {
 
                 val brd_trans = {
                     post_state: sys.brd.state,
@@ -146,7 +167,10 @@ module p_bridge_br{
     }
 
     pure def brd_br_5(sys : BRD_CSystem) : Set[BRD_CTransition] = {
-        sys.brd.input.brd_get_bridge_br_algorithm_request_messages().map(p => {
+        sys.brd.input.filterMap(z => match z {
+            | BridgeBRAlgorithmRequest(p) => Some(p)
+            | _ => None
+        }).map(p => {
             val r = p.args.r
             val r0 = sys.brd.params.r0
             val R = sys.brd.params.R
@@ -303,8 +327,14 @@ module p_bridge_br{
     }  
 
     pure def brd_br_5_case5_2(sys : BRD_CSystem) : Set[BRD_CTransition] = {          
-        sys.atms.input.atms_get_asign_response_messages().map(p => {
-            sys.brd.handles.brd_get_bridge_asig_wait_messages().filter(q => p.cfg == q.cfg).map(q => {
+        sys.atms.input.filterMap(z => match z {
+            | ASignResponse(p) => Some(p)
+            | _ => None
+        }).map(p => {
+            sys.brd.handles.filterMap(z => match z {
+                | BridgeASigWait(q) => Some(q)
+                | _ => None
+            }).filter(q => p.cfg == q.cfg).map(q => {
                 if(p.tau == None){
                     //Set({...sys.brd_id_ctrans(),}) // TODO
                     Map().get(2)
@@ -382,8 +412,14 @@ module p_bridge_br{
     }
 
     pure def brd_br_5_case3_2(sys : BRD_CSystem) : Set[BRD_CTransition] = {    
-        sys.ledger1.input.led_get_comsel_response_messages().map(p => {
-            sys.brd.handles.brd_get_bridge_com_sel_wait_messages().filter(q => p.cfg == q.cfg).map(q => {
+        sys.ledger1.input.filterMap(z => match z {
+            | ComSelResponse(p) => Some(p)
+            | _ => None
+        }).map(p => {
+            sys.brd.handles.filterMap(z => match z {
+                | BridgeComSelWait(q) => Some(q)
+                | _ => None
+            }).filter(q => p.cfg == q.cfg).map(q => {
                 val brd_trans = {
                     post_state: sys.brd.state,
                     effects: Set(
@@ -418,8 +454,14 @@ module p_bridge_br{
     }
 
     pure def brd_br_5_case3_3(sys : BRD_CSystem) : Set[BRD_CTransition] = {    
-        sys.atms.input.atms_get_akey_response_messages().map(p => {
-            sys.brd.handles.brd_get_bridge_akey_wait_messages().filter(q => p.cfg == q.cfg).map(q => {
+        sys.atms.input.filterMap(z => match z {
+            | AKeyResponse(p) => Some(p)
+            | _ => None
+        }).map(p => {
+            sys.brd.handles.filterMap(z => match z {
+                | BridgeAKeyWait(q) => Some(q)
+                | _ => None
+            }).filter(q => p.cfg == q.cfg).map(q => {
 
                 if(p.avk == None){
                     val brd_trans = {
@@ -476,8 +518,14 @@ module p_bridge_br{
     }
 
     pure def brd_br_5_case3_4(sys : BRD_CSystem) : Set[BRD_CTransition] = {  
-        sys.ledger1.input.led_get_apl_response_messages().map(p => {
-            sys.brd.handles.brd_get_bridge_apl_wait_messages().filter(q => p.cfg == q.cfg).map(q => {
+        sys.ledger1.input.filterMap(z => match z {
+            | APLResponse(p) => Some(p)
+            | _ => None
+        }).map(p => {
+            sys.brd.handles.filterMap(z => match z {
+                | BridgeAPLWait(q) => Some(q)
+                | _ => None
+            }).filter(q => p.cfg == q.cfg).map(q => {
 
                 val brd_trans = {
                     post_state: sys.brd.state,
@@ -517,8 +565,14 @@ module p_bridge_br{
     }
 
     pure def brd_br_5_case3_5(sys : BRD_CSystem) : Set[BRD_CTransition] = {    
-        sys.hash.input.hash_get_response_messages().map(p => {
-            sys.brd.handles.brd_get_bridge_hash_wait_messages().filter(q => p.cfg == q.cfg).map(q => {
+        sys.hash.input.filterMap(z => match z {
+            | HashResponse(p) => Some(p)
+            | _ => None
+        }).map(p => {
+            sys.brd.handles.filterMap(z => match z {
+                | BridgeHashWait(q) => Some(q)
+                | _ => None
+            }).filter(q => p.cfg == q.cfg).map(q => {
                     
                 val brd_trans = {
                     post_state: sys.brd.state,
@@ -557,8 +611,14 @@ module p_bridge_br{
     }
 
     pure def brd_br_5_case3_6(sys : BRD_CSystem) : Set[BRD_CTransition] = {  
-        sys.atms.input.atms_get_sign_response_messages().map(p => {
-            sys.brd.handles.brd_get_bridge_sig_wait_messages().filter(q => p.cfg == q.cfg).map(q => {
+        sys.atms.input.filterMap(z => match z {
+            | SignResponse(p) => Some(p)
+            | _ => None
+        }).map(p => {
+            sys.brd.handles.filterMap(z => match z {
+                | BridgeSigWait(q) => Some(q)
+                | _ => None
+            }).filter(q => p.cfg == q.cfg).map(q => {
 
                 val bst = {...q.bst, 
                     aux_prim: Some({bvks: q.bst.aux.unwrap().bvks, com: q.com_prim}),    
@@ -617,7 +677,10 @@ module p_bridge_br{
     }
 
     pure def brd_br_6(sys : BRD_CSystem) : Set[BRD_CTransition] = {      
-        sys.brd.input.brd_get_bridge_br_algorithm_response_messages().map(p => {
+        sys.brd.input.filterMap(z => match z {
+            | BridgeBRAlgorithmResponse(p) => Some(p)
+            | _ => None
+        }).map(p => {
 
             if(p.resp.bst == None){
                 Map().get(1) // should not happen
@@ -639,7 +702,10 @@ module p_bridge_br{
     }
 
     pure def brd_br_7(sys : BRD_CSystem) : Set[BRD_CTransition] = {   
-        sys.brd.input.brd_get_bridge_diffuse_messages().map(p => {
+        sys.brd.input.filterMap(z => match z {
+            | BridgeDiffuse(p) => Some(p)
+            | _ => None
+        }).map(p => {
             if(p.resp.m == None){
                 Set({...sys.brd_id_ctrans(),
                     brd: {
@@ -674,8 +740,14 @@ module p_bridge_br{
     }
 
     pure def brd_br_8(sys : BRD_CSystem) : Set[BRD_CTransition] = {   
-        sys.dif.input.dif_get_diffuse_response_messages().map(p => {
-            sys.brd.handles.brd_get_bridge_diffuse_wait_messages().filter(q => p.cfg == q.cfg).map(q => {
+        sys.dif.input.filterMap(z => match z {
+            | DIF_DiffuseResponse(p) => Some(p)
+            | _ => None
+        }).map(p => {
+            sys.brd.handles.filterMap(z => match z {
+                | BridgeDiffuseWait(q) => Some(q)
+                | _ => None
+            }).filter(q => p.cfg == q.cfg).map(q => {
                 Set({...sys.brd_id_ctrans(),
                     dif: sys.dif.dif_skip_trans(),
                     brd: {
@@ -722,7 +794,10 @@ module p_bridge_br{
     // }
 
     pure def brd_br_11(sys : BRD_CSystem) : Set[BRD_CTransition] = {   
-        sys.brd.input.brd_get_bridge_l2_submit_messages().map(p => {
+        sys.brd.input.filterMap(z => match z {
+            | BridgeL2Submit(p) => Some(p)
+            | _ => None
+        }).map(p => {
             if(p.resp.btx2 == None){
                 Set({...sys.brd_id_ctrans(),
                     brd: {
@@ -764,8 +839,14 @@ module p_bridge_br{
     }    
 
     pure def brd_br_12(sys : BRD_CSystem) : Set[BRD_CTransition] = {  
-        sys.ledger2.input.led_get_submit_response_messages().map(p => {
-            sys.brd.handles.brd_get_bridge_l2_submit_wait_messages().filter(q => p.cfg == q.cfg).map(q => {
+        sys.ledger2.input.filterMap(z => match z {
+            | SubmitResponse(p) => Some(p)
+            | _ => None
+        }).map(p => {
+            sys.brd.handles.filterMap(z => match z {
+                | BridgeL2SubmitWait(q) => Some(q)
+                | _ => None
+            }).filter(q => p.cfg == q.cfg).map(q => {
 
                 Set({...sys.brd_id_ctrans(),
                     ledger2: sys.ledger2.led_skip_trans(),
@@ -789,8 +870,14 @@ module p_bridge_br{
     }    
 
     pure def brd_br_13(sys : BRD_CSystem) : Set[BRD_CTransition] = {  
-        sys.clock.input.get_okay_response_messages().map(p => {
-            sys.brd.handles.brd_get_bridge_ok_wait_messages().filter(q => p.cfg == q.cfg).map(q => {
+        sys.clock.input.filterMap(z => match z {
+            | OkayResponse(p) => Some(p)
+            |  _ => None
+        }).map(p => {
+            sys.brd.handles.filterMap(z => match z {
+                | BridgeOKWait(q) => Some(q)
+                | _ => None
+            }).filter(q => p.cfg == q.cfg).map(q => {
                 Set({...sys.brd_id_ctrans(),
                     clock: sys.clock.gc_skip_trans(),
                     brd: {

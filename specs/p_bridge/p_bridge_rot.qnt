@@ -19,7 +19,12 @@ module p_bridge_rot{
     import p_bridge.* from "./p_bridge" 
 
     pure def brd_rot_1(sys: BRD_CSystem) : Set[BRD_CTransition] = {
-        sys.brd.input.brd_get_rot_request_messages().map(p => {
+        sys.brd.input.filterMap(z => {
+            match z {
+                | RoTRequest(p) => Some(p)
+                | _ => None
+            }
+        }).map(p => {
             if(brd_access_check(p.cfg, sys.brd.params)){
                 val r = sys.clock.state.TIME
                 if(r != sys.brd.params.r0 + 1 or sys.brd.state.rot_flag.contains(p.cfg.party)){
@@ -62,8 +67,13 @@ module p_bridge_rot{
     }        
 
     pure def brd_rot_2(sys : BRD_CSystem) : Set[BRD_CTransition] = {
-        sys.pki.input.pki_get_get_all_response_messages().map(p => {
-            sys.brd.handles.brd_get_rot_pki_get_all_wait_messages().filter(q => p.cfg == q.cfg).map(q => {
+        sys.pki.input.filterMap(z => match z {
+            | PKI_GetAllResponse(p) => Some(p)
+            | _ => None}).map(p => {
+            sys.brd.handles.filterMap(z => match z {
+                | RoTPKIGetAllWait(q) => Some(q)
+                | _ => None
+            }).filter(q => p.cfg == q.cfg).map(q => {
                 val brd_trans = {
                     post_state: sys.brd.state,
                     effects: Set(
@@ -91,8 +101,14 @@ module p_bridge_rot{
     
 
     pure def brd_rot_3(sys : BRD_CSystem) : Set[BRD_CTransition] = {
-        sys.ledger1.input.led_get_comsel_response_messages().map(p => {
-            sys.brd.handles.brd_get_rot_com_sel_wait_messages().filter(q => p.cfg == q.cfg).map(q => {
+        sys.ledger1.input.filterMap(z => match z {
+            | ComSelResponse(p) => Some(p)
+            | _ => None
+        }).map(p => {
+            sys.brd.handles.filterMap(z => match z {
+                | RoTComSelWait(q) => Some(q)
+                | _ => None
+            }).filter(q => p.cfg == q.cfg).map(q => {
 
                 val brd_trans = {
                     post_state: sys.brd.state,
@@ -122,8 +138,14 @@ module p_bridge_rot{
     }        
 
     pure def brd_rot_4(sys : BRD_CSystem) : Set[BRD_CTransition] = {
-        sys.atms.input.atms_get_akey_response_messages().map(p => {
-            sys.brd.handles.brd_get_rot_akey_wait_messages().filter(q => p.cfg == q.cfg).map(q => {
+        sys.atms.input.filterMap(z => match z {
+            | AKeyResponse(p) => Some(p)
+            | _ => None
+        }).map(p => {
+            sys.brd.handles.filterMap(z => match z {
+                | RoTAKeyWait(q) => Some(q)
+                | _ => None
+            }).filter(q => p.cfg == q.cfg).map(q => {
                 if(p.avk == None){
                     Set({...sys.brd_id_ctrans(),
                         brd: {
@@ -170,28 +192,38 @@ module p_bridge_rot{
     }    
 
     pure def brd_rot_5(sys : BRD_CSystem) : Set[BRD_CTransition] = {
-        sys.clock.input.get_okay_response_messages().map(p => {
-            sys.brd.handles.brd_get_rot_ok_wait_messages().filter(q => p.cfg == q.cfg).map(q => {
+        sys.clock.input.map(pp => {
+            match pp {
+                | OkayResponse(p) => {
 
-                val brd_trans = {
-                    post_state: sys.brd.state,
-                    effects: Set(
-                        BRD_UpdateInput(Set(RoTResponse({
-                            cfg: q.cfg,
-                            bvks: q.bvks,
-                            com: q.com,
-                            avk: q.avk 
-                        }))),
-                        BRD_RemoveHandle(RoTOKWait(q)),
-                    )
+                    sys.brd.handles.filterMap(z => match z {
+                        | RoTOKWait(q) => Some(q)
+                        | _ => None
+                    }).filter(q => p.cfg == q.cfg).map(q => {
+
+                        val brd_trans = {
+                            post_state: sys.brd.state,
+                            effects: Set(
+                                BRD_UpdateInput(Set(RoTResponse({
+                                    cfg: q.cfg,
+                                    bvks: q.bvks,
+                                    com: q.com,
+                                    avk: q.avk 
+                                }))),
+                                BRD_RemoveHandle(RoTOKWait(q)),
+                            )
+                        }
+
+                        Set({...sys.brd_id_ctrans(),
+                            brd: brd_trans,
+                            clock: sys.clock.gc_skip_trans(),
+                            atms: sys.atms.atms_skip_trans()
+                        })
+                    }).flatten()
                 }
+                | _ => Set()
+            }
 
-                Set({...sys.brd_id_ctrans(),
-                    brd: brd_trans,
-                    clock: sys.clock.gc_skip_trans(),
-                    atms: sys.atms.atms_skip_trans()
-                })
-            }).flatten()
         }).flatten()
     }
 

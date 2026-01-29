@@ -13,7 +13,10 @@ module f_inizk{
     //val ALL_WITNESSES = Set(List()) // TODO: change that to get more adv behaviors
 
     pure def nizk_sim_loses_ctrl(nizk: NIZK_System) : Set[NIZK_Transition] = {
-        nizk.input.nizk_get_sim_control_messages().map(c =>  
+        nizk.input.filterMap(m => match m {
+            | NIZK_SIMControl => Some(m)
+            | _ => None
+        }).map(c =>  
             {
                 post_state : nizk.state,
                 effects : Set(
@@ -23,7 +26,10 @@ module f_inizk{
     }    
 
     pure def nizk_rel_1(nizk: NIZK_System, hash: HASH_System) : Set[(NIZK_Transition, HASH_Transition)] = {
-        nizk.input.nizk_get_rel_request_messages().map(m => {
+        nizk.input.filterMap(m => match m {
+            | NIZK_RelRequest(m) => Some(m)
+            | _ => None
+        }).map(m => {
            // if(nizk_access_check(m.cfg, nizk.params)) {
                 val sid = m.cfg.sid
                 val party = m.cfg.party
@@ -54,8 +60,11 @@ module f_inizk{
     }
 
     pure def nizk_rel_2(nizk: NIZK_System, hash: HASH_System) : Set[(NIZK_Transition, HASH_Transition)] = {
-        hash.input.hash_get_response_messages().map(r => {
-            nizk.handles.nizk_get_rel_request_wait_messages().filter(x => r.cfg == x.cfg).map(p => {
+        hash.input.filterMap(z => match z { | HashResponse(p) => Some(p) | _ => None }).map(r => {
+            nizk.handles.filterMap(h => match h {
+                | NIZK_RelRequestWait(x) => Some(x)
+                | _ => None
+            }).filter(x => r.cfg == x.cfg).map(p => {
                 val sid = p.cfg.sid
                 val party = p.cfg.party
                 val sid_state = nizk.state.get(sid)
@@ -84,7 +93,10 @@ module f_inizk{
     }
 
     pure def nizk_prove_0(nizk: NIZK_System) : Set[NIZK_Transition] = {
-        nizk.input.nizk_get_prove_request_messages().map(m => {
+        nizk.input.filterMap(m => match m {
+            | NIZK_ProveRequest(m) => Some(m)
+            | _ => None
+        }).map(m => {
             if(nizk_access_check(m.cfg, nizk.params)) {
                 val sid = m.cfg.sid
                 val party = m.cfg.party
@@ -111,8 +123,14 @@ module f_inizk{
     }
 
     pure def nizk_prove_1(nizk: NIZK_System) : Set[NIZK_Transition] = {
-        nizk.handles.nizk_get_prove_rel_wait_messages().map(m => {
-            nizk.input.nizk_get_rel_response_messages().filter(x => x.cfg.nonce == m.cfg.nonce).map(r => {
+        nizk.handles.filterMap(h => match h {
+            | NIZK_ProveRelWait(m) => Some(m)
+            | _ => None
+        }).map(m => {
+            nizk.input.filterMap(i => match i {
+                | NIZK_RelResponse(r) => Some(r)
+                | _ => None
+            }).filter(x => x.cfg.nonce == m.cfg.nonce).map(r => {
              
                 val sid = m.cfg.sid
                 val party = m.cfg.party
@@ -141,8 +159,14 @@ module f_inizk{
     }
 
     pure def nizk_prove_2(nizk: NIZK_System, sim_pi: NIZK_Proof) : Set[NIZK_Transition] = {
-        nizk.input.nizk_get_sim_control_messages().map(p => {
-            nizk.handles.nizk_get_sim_prove_hold_messages().map(q => {
+        nizk.input.filterMap(m => match m {
+            | NIZK_SIMControl => Some(m)
+            | _ => None
+        }).map(p => {
+            nizk.handles.filterMap(h => match h {
+                | NIZK_SIMProveHold(q) => Some(q)
+                | _ => None
+            }).map(q => {
                 {
                     post_state : nizk.state,
                     effects : Set( 
@@ -155,15 +179,18 @@ module f_inizk{
     }
 
     action nizk_prove_2_act : bool = all {
-        f_nizk_s.input.nizk_get_sim_control_messages().size() > 0,
-        f_nizk_s.handles.nizk_get_sim_prove_hold_messages().size() > 0,
+        f_nizk_s.input.filterMap(m => match m { | NIZK_SIMControl => Some(m) | _ => None }).size() > 0,
+        f_nizk_s.handles.filterMap(h => match h { | NIZK_SIMProveHold(q) => Some(q) | _ => None }).size() > 0,
         nondet sim_pi = ALL_PROOFS.oneOf()
         nondet t = nizk_prove_2(f_nizk_s, sim_pi).oneOf()
         f_nizk_s' =  nizk_process_transitions(f_nizk_s, t)
     } 
 
     pure def nizk_prove_3(nizk: NIZK_System) : Set[NIZK_Transition] = {
-        nizk.input.nizk_get_sim_prove_release_messages().map(p => {
+        nizk.input.filterMap(m => match m {
+            | NIZK_SIMProveRelease(p) => Some(p)
+            | _ => None
+        }).map(p => {
             val party = p.cfg.party
             val sid = p.cfg.sid
             val sid_state = nizk.state.get(sid)
@@ -202,7 +229,10 @@ module f_inizk{
     }
 
     pure def nizk_verify_1(nizk: NIZK_System) : Set[NIZK_Transition] = {
-        nizk.input.nizk_get_verify_request_messages().map(m => {
+        nizk.input.filterMap(m => match m {
+            | NIZK_VerifyRequest(m) => Some(m)
+            | _ => None
+        }).map(m => {
             if(nizk_access_check(m.cfg, nizk.params)) {
                 val sid = m.cfg.sid
                 val party = m.cfg.party
@@ -227,8 +257,14 @@ module f_inizk{
     }    
 
     pure def nizk_verify_2(nizk: NIZK_System, sim_w: NIZK_Witness) : Set[NIZK_Transition] = {
-        nizk.input.nizk_get_sim_control_messages().map(p => {
-            nizk.handles.nizk_get_sim_verify_hold_messages().map(q => {
+        nizk.input.filterMap(m => match m {
+            | NIZK_SIMControl => Some(m)
+            | _ => None
+        }).map(p => {
+            nizk.handles.filterMap(h => match h {
+                | NIZK_SIMVerifyHold(q) => Some(q)
+                | _ => None
+            }).map(q => {
                 {
                     post_state : nizk.state,
                     effects : Set( 
@@ -241,8 +277,8 @@ module f_inizk{
     }    
 
     action nizk_verify_2_act : bool = all {
-        f_nizk_s.input.nizk_get_sim_control_messages().size() > 0,
-        f_nizk_s.handles.nizk_get_sim_verify_hold_messages().size() > 0,
+        f_nizk_s.input.filterMap(m => match m { | NIZK_SIMControl => Some(m) | _ => None }).size() > 0,
+        f_nizk_s.handles.filterMap(h => match h { | NIZK_SIMVerifyHold(q) => Some(q) | _ => None }).size() > 0,
         //nondet sim_w = Set(List()).oneOf() // TODO: change that to get more adv behaviors
         val sim_w = List()
         nondet t = nizk_verify_2(f_nizk_s, sim_w).oneOf()
@@ -250,7 +286,10 @@ module f_inizk{
     }      
 
     pure def nizk_verify_3(nizk: NIZK_System) : Set[NIZK_Transition] = {
-        nizk.input.nizk_get_sim_verify_release_messages().map(p => {
+        nizk.input.filterMap(m => match m {
+            | NIZK_SIMVerifyRelease(p) => Some(p)
+            | _ => None
+        }).map(p => {
             val sid = p.cfg.sid
             val party = p.cfg.party
             val sid_state = nizk.state.get(sid)
@@ -277,8 +316,14 @@ module f_inizk{
     }    
 
     pure def nizk_verify_4(nizk: NIZK_System) : Set[NIZK_Transition] = {
-        nizk.input.nizk_get_rel_response_messages().map(r => {
-            nizk.handles.nizk_get_verify_rel_wait_messages().filter(x => r.cfg == x.cfg).map(p => {
+        nizk.input.filterMap(m => match m {
+            | NIZK_RelResponse(r) => Some(r)
+            | _ => None
+        }).map(r => {
+            nizk.handles.filterMap(h => match h {
+                | NIZK_VerifyRelWait(x) => Some(x)
+                | _ => None
+            }).filter(x => r.cfg == x.cfg).map(p => {
                 val sid = p.cfg.sid
                 val party = p.cfg.party
                 val sid_state = nizk.state.get(sid)

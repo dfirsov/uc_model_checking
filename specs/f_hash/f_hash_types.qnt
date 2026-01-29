@@ -77,49 +77,49 @@ module f_hash_types {
         })
     }        
 
-    pure def hash_get_hash_request_messages(messages: Set[HASH_Message]): Set[{cfg: MsgConfig, x: Hash_Input}] = {
-        messages.filterMap(m => {
-            match m {
-                | HashRequest(p) => Some(p)
-                | _ => None
-            }
-        })
-    }
-    pure def hash_get_sim_request_hold_messages(messages: Set[HASH_Message]): Set[{cfg: MsgConfig, x: Hash_Input}] = {
-        messages.filterMap(m => {
-            match m {
-                | SIMHashRequestHold(p) => Some(p)
-                | _ => None
-            }
-        })
-    }
+//     pure def hash_get_hash_request_messages(messages: Set[HASH_Message]): Set[{cfg: MsgConfig, x: Hash_Input}] = {
+//         messages.filterMap(m => {
+//             match m {
+//                 | HashRequest(p) => Some(p)
+//                 | _ => None
+//             }
+//         })
+//     }
+//     pure def hash_get_sim_request_hold_messages(messages: Set[HASH_Message]): Set[{cfg: MsgConfig, x: Hash_Input}] = {
+//         messages.filterMap(m => {
+//             match m {
+//                 | SIMHashRequestHold(p) => Some(p)
+//                 | _ => None
+//             }
+//         })
+//     }
 
-    pure def hash_get_sim_request_release_messages(messages: Set[HASH_Message]): Set[{cfg: MsgConfig, x: Hash_Input, sim_h: Hash_Output}] = {
-        messages.filterMap(m => {
-            match m {
-                | SIMHashRequestRelease(p) => Some(p)
-                | _ => None
-            }
-        })
-    }
+//     pure def hash_get_sim_request_release_messages(messages: Set[HASH_Message]): Set[{cfg: MsgConfig, x: Hash_Input, sim_h: Hash_Output}] = {
+//         messages.filterMap(m => {
+//             match m {
+//                 | SIMHashRequestRelease(p) => Some(p)
+//                 | _ => None
+//             }
+//         })
+//     }
 
-    pure def hash_get_response_messages(messages: Set[HASH_Message]): Set[{cfg: MsgConfig, x: Hash_Input, h: Hash_Output}] = {
-        messages.filterMap(m => {
-            match m {
-                | HashResponse(p) => Some(p)
-                | _ => None
-            }
-        })
-    }
+//     pure def hash_get_response_messages(messages: Set[HASH_Message]): Set[{cfg: MsgConfig, x: Hash_Input, h: Hash_Output}] = {
+//         messages.filterMap(m => {
+//             match m {
+//                 | HashResponse(p) => Some(p)
+//                 | _ => None
+//             }
+//         })
+//     }
 
-    pure def hash_get_sim_control_messages(messages: Set[HASH_Message]): Set[HASH_Message] = {
-        messages.filterMap(m => {
-            match m {
-                | HASH_SIMControl => Some(HASH_SIMControl)
-                | _ => None
-            }
-        })
-    }
+//     pure def hash_get_sim_control_messages(messages: Set[HASH_Message]): Set[HASH_Message] = {
+//         messages.filterMap(m => {
+//             match m {
+//                 | HASH_SIMControl => Some(HASH_SIMControl)
+//                 | _ => None
+//             }
+//         })
+//     }
 
     pure def hash_apply_effect(sys: HASH_System, eff: HASH_Effect): HASH_System = {
         match eff {

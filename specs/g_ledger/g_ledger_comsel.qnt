@@ -10,7 +10,10 @@ module g_ledger_comsel{
 
 
     pure def led_comsel_1(led: LED_System, clock: GC_System) : Set[(LED_Transition, GC_Transition)] = {
-        led.input.led_get_comsel_request_messages().map(p => {
+        led.input.filterMap(m => match m {
+            | ComSelRequest(p) => Some(p)
+            | _ => None
+        }).map(p => {
             if(led_access_check(p.cfg, led.params)){
                 {
                     post_state: led.state,
@@ -54,8 +57,14 @@ module g_ledger_comsel{
     }     
 
     pure def led_comsel_2(led: LED_System, clock: GC_System, sim_com: List[CommitteeMember]) : Set[(LED_Transition, GC_Transition)] = {
-        led.input.led_get_sim_control_messages().map(_ => {
-            led.handles.led_get_comsel_sim_hold_messages().map(p => {
+        led.input.filterMap(m => match m {
+            | LED_SIMControl => Some(m)
+            | _ => None
+        }).map(_ => {
+            led.handles.filterMap(h => match h {
+                | ComSelSIMHold(p) => Some(p)
+                | _ => None
+            }).map(p => {
                 {
                     post_state: led.state,
                     effects: Set(
@@ -68,7 +77,10 @@ module g_ledger_comsel{
     }
 
     pure def led_comsel_3(led: LED_System, clock: GC_System) : Set[(LED_Transition, GC_Transition)] = {
-        led.input.led_get_comsel_sim_release_messages().map(p => {
+        led.input.filterMap(m => match m {
+            | ComSelSIMRelease(p) => Some(p)
+            | _ => None
+        }).map(p => {
             if(led.state.Com.has(p.r)){
                 // committee already assigned for this time
                 {

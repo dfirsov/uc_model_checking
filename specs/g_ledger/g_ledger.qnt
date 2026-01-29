@@ -13,7 +13,10 @@ module g_ledger{
 
     // SIM gives control back to the environment
     pure def led_sim_loses_ctrl(led: LED_System, clock: GC_System) : Set[(LED_Transition, GC_Transition)] = {
-        led.input.led_get_sim_control_messages().map(c =>  // sim must have control
+        led.input.filterMap(m => match m {
+            | LED_SIMControl => Some(m)
+            | _ => None
+        }).map(c =>  // sim must have control
             {   
                 post_state : led.state,
                 effects : Set( 
@@ -24,7 +27,10 @@ module g_ledger{
  
 
     pure def led_submit_1(ledger : LED_System, clock : GC_System) : Set[(LED_Transition, GC_Transition)] = {
-        ledger.input.led_get_submit_request_messages().filter(p => led_access_check(p.cfg,ledger.params)).map(p => {
+        ledger.input.filterMap(m => match m {
+            | SubmitRequest(p) => Some(p)
+            | _ => None
+        }).filter(p => led_access_check(p.cfg,ledger.params)).map(p => {
 
             val ledger_transition = {
                 post_state: ledger.state,
@@ -46,36 +52,50 @@ module g_ledger{
     }
 
     pure def led_submit_2(ledger : LED_System, clock : GC_System) : Set[(LED_Transition, GC_Transition)] = {
-        clock.input.get_time_response_messages().map(q => {
-            ledger.handles.led_get_submit_time_request_hold_messages().filter(p => p.cfg.nonce == q.cfg.nonce).map(p => {
-                val t = q.time
-                val eID = ledger.state.eID + 1
-                val buffer = ledger.state.buffer.put(eID, ({tx: p.tx, time:t}))
+        clock.input.map(qq => {
+            match qq {
+                | TimeResponse(q) => {
+                    ledger.handles.filterMap(h => match h {
+                        | SubmitTimeRequestHold(p) => Some(p)
+                        | _ => None
+                    }).filter(p => p.cfg.nonce == q.cfg.nonce).map(p => {
+                        val t = q.time
+                        val eID = ledger.state.eID + 1
+                        val buffer = ledger.state.buffer.put(eID, ({tx: p.tx, time:t}))
 
-                val ledger_transition = {
-                    post_state: {...ledger.state, buffer: buffer, eID: eID},
-                    effects: Set(
-                        LED_RemoveHandle(SubmitTimeRequestHold(p)),
-                        LED_AppendHandle(SubmitSIMHold({cfg: p.cfg, tx: p.tx, t: t, eID: eID})),
-                        LED_UpdateInput(Set(LED_SIMControl))
-                    )
-                }
+                        val ledger_transition = {
+                            post_state: {...ledger.state, buffer: buffer, eID: eID},
+                            effects: Set(
+                                LED_RemoveHandle(SubmitTimeRequestHold(p)),
+                                LED_AppendHandle(SubmitSIMHold({cfg: p.cfg, tx: p.tx, t: t, eID: eID})),
+                                LED_UpdateInput(Set(LED_SIMControl))
+                            )
+                        }
 
-                val gc_transition = {
-                    post_state: clock.state,
-                    effects: Set(
-                        GC_UpdateInput(Set())
-                    )
+                        val gc_transition = {
+                            post_state: clock.state,
+                            effects: Set(
+                                GC_UpdateInput(Set())
+                            )
+                        }
+                        Set((ledger_transition, gc_transition))
+                }).flatten()
                 }
-                (ledger_transition, gc_transition)
-          })
+                | _ => Set()
+            }
         }).flatten()        
     }
 
     // simulator
     pure def led_submit_3(ledger : LED_System, clock : GC_System) : Set[(LED_Transition, GC_Transition)] = {
-        ledger.input.led_get_sim_control_messages().map(q => {
-            ledger.handles.led_get_submit_sim_hold_messages().map(p => {
+        ledger.input.filterMap(m => match m {
+            | LED_SIMControl => Some(m)
+            | _ => None
+        }).map(q => {
+            ledger.handles.filterMap(h => match h {
+                | SubmitSIMHold(p) => Some(p)
+                | _ => None
+            }).map(p => {
                 {
                     post_state: ledger.state,
                     effects: Set(
@@ -88,7 +108,10 @@ module g_ledger{
     }
 
     pure def led_submit_4(led : LED_System, clock : GC_System) : Set[(LED_Transition, GC_Transition) ] = {
-        led.input.led_get_submit_sim_release_messages().map(p => {
+        led.input.filterMap(m => match m {
+            | SubmitSIMRelease(p) => Some(p)
+            | _ => None
+        }).map(p => {
             {
                 post_state: led.state,
                 effects: Set(
@@ -99,7 +122,10 @@ module g_ledger{
     }
 
     pure def led_ok_1(led : LED_System, clock: GC_System) : Set[(LED_Transition, GC_Transition)] = {
-        led.input.led_get_ok_request_messages().filter(p => led_access_check(p.cfg, led.params)).map(msg => {
+        led.input.filterMap(m => match m {
+            | OKRequest(msg) => Some(msg)
+            | _ => None
+        }).filter(p => led_access_check(p.cfg, led.params)).map(msg => {
 
             val led_transition = {
                 post_state: led.state,
@@ -122,8 +148,15 @@ module g_ledger{
     }     
 
     pure def led_ok_2(led : LED_System, clock: GC_System) : Set[(LED_Transition, GC_Transition)] = {
-        led.handles.led_get_ok_request_wait_messages().map(msg => {
-            clock.input.get_okay_response_messages().filter(msg2 => msg2.cfg.nonce == msg.cfg.nonce).map(msg2 => {
+        led.handles.filterMap(h => match h {
+            | OKRequestWait(msg) => Some(msg)
+            | _ => None
+        }).map(msg => {
+            clock.input.filterMap(msg2 => {
+                match msg2 {
+                    | OkayResponse(q) => Some(q)
+                    | _ => None
+                }}).filter(msg2 => msg2.cfg.nonce == msg.cfg.nonce).map(msg2 => {
 
                     val led_transition = {
                         post_state: led.state,
@@ -146,7 +179,10 @@ module g_ledger{
     }           
 
     pure def led_read_1(led : LED_System, clock: GC_System) : Set[(LED_Transition, GC_Transition)] = {
-        led.input.led_get_read_request_messages().filter(p => led_access_check(p.cfg, led.params)).map(p => {
+        led.input.filterMap(m => match m {
+            | ReadRequest(p) => Some(p)
+            | _ => None
+        }).filter(p => led_access_check(p.cfg, led.params)).map(p => {
             {
                 post_state: led.state,
                 effects: Set(
@@ -159,8 +195,14 @@ module g_ledger{
     }
  
     pure def led_read_2(led : LED_System, clock: GC_System, simI : List[Pointer], simPtr_prim:Pointer) : Set[(LED_Transition, GC_Transition)] = {
-        led.input.led_get_sim_control_messages().map(q => {  
-            led.handles.led_get_read_sim_hold_messages().map(p => {
+        led.input.filterMap(m => match m {
+            | LED_SIMControl => Some(m)
+            | _ => None
+        }).map(q => {  
+            led.handles.filterMap(h => match h {
+                | ReadSIMHold(p) => Some(p)
+                | _ => None
+            }).map(p => {
                 {
                     post_state: led.state,
                     effects: Set(
@@ -194,7 +236,10 @@ module g_ledger{
     }
 
     pure def led_read_3(led: LED_System, clock: GC_System) : Set[(LED_Transition,GC_Transition)] = {
-        led.input.led_get_read_sim_release_messages().map(p => {
+        led.input.filterMap(m => match m {
+            | ReadSIMRelease(p) => Some(p)
+            | _ => None
+        }).map(p => {
 
             val led_transition = {
                 post_state: led.state,
@@ -216,8 +261,14 @@ module g_ledger{
     }
 
     pure def led_read_4(led: LED_System, clock: GC_System) : Set[(LED_Transition,GC_Transition)] = {
-        clock.input.get_time_response_messages().map(q => {
-            led.handles.led_get_read_time_request_hold_messages().filter(p => p.cfg.nonce == q.cfg.nonce).map(p => {
+        clock.input.filterMap(z => match z {
+            | TimeResponse(q) => Some(q)
+            | _ => None
+        }).map(q => {
+            led.handles.filterMap(h => match h {
+                | ReadTimeRequestHold(p) => Some(p)
+                | _ => None
+            }).filter(p => p.cfg.nonce == q.cfg.nonce).map(p => {
 
                 val t = q.time
                 val P = p.cfg.party

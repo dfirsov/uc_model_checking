@@ -13,7 +13,10 @@ module g_ledger_ival {
 
 
     pure def led_eval_1(led: LED_System, atms: ATMS_System) : Set[(LED_Transition, ATMS_Transition)] = {
-        led.input.led_get_eval_request_messages().map(p => {
+        led.input.filterMap(m => match m {
+            | EvalRequest(p) => Some(p)
+            | _ => None
+        }).map(p => {
             if(led_access_check(p.cfg, led.params)){
                 if(p.log.listHas(p.tx)){
                     Set(({
@@ -108,8 +111,14 @@ module g_ledger_ival {
     }  
 
     pure def led_eval_2(led: LED_System, atms: ATMS_System) : Set[(LED_Transition, ATMS_Transition)] = {    
-        atms.input.atms_get_averify_response_messages().map(p => {
-            led.handles.led_get_eval_aver_wait_messages().filter(h => p.cfg == h.cfg).map(q => {
+        atms.input.filterMap(m => match m {
+            | AVerifyResponse(p) => Some(p)
+            | _ => None
+        }).map(p => {
+            led.handles.filterMap(h => match h {
+                | EvalAverWait(q) => Some(q)
+                | _ => None
+            }).filter(h => p.cfg == h.cfg).map(q => {
                 if(p.b){
                     Set(({
                         post_state: {...led.state,
@@ -153,7 +162,10 @@ module g_ledger_ival {
 
 
     pure def led_iread_1(led : LED_System, clock: GC_System) : Set[(LED_Transition, GC_Transition)] = {
-        led.input.led_get_read_request_messages().filter(p => led_access_check(p.cfg, led.params)).map(p => {
+        led.input.filterMap(m => match m {
+            | ReadRequest(p) => Some(p)
+            | _ => None
+        }).filter(p => led_access_check(p.cfg, led.params)).map(p => {
             {
                 post_state: led.state,
                 effects: Set(
@@ -166,8 +178,14 @@ module g_ledger_ival {
     }
  
     pure def led_iread_2(led : LED_System, clock: GC_System, simI : List[Pointer], simPtr_prim:Pointer) : Set[(LED_Transition, GC_Transition)] = {
-        led.input.led_get_sim_control_messages().map(_ => {  
-            led.handles.led_get_read_sim_hold_messages().map(p => {
+        led.input.filterMap(m => match m {
+            | LED_SIMControl => Some(m)
+            | _ => None
+        }).map(_ => {  
+            led.handles.filterMap(h => match h {
+                | ReadSIMHold(p) => Some(p)
+                | _ => None
+            }).map(p => {
                 {
                     post_state: led.state,
                     effects: Set(
@@ -198,7 +216,10 @@ module g_ledger_ival {
 
     // maybe refactor that for the direct response
     pure def led_iread_3(led: LED_System, clock: GC_System) : Set[(LED_Transition, GC_Transition)] = {
-        led.input.led_get_read_sim_release_messages().map(p => {
+        led.input.filterMap(m => match m {
+            | ReadSIMRelease(p) => Some(p)
+            | _ => None
+        }).map(p => {
 
             val led_transition = {
                 post_state: led.state,
@@ -220,8 +241,14 @@ module g_ledger_ival {
     }
 
     pure def led_iread_4(led: LED_System, clock: GC_System) : Set[(LED_Transition, GC_Transition)] = {
-        clock.input.get_time_response_messages().map(q => {
-            led.handles.led_get_read_time_request_hold_messages().filter(p => p.cfg.nonce == q.cfg.nonce).map(p => {
+        clock.input.filterMap(z => match z {
+            TimeResponse(q) => Some(q)
+            | _ => None
+        }).map(q => {
+            led.handles.filterMap(h => match h {
+                | ReadTimeRequestHold(p) => Some(p)
+                | _ => None
+            }).filter(p => p.cfg.nonce == q.cfg.nonce).map(p => {
 
                 val t = q.time
                 val P = p.cfg.party
@@ -251,7 +278,10 @@ module g_ledger_ival {
     }
 
     pure def led_iread_5(led: LED_System, clock: GC_System) : Set[(LED_Transition, GC_Transition)] = {
-        led.input.led_get_read_loop_computation_messages().map(p => {
+        led.input.filterMap(m => match m {
+            | ReadLoopComputation(p) => Some(p)
+            | _ => None
+        }).map(p => {
 
             if(p.I == List()){
                 {
@@ -284,8 +314,14 @@ module g_ledger_ival {
     }
 
     pure def led_iread_6(led: LED_System, clock: GC_System) : Set[(LED_Transition, GC_Transition)] = {
-        led.input.led_get_eval_response_messages().map(p => {
-            led.handles.led_get_read_loop_computation_messages().filter(h => p.cfg == h.cfg).map(q => {
+        led.input.filterMap(m => match m {
+            | EvalResponse(p) => Some(p)
+            | _ => None
+        }).map(p => {
+            led.handles.filterMap(h => match h {
+                | ReadLoopComputation(q) => Some(q)
+                | _ => None
+            }).filter(h => p.cfg == h.cfg).map(q => {
 
                 val tx_t : {tx:LED_Tx, time: Time} = q.buffer.get(q.I.head())
                 val new_log = if(p.b) q.log.append(tx_t) else q.log
@@ -307,7 +343,10 @@ module g_ledger_ival {
     }
 
     pure def led_iread_7(led: LED_System, clock: GC_System) : Set[(LED_Transition, GC_Transition)] = {
-        led.input.led_get_read_loop_computation_finish_messages().map(p => {
+        led.input.filterMap(m => match m {
+            | ReadLoopComputationFinish(p) => Some(p)
+            | _ => None
+        }).map(p => {
 
                 val log = p.log
                 val buffer = p.buffer

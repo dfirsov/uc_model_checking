@@ -14,7 +14,6 @@ module p_bridge_inizk{
     import p_bridge.* from "./p_bridge"    
 
     import f_inizk_types.* from "../f_inizk/f_inizk_types" 
-       
 
     pure def brd_certify_1(sys: BRD_CSystem) : Set[BRD_CTransition] = {
         sys.brd.input.brd_get_certify_request_messages().map(p => {
@@ -44,8 +43,11 @@ module p_bridge_inizk{
     }
 
     pure def brd_certify_2(sys : BRD_CSystem) : Set[BRD_CTransition] = {
-        sys.ledger1.input.led_get_read_response_messages().map(p => {
-            sys.brd.handles.brd_get_certify_read_wait_messages().filter(q => p.cfg == q.cfg).map(q => {
+        sys.ledger1.input.filterMap(z => match z {| ReadResponse(p) => Some(p) | _ => None }).map(p => {
+            sys.brd.handles.filterMap(z => match z {
+                | CertifyReadWait(q) => Some(q)
+                | _ => None
+            }).filter(q => p.cfg == q.cfg).map(q => {
                 val brd_trans = {
                     post_state: sys.brd.state,
                     effects: Set(
@@ -71,8 +73,9 @@ module p_bridge_inizk{
     }
 
     pure def brd_certify_3(sys : BRD_CSystem) : Set[BRD_CTransition] = {
-        sys.ledger1.input.led_get_apl_response_messages().map(p => {
-            sys.brd.handles.brd_get_certify_apl_wait_messages().filter(q => p.cfg == q.cfg).map(q => {
+        sys.ledger1.input.filterMap(z => match z { | APLResponse(p) => Some(p) | _ => None }).map(p => {
+            sys.brd.handles.filterMap(z => match z {| CertifyAPLWait(q) => Some(q) | _ => None
+            }).filter(q => p.cfg == q.cfg).map(q => {
                 val brd_trans = {
                     post_state: sys.brd.state,
                     effects: Set(
@@ -101,8 +104,11 @@ module p_bridge_inizk{
     }
 
     pure def brd_certify_4(sys : BRD_CSystem) : Set[BRD_CTransition] = {
-        sys.hash.input.hash_get_response_messages().map(p => {
-            sys.brd.handles.brd_get_certify_hash_wait_messages().filter(q => p.cfg == q.cfg).map(q => {
+        sys.hash.input.filterMap(z => match z { | HashResponse(p) => Some(p) | _ => None }).map(p => {
+            sys.brd.handles.filterMap(z => match z {
+                | CertifyHashWait(q) => Some(q)
+                | _ => None
+            }).filter(q => p.cfg == q.cfg).map(q => {
                 val brd_trans = {
                     post_state: sys.brd.state,
                     effects: Set(
@@ -132,7 +138,10 @@ module p_bridge_inizk{
 
     pure def brd_certify_5(sys : BRD_CSystem) : Set[BRD_CTransition] = {
         sys.nizk.input.nizk_get_prove_response_messages().map(p => {
-            sys.brd.handles.brd_get_certify_prove_wait_messages().filter(q => p.cfg == q.cfg).map(q => {
+            sys.brd.handles.filterMap(z => match z {
+                | CertifyProveWait(q) => Some(q)
+                | _ => None
+            }).filter(q => p.cfg == q.cfg).map(q => {
                 val res = if (p.pi == None) None else Some({pi: p.pi.unwrap(), h: q.h})
 
                 val brd_trans = {
@@ -192,7 +201,10 @@ module p_bridge_inizk{
 
     pure def brd_verify_2(sys : BRD_CSystem) : Set[BRD_CTransition] = {
         sys.nizk.input.nizk_get_verify_response_messages().map(p => {
-            sys.brd.handles.brd_get_verify_nizk_verify_wait_messages().filter(q => p.cfg == q.cfg).map(q => {
+            sys.brd.handles.filterMap(z => match z {
+                | BRD_VerifyNIZKVerifyWait(q) => Some(q)
+                | _ => None
+            }).filter(q => p.cfg == q.cfg).map(q => {
                 val res = p.b and q.mem.hs.listHas(q.proof.h)
                 
                 val brd_trans = {

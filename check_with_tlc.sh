@@ -7,7 +7,7 @@ source "$SCRIPT_DIR/common.sh" || { echo "Error: Could not load common.sh"; exit
 # Default configurations
 # apalache-dist-0.51.1
 APALACHE_JAR="$HOME/.quint/apalache-dist-0.51.1/apalache/lib/apalache.jar"
-JAVA_OPTS="-Xmx16G -Xss4G"
+JAVA_OPTS="-Xmx16G -Xss1G"
 
 FILE=""  # Mandatory: User must specify a file
 MAIN=""  # Optional: Main module name

@@ -7,7 +7,7 @@ module f_atms{
 
     
     var f_atms_s : ATMS_System
-
+ 
     val ALL_VKS: Set[ATMS_VK] = 1.to(UNIVERSE_SIZE)
     val ALL_SIGS: Set[ATMS_Signature] = 1.to(UNIVERSE_SIZE)
     val ALL_AVKS: Set[ATMS_AVK] = 1.to(UNIVERSE_SIZE)
@@ -15,7 +15,10 @@ module f_atms{
 
     // SIM gives control back to the environment
     pure def atms_sim_loses_ctrl(atms: ATMS_System) : Set[ATMS_Transition] = {
-        atms.input.atms_get_sim_control_messages().map(c =>  // sim must have control
+        atms.input.filterMap(m => match m {
+            | SIMControl => Some(m)
+            | _ => None
+        }).map(c =>  // sim must have control
             {   
                 post_state : atms.state,
                 effects : Set( 
@@ -40,7 +43,10 @@ module f_atms{
  
 
     pure def atms_gen_1(atms: ATMS_System) : Set[ATMS_Transition] = {
-        atms.input.atms_get_gen_request_messages().map(p =>{
+        atms.input.filterMap(m => match m {
+            | GenRequest(p) => Some(p)
+            | _ => None
+        }).map(p =>{
             if(atms_access_check(p.cfg, atms.params)) {
                 {
                     post_state: atms.state,
@@ -62,16 +68,22 @@ module f_atms{
     }
 
     action atms_gen_2_act = all {
-        f_atms_s.input.atms_get_sim_control_messages().size() > 0,
-        f_atms_s.handles.atms_get_sim_gen_hold_messages().size() > 0,
+        // f_atms_s.input.atms_get_sim_control_messages().size() > 0,
+        // f_atms_s.handles.atms_get_sim_gen_hold_messages().size() > 0,
         nondet sim_vk = ALL_VKS.oneOf()
         nondet t = atms_gen_2(f_atms_s, Some(sim_vk)).oneOf()
         f_atms_s' = atms_process_transitions(f_atms_s, t) 
     }
  
     pure def atms_gen_2(atms: ATMS_System, sim_vk: Option[ATMS_VK]): Set[ATMS_Transition] = {
-        atms.input.atms_get_sim_control_messages().map(_ => {
-            atms.handles.atms_get_sim_gen_hold_messages().map(p => {
+        atms.input.filterMap(m => match m {
+            | SIMControl => Some(m)
+            | _ => None
+        }).map(_ => {
+            atms.handles.filterMap(h => match h {
+                | SIMGenHold(p) => Some(p)
+                | _ => None
+            }).map(p => {
                 {
                     post_state: atms.state,
                     effects: Set(
@@ -104,7 +116,10 @@ module f_atms{
     }
 
     pure def atms_gen_3(atms: ATMS_System): Set[ATMS_Transition] = {
-        atms.input.atms_get_sim_gen_release_messages().map(p => {
+        atms.input.filterMap(m => match m {
+            | SIMGenRelease(p) => Some(p)
+            | _ => None
+        }).map(p => {
             val P = p.cfg.party
             val sid = p.cfg.sid
             val sid_state = atms.state.get(sid)
@@ -143,7 +158,10 @@ module f_atms{
     }
 
     pure def atms_akey_1(atms: ATMS_System) : Set[ATMS_Transition] = {
-        atms.input.atms_get_akey_request_messages().map(p =>{
+        atms.input.filterMap(m => match m {
+            | AKeyRequest(p) => Some(p)
+            | _ => None
+        }).map(p =>{
             if(atms_access_check(p.cfg, atms.params)) {
                 {
                     post_state: atms.state,
@@ -165,16 +183,22 @@ module f_atms{
     }    
 
     action atms_akey_2_act : bool = all {
-        f_atms_s.input.atms_get_sim_control_messages().size() > 0,
-        f_atms_s.handles.atms_get_sim_akey_hold_messages().size() > 0,
+        // f_atms_s.input.atms_get_sim_control_messages().size() > 0,
+        // f_atms_s.handles.atms_get_sim_akey_hold_messages().size() > 0,
         nondet sim_avk = ALL_AVKS.oneOf()
         nondet t = atms_akey_2(f_atms_s, Some(sim_avk)).oneOf()
         f_atms_s' = atms_process_transitions(f_atms_s, t) 
     }    
 
     pure def atms_akey_2(atms: ATMS_System, sim_avk: Option[ATMS_AVK]): Set[ATMS_Transition] = {
-        atms.input.atms_get_sim_control_messages().map(_ => {
-            atms.handles.atms_get_sim_akey_hold_messages().map(p => {
+        atms.input.filterMap(m => match m {
+            | SIMControl => Some(m)
+            | _ => None
+        }).map(_ => {
+            atms.handles.filterMap(h => match h {
+                | SIMAKeyHold(p) => Some(p)
+                | _ => None
+            }).map(p => {
                 {
                     post_state: atms.state,
                     effects: Set(
@@ -217,7 +241,10 @@ module f_atms{
     }
 
     pure def atms_akey_3(atms: ATMS_System): Set[ATMS_Transition] = {
-        atms.input.atms_get_sim_akey_release_messages().map(p => {
+        atms.input.filterMap(m => match m {
+            | SIMAKeyRelease(p) => Some(p)
+            | _ => None
+        }).map(p => {
             val P = p.cfg.party
             val sid = p.cfg.sid
             val sid_state = atms.state.get(sid)
@@ -272,7 +299,10 @@ module f_atms{
     }
 
     pure def atms_acheck_1(atms: ATMS_System) : Set[ATMS_Transition] = {
-        atms.input.atms_get_acheck_request_messages().map(p =>{
+        atms.input.filterMap(m => match m {
+            | ACheckRequest(p) => Some(p)
+            | _ => None
+        }).map(p =>{
             if(atms_access_check(p.cfg, atms.params)) {
                 Set({
                     post_state: atms.state,
@@ -294,16 +324,22 @@ module f_atms{
     }
 
     action atms_acheck_2_act = all {
-        f_atms_s.input.atms_get_sim_control_messages().size() > 0,
-        f_atms_s.handles.atms_get_sim_acheck_hold_messages().size() > 0,
+        // f_atms_s.input.atms_get_sim_control_messages().size() > 0,
+        // f_atms_s.handles.atms_get_sim_acheck_hold_messages().size() > 0,
         nondet sim_avk = ALL_AVKS.oneOf()
         nondet t = atms_acheck_2(f_atms_s, Some(sim_avk)).oneOf()
         f_atms_s' = atms_process_transitions(f_atms_s, t) 
     }     
  
     pure def atms_acheck_2(atms: ATMS_System, sim_avk: Option[ATMS_AVK]): Set[ATMS_Transition] = {
-        atms.input.atms_get_sim_control_messages().map(_ => {
-            atms.handles.atms_get_sim_acheck_hold_messages().map(p => {
+        atms.input.filterMap(m => match m {
+            | SIMControl => Some(m)
+            | _ => None
+        }).map(_ => {
+            atms.handles.filterMap(h => match h {
+                | SIMACheckHold(p) => Some(p)
+                | _ => None
+            }).map(p => {
                 Set({
                     post_state: atms.state,
                     effects: Set(
@@ -316,7 +352,10 @@ module f_atms{
     }
 
     pure def atms_acheck_3(atms: ATMS_System): Set[ATMS_Transition] = {
-        atms.input.atms_get_sim_acheck_release_messages().map(p => {
+        atms.input.filterMap(m => match m {
+            | SIMACheckRelease(p) => Some(p)
+            | _ => None
+        }).map(p => {
             val sid_state = atms.state.get(p.cfg.sid)
             val maybe_avk_record = sid_state.AVK.find(x => x.vks == p.vks) // TODO: AVK must be functional
 
@@ -373,7 +412,10 @@ module f_atms{
     }
 
     pure def atms_sign_1(atms: ATMS_System) : Set[ATMS_Transition] = {
-        atms.input.atms_get_sign_request_messages().map(p =>{
+        atms.input.filterMap(m => match m {
+            | SignRequest(p) => Some(p)
+            | _ => None
+        }).map(p =>{
             if(atms_access_check(p.cfg, atms.params)) {
                 if (atms.state.get(p.cfg.sid).VK.exists(x => x.party == p.cfg.party)){
                     Set({
@@ -405,16 +447,22 @@ module f_atms{
     }
 
     action atms_sign_2_act = all {
-        f_atms_s.input.atms_get_sim_control_messages().size() > 0,
-        f_atms_s.handles.atms_get_sim_sign_hold_messages().size() > 0,
+        // f_atms_s.input.atms_get_sim_control_messages().size() > 0,
+        // f_atms_s.handles.atms_get_sim_sign_hold_messages().size() > 0,
         nondet sim_sig = ALL_SIGS.oneOf()
         nondet t = atms_sign_2(f_atms_s, Some(sim_sig)).oneOf()
         f_atms_s' = atms_process_transitions(f_atms_s, t) 
     }         
 
     pure def atms_sign_2(atms: ATMS_System, sim_sig: Option[ATMS_Signature]): Set[ATMS_Transition] = {
-        atms.input.atms_get_sim_control_messages().map(_ => {
-            atms.handles.atms_get_sim_sign_hold_messages().map(p => {
+        atms.input.filterMap(m => match m {
+            | SIMControl => Some(m)
+            | _ => None
+        }).map(_ => {
+            atms.handles.filterMap(h => match h {
+                | SIMSignHold(p) => Some(p)
+                | _ => None
+            }).map(p => {
                 {
                     post_state: atms.state,
                     effects: Set(
@@ -455,7 +503,10 @@ module f_atms{
     }
 
     pure def atms_sign_3(atms: ATMS_System): Set[ATMS_Transition] = {
-        atms.input.atms_get_sim_sign_release_messages().map(p => {
+        atms.input.filterMap(m => match m {
+            | SIMSignRelease(p) => Some(p)
+            | _ => None
+        }).map(p => {
             val sid_state = atms.state.get(p.cfg.sid)
             // runtime error if not true [must never happen]
             val vk_record = sid_state.VK.find(x => x.party == p.cfg.party).unwrap()
@@ -487,7 +538,10 @@ module f_atms{
     }
 
     pure def atms_ver_1(atms: ATMS_System) : Set[ATMS_Transition] = {
-        atms.input.atms_get_verify_request_messages().map(p =>{
+        atms.input.filterMap(m => match m {
+            | VerifyRequest(p) => Some(p)
+            | _ => None
+        }).map(p =>{
             if(atms_access_check(p.cfg, atms.params)) {
                 Set({
                     post_state: atms.state,
@@ -509,8 +563,14 @@ module f_atms{
     } 
 
     pure def atms_ver_2(atms: ATMS_System) : Set[ATMS_Transition] = {
-        atms.input.atms_get_sim_control_messages().map(_ => {
-            atms.handles.atms_get_sim_verify_hold_messages().map(p => {
+        atms.input.filterMap(m => match m {
+            | SIMControl => Some(m)
+            | _ => None
+        }).map(_ => {
+            atms.handles.filterMap(h => match h {
+                | SIMVerifyHold(p) => Some(p)
+                | _ => None
+            }).map(p => {
                 Set(true,false).map(b => {
                     {
                         post_state: atms.state,
@@ -525,7 +585,10 @@ module f_atms{
     }
 
     pure def atms_ver_3(atms: ATMS_System): Set[ATMS_Transition] = {
-        atms.input.atms_get_sim_verify_release_messages().map(p => {
+        atms.input.filterMap(m => match m {
+            | SIMVerifyRelease(p) => Some(p)
+            | _ => None
+        }).map(p => {
             val sid_state = atms.state.get(p.cfg.sid)
 
             val ver_record = sid_state.VER.find(x => and {
@@ -577,7 +640,10 @@ module f_atms{
     }
 
     pure def atms_asign_1(atms : ATMS_System) : Set[ATMS_Transition] = {
-        atms.input.atms_get_asign_request_messages().map(p =>{
+        atms.input.filterMap(m => match m {
+            | ASignRequest(p) => Some(p)
+            | _ => None
+        }).map(p =>{
             if(atms_access_check(p.cfg, atms.params)) {
                 Set({
                     post_state: atms.state,
@@ -599,8 +665,8 @@ module f_atms{
     }
 
     action atms_asign_2_act = all {
-        f_atms_s.input.atms_get_sim_control_messages().size() > 0,
-        f_atms_s.handles.atms_get_sim_asign_hold_messages().size() > 0,
+        // f_atms_s.input.atms_get_sim_control_messages().size() > 0,
+        // f_atms_s.handles.atms_get_sim_asign_hold_messages().size() > 0,
         nondet sim_avk = ALL_AVKS.oneOf()
         nondet sim_tau = ALL_ASIGS.oneOf()
         //val sim_bs = List(true, false, true) // TODO: generate this thing somehow
@@ -610,8 +676,14 @@ module f_atms{
     }         
 
     pure def atms_asign_2(atms: ATMS_System, sim_avk: Option[ATMS_AVK], sim_tau: Option[ATMS_ASignature], sim_bs : List[bool]): Set[ATMS_Transition] = {
-        atms.input.atms_get_sim_control_messages().map(_ => {
-            atms.handles.atms_get_sim_asign_hold_messages().map(p => {
+        atms.input.filterMap(m => match m {
+            | SIMControl => Some(m)
+            | _ => None
+        }).map(_ => {
+            atms.handles.filterMap(h => match h {
+                | SIMASignHold(p) => Some(p)
+                | _ => None
+            }).map(p => {
                 {
                     post_state: atms.state,
                     effects: Set(
@@ -653,7 +725,10 @@ module f_atms{
 
 
     pure def atms_asign_3(atms: ATMS_System): Set[ATMS_Transition] = {
-        atms.input.atms_get_sim_asign_release_messages().map(p => {
+        atms.input.filterMap(m => match m {
+            | SIMASignRelease(p) => Some(p)
+            | _ => None
+        }).map(p => {
             val sid_state = atms.state.get(p.cfg.sid)
 
             val Y = if(sid_state.AVK.exists(x => x.vks == p.vks)){
@@ -776,7 +851,10 @@ module f_atms{
     }
 
     pure def atms_aver_1(atms: ATMS_System) : Set[ATMS_Transition] = {
-        atms.input.atms_get_averify_request_messages().map(p =>{
+        atms.input.filterMap(m => match m {
+            | AVerifyRequest(p) => Some(p)
+            | _ => None
+        }).map(p =>{
             if(atms_access_check(p.cfg, atms.params)) {
                 val sid_state = atms.state.get(p.cfg.sid)
                 Set({
@@ -798,8 +876,8 @@ module f_atms{
     }
 
     action atms_aver_2_act = all {
-        f_atms_s.input.atms_get_sim_control_messages().size() > 0,
-        f_atms_s.handles.atms_get_sim_averify_hold_messages().size() > 0,
+        // f_atms_s.input.atms_get_sim_control_messages().size() > 0,
+        // f_atms_s.handles.atms_get_sim_averify_hold_messages().size() > 0,
         nondet sim_vks_set = ALL_VKS.powerset().oneOf()
         nondet sim_b = Set(true,false).oneOf()
         nondet t = atms_aver_2(f_atms_s, Some(sim_vks_set.setToList()), sim_b).oneOf()
@@ -807,8 +885,14 @@ module f_atms{
     }             
 
     pure def atms_aver_2(atms: ATMS_System, sim_vks: Option[List[ATMS_VK]], sim_b: bool) : Set[ATMS_Transition] = {
-        atms.input.atms_get_sim_control_messages().map(_ => {
-            atms.handles.atms_get_sim_averify_hold_messages().map(p => {
+        atms.input.filterMap(m => match m {
+            | SIMControl => Some(m)
+            | _ => None
+        }).map(_ => {
+            atms.handles.filterMap(h => match h {
+                | SIMAVerifyHold(p) => Some(p)
+                | _ => None
+            }).map(p => {
                 {
                         post_state: atms.state,
                         effects: Set(
@@ -821,7 +905,10 @@ module f_atms{
     }
 
     pure def atms_aver_3(atms: ATMS_System): Set[ATMS_Transition] = {
-        atms.input.atms_get_sim_averify_release_messages().map(p => {
+        atms.input.filterMap(m => match m {
+            | SIMAVerifyRelease(p) => Some(p)
+            | _ => None
+        }).map(p => {
             val sid = p.cfg.sid
             val sid_state = atms.state.get(sid)
 

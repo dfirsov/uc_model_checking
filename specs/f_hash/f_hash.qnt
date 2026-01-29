@@ -13,7 +13,10 @@ module f_hash {
 
 
     pure def hash_hash_1(f_hash: HASH_System) : Set[HASH_Transition] = {
-        f_hash.input.hash_get_hash_request_messages().map(p => {
+        f_hash.input.filterMap(m => match m {
+            | HashRequest(p) => Some(p)
+            | _ => None
+        }).map(p => {
                 {
                 post_state: f_hash.state,
                 effects: Set(
@@ -39,8 +42,14 @@ module f_hash {
     }
 
     pure def hash_hash_2(f_hash: HASH_System, sim_h : Hash_Output) : Set[HASH_Transition] = {
-        f_hash.input.hash_get_sim_control_messages().map(_ => {
-            f_hash.handles.hash_get_sim_request_hold_messages().map(p => {
+        f_hash.input.filterMap(m => match m {
+            | HASH_SIMControl => Some(m)
+            | _ => None
+        }).map(_ => {
+            f_hash.handles.filterMap(h => match h {
+                | SIMHashRequestHold(p) => Some(p)
+                | _ => None
+            }).map(p => {
                 Set({
                     post_state: f_hash.state,
                     effects: Set(
@@ -65,7 +74,10 @@ module f_hash {
     }
 
     pure def hash_hash_3(f_hash: HASH_System) : Set[HASH_Transition] = {
-        f_hash.input.hash_get_sim_request_release_messages().map(p => {
+        f_hash.input.filterMap(m => match m {
+            | SIMHashRequestRelease(p) => Some(p)
+            | _ => None
+        }).map(p => {
 
             val sid = p.cfg.sid
             val party = p.cfg.party
@@ -102,7 +114,10 @@ module f_hash {
     }   
 
     pure def hash_sim_loses_ctrl(hash: HASH_System) : Set[HASH_Transition] = {
-        hash.input.hash_get_sim_control_messages().map(c =>  
+        hash.input.filterMap(m => match m {
+            | HASH_SIMControl => Some(m)
+            | _ => None
+        }).map(c =>  
             {
                 post_state : hash.state,
                 effects : Set(

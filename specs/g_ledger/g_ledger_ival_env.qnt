@@ -141,7 +141,7 @@ module g_ledger_ival_env {
 
     action init = all {
         led_init({P: Parties, C: C, SIDs: sids, delta_latency: delta_latency, delta_slack: delta_slack, delta_apl: delta_apl, Val:  true, comsel_a: 1, comsel_b: 1, comsel_c: 2, responsive_simulator: true, enable_logging: true}),
-        gc_init({C: C,time: 0, Reg: Parties.map(x => sids.map(y => {party: x, sid: y})).flatten(), responsive_sim: true, enable_logging: false} ),        
+        gc_init({C: C,time: 0, Reg: Parties.map(x => sids.map(y => {party: x, sid: y})).flatten(), responsive_simulator: true, enable_logging: false} ),        
 
         atms_init({
             P : Parties, 

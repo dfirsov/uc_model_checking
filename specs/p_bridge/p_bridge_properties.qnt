@@ -34,7 +34,7 @@ module p_bridge_properties{
     import p_bridge_rot.* from "./p_bridge_rot"
     import p_bridge_br.* from "./p_bridge_br"
     import p_bridge_led2.* from "./p_bridge_led2"    
-     import p_bridge_env.* from "./p_bridge_env" 
+    import p_bridge_env.* from "./p_bridge_env" 
    
 
     val Parties = 1.to(PARTY_SIZE)
@@ -85,14 +85,26 @@ module p_bridge_properties{
     //val Q5 = g_clock_s.state.TIME <= 8
     val Q6 = p_bridge_s.log.map(x => x.msg).brd_get_verify_response_messages().filter(x => x.res == true).size() == 0
 
-    val RoT_Agreement = p_bridge_s.log.map(x => x.msg).brd_get_rot_response_messages().forall(rsp1 =>
-        p_bridge_s.log.map(x => x.msg).brd_get_rot_response_messages().forall(rsp2 =>
+    val RoT_Agreement = p_bridge_s.log.map(x => x.msg).filterMap(z => match z {
+        RoTResponse(p) => Some(p)
+        | _ => None
+    }).forall(rsp1 =>
+        p_bridge_s.log.map(x => x.msg).filterMap(z => match z {
+            RoTResponse(p) => Some(p)
+            | _ => None
+        }).forall(rsp2 =>
             rsp1.avk == rsp2.avk
         )
     )
 
-    val Bridge_State_Consistency = p_bridge_s.log.map(x => x.msg).brd_get_bridge_br_algorithm_response_messages().forall(p =>
-        p_bridge_s.log.map(x => x.msg).brd_get_bridge_br_algorithm_response_messages().forall(q =>
+    val Bridge_State_Consistency = p_bridge_s.log.map(x => x.msg).filterMap(z => match z {
+        | BridgeBRAlgorithmResponse(p) => Some(p)
+        | _ => None
+    }).forall(p =>
+        p_bridge_s.log.map(x => x.msg).filterMap(z => match z {
+            | BridgeBRAlgorithmResponse(q) => Some(q)
+            | _ => None
+        }).forall(q =>
             (p.args.r == q.args.r and p.resp.bst != None) implies {
                 val p_bst = p.resp.bst.unwrap()
                 val q_bst = q.resp.bst.unwrap()
@@ -114,8 +126,14 @@ module p_bridge_properties{
     )
 
     //Bridge aux update: For all rounds r and all parties P, we have that bst[P].aux @ (r + R) = bst[P].aux’ @ r.
-    val Bridge_Aux_Update = p_bridge_s.log.map(x => x.msg).brd_get_bridge_br_algorithm_response_messages().forall(p =>
-        p_bridge_s.log.map(x => x.msg).brd_get_bridge_br_algorithm_response_messages().forall(q =>
+    val Bridge_Aux_Update = p_bridge_s.log.map(x => x.msg).filterMap(z => match z {
+        | BridgeBRAlgorithmResponse(p) => Some(p)
+        | _ => None
+}).forall(p =>
+        p_bridge_s.log.map(x => x.msg).filterMap(z => match z {
+            | BridgeBRAlgorithmResponse(q) => Some(q)
+            | _ => None
+        }).forall(q =>
             and {
                 p.cfg.party == q.cfg.party,
                 p.args.r + p_bridge_s.params.R + p_bridge_s.params.delta + 2 == q.args.r,
@@ -132,8 +150,14 @@ module p_bridge_properties{
     // (VIOLATED) Bridge democracy: 
     // For all rounds r and all parties P, we have 
     // that bst[P].aux.Com @ r ≠ bst[P].aux.Com @ (r + R) (doesn’t hold – authoritarian regime possible)
-    val Bridge_Democracy = p_bridge_s.log.map(x => x.msg).brd_get_bridge_br_algorithm_response_messages().forall(p =>
-        p_bridge_s.log.map(x => x.msg).brd_get_bridge_br_algorithm_response_messages().forall(q =>
+    val Bridge_Democracy = p_bridge_s.log.map(x => x.msg).filterMap(z => match z {
+        | BridgeBRAlgorithmResponse(p) => Some(p)
+        | _ => None
+    }).forall(p =>
+        p_bridge_s.log.map(x => x.msg).filterMap(z => match z {
+            | BridgeBRAlgorithmResponse(q) => Some(q)
+            | _ => None
+        }).forall(q =>
             and {
                 p.cfg.party == q.cfg.party,
                 p.args.r + p_bridge_s.params.R == q.args.r,
@@ -149,8 +173,14 @@ module p_bridge_properties{
 
     // Bridge state persistence: For all rounds r and r’ and all parties P,  we have 
     // bst[P].(rot, cID, h, avk’, aux, aux’) @ r = bst[P].(rot, cID, h, avk’, aux, aux’) @ r’ as long as  1 ≤ (r % R),  (r’ % R) ≤ ∆ + 1; 
-    val Bridge_State_Persistence = p_bridge_s.log.map(x => x.msg).brd_get_bridge_br_algorithm_response_messages().forall(p =>
-        p_bridge_s.log.map(x => x.msg).brd_get_bridge_br_algorithm_response_messages().forall(q =>
+    val Bridge_State_Persistence = p_bridge_s.log.map(x => x.msg).filterMap(z => match z {
+        | BridgeBRAlgorithmResponse(p) => Some(p)
+        | _ => None
+    }).forall(p =>
+        p_bridge_s.log.map(x => x.msg).filterMap(z => match z {
+            | BridgeBRAlgorithmResponse(q) => Some(q)
+            | _ => None
+        }).forall(q =>
             and {
                 p.cfg.party == q.cfg.party,
                 p.args.r % p_bridge_s.params.R >= 1, 

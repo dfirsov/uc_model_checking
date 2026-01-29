@@ -13,10 +13,14 @@ module g_clock_properties {
     val C = 1.to(CORRUPTED_PARTY_SIZE)
     val SIDs = 1.to(SID_SIZE)
 
-    action step : bool = any {
-        gc_step,  // internal dynamics of the g_clock
-        env_send_reqs, // sends interface-level requests
-        env_consume_responses, // consumes interface-level responses
+    action step : bool = if(g_clock_s.log.size() < MAX_LOG_SIZE) {
+        any {
+            gc_step,
+            env_send_reqs,
+            env_consume_responses
+        }
+    } else {
+        gc_stutter
     }
 
     action init = {

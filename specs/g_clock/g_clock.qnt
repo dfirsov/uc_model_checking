@@ -24,91 +24,118 @@ module g_clock{
     }    
 
     // sim might want to give control back to the environment
-    pure def gc_sim_loses_ctrl(dif: GC_System) : Set[GC_Transition] = {
-        dif.input.gc_get_sim_control_messages().map(c =>  // sim must have control
-            {   
-                post_state : dif.state,
-                effects : Set( 
-                    GC_UpdateInput(Set()),
-                )  
-            })
+    pure def gc_sim_loses_ctrl(clock: GC_System) : Set[GC_Transition] = {
+        clock.input.map(m => {
+            match m {
+                | GC_SIMControl => Set({
+                    post_state : clock.state,
+                    effects : Set( 
+                        GC_UpdateInput(Set()),
+                    )  
+                })
+                | _ => Set()
+            }
+        }).flatten()
     }    
 
     pure def gc_register(clock: GC_System) :  Set[GC_Transition] = { 
-        clock.input.get_register_request_messages().map(msg => 
-        {
-            post_state : {...clock.state, 
-                Reg : clock.state.Reg.union(Set({party: msg.cfg.party, sid: msg.cfg.sid})),
-            },
-            effects : Set( 
-                GC_LogMessage(RegisterRequest(msg)), 
-                GC_UpdateInput(Set(RegisterResponse(msg))),
-                GC_LogMessage(RegisterResponse(msg)),
-            )
-        })
+        clock.input.map(m => {
+            match m {
+                | RegisterRequest(msg) => Set({
+
+                    post_state : {...clock.state, 
+                        Reg : clock.state.Reg.union(Set({party: msg.cfg.party, sid: msg.cfg.sid})),
+                    },
+                    effects : Set( 
+                        GC_LogMessage(RegisterRequest(msg)), 
+                        GC_UpdateInput(Set(RegisterResponse(msg))),
+                        GC_LogMessage(RegisterResponse(msg)),
+                    )
+                })
+                | _ => Set()    
+            }
+        }).flatten()
     }
 
     pure def gc_time(clock: GC_System) : Set[GC_Transition] = {
-        clock.input.get_time_request_messages().map(msg =>{
-            val tr = TimeResponse({cfg: msg.cfg, time: clock.state.TIME})
-            {
-                post_state : clock.state,
-                effects : Set(
-                    GC_LogMessage(TimeRequest(msg)),
-                    GC_UpdateInput(Set(tr)),
-                    GC_LogMessage(tr),
-                )
+        clock.input.map(m => {
+            match m {
+                | TimeRequest(msg) => {
+                    val tr = TimeResponse({cfg: msg.cfg, time: clock.state.TIME})
+                    Set({
+                        post_state : clock.state,
+                        effects : Set(
+                            GC_LogMessage(TimeRequest(msg)),
+                            GC_UpdateInput(Set(tr)),
+                        )
+                    })
+                }
+                | _ => Set()
             }
-        })
+        }).flatten()
     }
 
     pure def gc_okay_1(clock: GC_System) : Set[GC_Transition] = {
-        clock.input.get_okay_request_messages().map(msg => {
-            if(clock.state.Reg.contains(({party: msg.cfg.party, sid: msg.cfg.sid}))) {
-                // Check if all registered parties are ready (including this one)
-                val flag = clock.state.Reg.forall(rp => or {
-                     clock.state.ok.contains(rp), 
-                     rp == ({party: msg.cfg.party, sid: msg.cfg.sid}),
-                     (msg.cfg.party).in(clock.params.C)
+        clock.input.map(m => {
+            match m {
+                | OkayRequest(msg) => Set({
+                    if(clock.state.Reg.contains(({party: msg.cfg.party, sid: msg.cfg.sid}))) {
+                        // Check if all registered parties are ready (including this one)
+                        val flag = clock.state.Reg.forall(rp => or {
+                             clock.state.ok.contains(rp), 
+                             rp == ({party: msg.cfg.party, sid: msg.cfg.sid}),
+                             (msg.cfg.party).in(clock.params.C)
+                        })
+                        val new_time = if (flag) clock.state.TIME + 1 else clock.state.TIME
+                        // for whatever reason we are keeping corrupted parties in the ok set
+                        val new_ok = if (flag) Set() else clock.state.ok.setAdd(({party: msg.cfg.party, sid: msg.cfg.sid}))
+                        
+                        {
+                            post_state : {...clock.state, 
+                                ok: new_ok,
+                                TIME: new_time
+                            },
+                            effects : Set(
+                                GC_LogMessage(OkayRequest(msg)),
+                                GC_UpdateInput(Set(GC_SIMControl)),
+                                GC_AppendHandle(SIMOkayRelease(msg)),
+                            )
+                        }
+                    } else {
+                        {
+                            post_state : clock.state,
+                            effects : Set(
+                                GC_UpdateInput(Set()),
+                            )
+                        }
+                    }
                 })
-                val new_time = if (flag) clock.state.TIME + 1 else clock.state.TIME
-                // for whatever reason we are keeping corrupted parties in the ok set
-                val new_ok = if (flag) Set() else clock.state.ok.setAdd(({party: msg.cfg.party, sid: msg.cfg.sid}))
-                
-                {
-                    post_state : {...clock.state, 
-                        ok: new_ok,
-                        TIME: new_time
-                    },
-                    effects : Set(
-                        GC_LogMessage(OkayRequest(msg)),
-                        GC_UpdateInput(Set(GC_SIMControl)),
-                        GC_AppendHandle(SIMOkayRelease(msg)),
-                    )
-                }
-            } else {
-                {
-                    post_state : clock.state,
-                    effects : Set(
-                        GC_UpdateInput(Set()),
-                    )
-                }
+                | _ => Set()
             }
-        })
+        }).flatten()
     }
 
     pure def gc_okay_2(clock: GC_System) : Set[GC_Transition] = {
-        clock.input.gc_get_sim_control_messages().map(p => {
-            clock.handles.get_sim_okay_release_messages().map(q => {
-                {
-                    post_state : clock.state,
-                    effects : Set(
-                        GC_UpdateInput(Set(OkayResponse(q))),
-                        GC_RemoveHandle(SIMOkayRelease(q)),
-                        GC_LogMessage(OkayResponse(q)),
-                    )
+        clock.input.map(m => {
+            match m {
+                | GC_SIMControl => {
+                    clock.handles.map(h => {
+                        match h {
+                            | SIMOkayRelease(q) => {
+                                Set({
+                                    post_state : clock.state,
+                                    effects : Set(
+                                        GC_UpdateInput(Set(OkayResponse(q))),
+                                        GC_RemoveHandle(SIMOkayRelease(q)),
+                                    )
+                                })
+                            }
+                            | _ => Set()
+                        }
+                    }).flatten()
                 }
-            })
+                | _ => Set()
+            }
         }).flatten()
     }
 
@@ -166,5 +193,6 @@ module g_clock{
     action gc_stutter : bool = {
         g_clock_s' = g_clock_s
     }
+    
 
 }

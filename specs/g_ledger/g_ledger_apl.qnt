@@ -11,7 +11,10 @@ module g_ledger_apl {
 
 
     pure def led_apl_1(led: LED_System, clock: GC_System) : Set[(LED_Transition, GC_Transition)] = {
-        led.input.led_get_apl_request_messages().map(p => {
+        led.input.filterMap(m => match m {
+            | APLRequest(p) => Some(p)
+            | _ => None
+        }).map(p => {
             if(led_access_check(p.cfg, led.params)){
                 {
                     post_state: led.state,
@@ -47,8 +50,14 @@ module g_ledger_apl {
     }    
 
     pure def led_apl_2(led: LED_System, clock: GC_System, sim_p: Pointer) : Set[(LED_Transition, GC_Transition)] = {
-        led.input.led_get_sim_control_messages().map(_ => {
-            led.handles.led_get_apl_sim_hold_messages().map(p => {
+        led.input.filterMap(m => match m {
+            | LED_SIMControl => Some(m)
+            | _ => None
+        }).map(_ => {
+            led.handles.filterMap(h => match h {
+                | APLSIMHold(p) => Some(p)
+                | _ => None
+            }).map(p => {
                 {
                     post_state: led.state,
                     effects: Set(
@@ -85,7 +94,10 @@ module g_ledger_apl {
 
 
     def led_apl_3(led: LED_System, clock: GC_System) : Set[(LED_Transition, GC_Transition)] = {
-        led.input.led_get_apl_sim_release_messages().map(p => {
+        led.input.filterMap(m => match m {
+            | APLSIMRelease(p) => Some(p)
+            | _ => None
+        }).map(p => {
             if(led.state.APL.has(p.r)){
                 Set({
                     post_state: led.state,

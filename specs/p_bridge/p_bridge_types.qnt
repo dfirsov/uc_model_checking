@@ -195,135 +195,135 @@ module p_bridge_types {
             ledger2: sys.ledger2.led_id_trans(), 
             dif: sys.dif.dif_id_trans(), 
             hash: sys.hash.hash_id_trans(),
-            nizk: sys.nizk.nizk_id_trans(), 
+            nizk: sys.nizk.nizk_id_trans(),
         }
     }    
 
-    pure def brd_get_bridge_request_messages(messages: Set[BRD_Message]): Set[{cfg: MsgConfig}] = {
-        messages.filterMap(m => {
-            match m {
-                | BridgeRequest(p) => Some(p)
-                | _ => None
-            }
-        })
-    }
+    // pure def brd_get_bridge_request_messages(messages: Set[BRD_Message]): Set[{cfg: MsgConfig}] = {
+    //     messages.filterMap(m => {
+    //         match m {
+    //             | BridgeRequest(p) => Some(p)
+    //             | _ => None
+    //         }
+    //     })
+    // }
 
-    pure def brd_get_bridge_fetch_wait_messages(messages: Set[BRD_Message]): Set[{cfg: MsgConfig, r: Time}] = {
-        messages.filterMap(m => {
-            match m {
-                | BridgeFetchWait(p) => Some(p)
-                | _ => None
-            }
-        })
-    }
+    // pure def brd_get_bridge_fetch_wait_messages(messages: Set[BRD_Message]): Set[{cfg: MsgConfig, r: Time}] = {
+    //     messages.filterMap(m => {
+    //         match m {
+    //             | BridgeFetchWait(p) => Some(p)
+    //             | _ => None
+    //         }
+    //     })
+    // }
 
-    pure def brd_get_bridge_l1_read_wait_messages(messages: Set[BRD_Message]): Set[{cfg: MsgConfig, r: Time, ms: Set[{party: Party, avk: ATMS_AVK, sig: SIG_Signature}]}] = {
-        messages.filterMap(m => {
-            match m {
-                | BridgeL1ReadWait(p) => Some(p)
-                | _ => None
-            }
-        })
-    }
+    // pure def brd_get_bridge_l1_read_wait_messages(messages: Set[BRD_Message]): Set[{cfg: MsgConfig, r: Time, ms: Set[{party: Party, avk: ATMS_AVK, sig: SIG_Signature}]}] = {
+    //     messages.filterMap(m => {
+    //         match m {
+    //             | BridgeL1ReadWait(p) => Some(p)
+    //             | _ => None
+    //         }
+    //     })
+    // }
 
-    pure def brd_get_bridge_br_algorithm_request_messages(messages: Set[BRD_Message]): Set[{cfg: MsgConfig, args: BRD_BR_Args}] = {
-        messages.filterMap(m => {
-            match m {
-                | BridgeBRAlgorithmRequest(p) => Some(p)
-                | _ => None
-            }
-        })
-    }
+    // pure def brd_get_bridge_br_algorithm_request_messages(messages: Set[BRD_Message]): Set[{cfg: MsgConfig, args: BRD_BR_Args}] = {
+    //     messages.filterMap(m => {
+    //         match m {
+    //             | BridgeBRAlgorithmRequest(p) => Some(p)
+    //             | _ => None
+    //         }
+    //     })
+    // }
 
-    pure def brd_get_bridge_br_algorithm_response_messages(messages: Set[BRD_Message]): Set[{cfg: MsgConfig, args: BRD_BR_Args, resp: BRD_BR_Resp}] = {
-        messages.filterMap(m => {
-            match m {
-                | BridgeBRAlgorithmResponse(p) => Some(p)
-                | _ => None
-            }
-        })
-    }    
+    // pure def brd_get_bridge_br_algorithm_response_messages(messages: Set[BRD_Message]): Set[{cfg: MsgConfig, args: BRD_BR_Args, resp: BRD_BR_Resp}] = {
+    //     messages.filterMap(m => {
+    //         match m {
+    //             | BridgeBRAlgorithmResponse(p) => Some(p)
+    //             | _ => None
+    //         }
+    //     })
+    // }    
 
-    pure def brd_get_bridge_l2_read_wait_messages(messages: Set[BRD_Message]): Set[{cfg: MsgConfig, r: Time, ms: Set[{party: Party, avk: ATMS_AVK, sig: SIG_Signature}], L1: List[LED_Tx]}] = {
-        messages.filterMap(m => {
-            match m {
-                | BridgeL2ReadWait(p) => Some(p)
-                | _ => None
-            }
-        })
-    }
+    // pure def brd_get_bridge_l2_read_wait_messages(messages: Set[BRD_Message]): Set[{cfg: MsgConfig, r: Time, ms: Set[{party: Party, avk: ATMS_AVK, sig: SIG_Signature}], L1: List[LED_Tx]}] = {
+    //     messages.filterMap(m => {
+    //         match m {
+    //             | BridgeL2ReadWait(p) => Some(p)
+    //             | _ => None
+    //         }
+    //     })
+    // }
 
-    pure def brd_get_bridge_com_sel_wait_messages(messages: Set[BRD_Message]): Set[{cfg: MsgConfig, args: BRD_BR_Args, bst: BRD_BST_Entry}] = {
-        messages.filterMap(m => {
-            match m {
-                | BridgeComSelWait(p) => Some(p)
-                | _ => None
-            }
-        })
-    }
+    // pure def brd_get_bridge_com_sel_wait_messages(messages: Set[BRD_Message]): Set[{cfg: MsgConfig, args: BRD_BR_Args, bst: BRD_BST_Entry}] = {
+    //     messages.filterMap(m => {
+    //         match m {
+    //             | BridgeComSelWait(p) => Some(p)
+    //             | _ => None
+    //         }
+    //     })
+    // }
 
-    pure def brd_get_bridge_akey_wait_messages(messages: Set[BRD_Message]): Set[{cfg: MsgConfig, args: BRD_BR_Args, bst: BRD_BST_Entry, com_prim: Committee}] = {
-        messages.filterMap(m => {
-            match m {
-                | BridgeAKeyWait(p) => Some(p)
-                | _ => None
-            }
-        })
-    }
+    // pure def brd_get_bridge_akey_wait_messages(messages: Set[BRD_Message]): Set[{cfg: MsgConfig, args: BRD_BR_Args, bst: BRD_BST_Entry, com_prim: Committee}] = {
+    //     messages.filterMap(m => {
+    //         match m {
+    //             | BridgeAKeyWait(p) => Some(p)
+    //             | _ => None
+    //         }
+    //     })
+    // }
 
-    pure def brd_get_bridge_apl_wait_messages(messages: Set[BRD_Message]): Set[{cfg: MsgConfig, args: BRD_BR_Args, bst: BRD_BST_Entry, com_prim: Committee, avk_prim: ATMS_AVK}] = {
-        messages.filterMap(m => {
-            match m {
-                | BridgeAPLWait(p) => Some(p)
-                | _ => None
-            }
-        })
-    }
+    // pure def brd_get_bridge_apl_wait_messages(messages: Set[BRD_Message]): Set[{cfg: MsgConfig, args: BRD_BR_Args, bst: BRD_BST_Entry, com_prim: Committee, avk_prim: ATMS_AVK}] = {
+    //     messages.filterMap(m => {
+    //         match m {
+    //             | BridgeAPLWait(p) => Some(p)
+    //             | _ => None
+    //         }
+    //     })
+    // }
 
-    pure def brd_get_bridge_hash_wait_messages(messages: Set[BRD_Message]): Set[{cfg: MsgConfig, args: BRD_BR_Args, bst: BRD_BST_Entry, com_prim: Committee, avk_prim: ATMS_AVK, apl: int}] = {
-        messages.filterMap(m => {
-            match m {
-                | BridgeHashWait(p) => Some(p)
-                | _ => None
-            }
-        })
-    }
+    // pure def brd_get_bridge_hash_wait_messages(messages: Set[BRD_Message]): Set[{cfg: MsgConfig, args: BRD_BR_Args, bst: BRD_BST_Entry, com_prim: Committee, avk_prim: ATMS_AVK, apl: int}] = {
+    //     messages.filterMap(m => {
+    //         match m {
+    //             | BridgeHashWait(p) => Some(p)
+    //             | _ => None
+    //         }
+    //     })
+    // }
 
-    pure def brd_get_bridge_sig_wait_messages(messages: Set[BRD_Message]): Set[{cfg: MsgConfig, args: BRD_BR_Args, bst: BRD_BST_Entry, com_prim: Committee, avk_prim: ATMS_AVK, apl: int, h: int}] = {
-        messages.filterMap(m => {
-            match m {
-                | BridgeSigWait(p) => Some(p)
-                | _ => None
-            }
-        })
-    }
+    // pure def brd_get_bridge_sig_wait_messages(messages: Set[BRD_Message]): Set[{cfg: MsgConfig, args: BRD_BR_Args, bst: BRD_BST_Entry, com_prim: Committee, avk_prim: ATMS_AVK, apl: int, h: int}] = {
+    //     messages.filterMap(m => {
+    //         match m {
+    //             | BridgeSigWait(p) => Some(p)
+    //             | _ => None
+    //         }
+    //     })
+    // }
 
-    pure def brd_get_bridge_asig_wait_messages(messages: Set[BRD_Message]): Set[{cfg: MsgConfig, args: BRD_BR_Args, bst: BRD_BST_Entry, msg: {h: int, avk: ATMS_AVK}, cID: int}] = {
-        messages.filterMap(m => {
-            match m {
-                | BridgeASigWait(p) => Some(p)
-                | _ => None
-            }
-        })
-    }
+    // pure def brd_get_bridge_asig_wait_messages(messages: Set[BRD_Message]): Set[{cfg: MsgConfig, args: BRD_BR_Args, bst: BRD_BST_Entry, msg: {h: int, avk: ATMS_AVK}, cID: int}] = {
+    //     messages.filterMap(m => {
+    //         match m {
+    //             | BridgeASigWait(p) => Some(p)
+    //             | _ => None
+    //         }
+    //     })
+    // }
 
-    pure def brd_get_bridge_diffuse_wait_messages(messages: Set[BRD_Message]): Set[{cfg: MsgConfig, args: BRD_BR_Args, resp: BRD_BR_Resp,}] = {
-        messages.filterMap(m => {
-            match m {
-                | BridgeDiffuseWait(p) => Some(p)
-                | _ => None
-            }
-        })
-    }
+    // pure def brd_get_bridge_diffuse_wait_messages(messages: Set[BRD_Message]): Set[{cfg: MsgConfig, args: BRD_BR_Args, resp: BRD_BR_Resp,}] = {
+    //     messages.filterMap(m => {
+    //         match m {
+    //             | BridgeDiffuseWait(p) => Some(p)
+    //             | _ => None
+    //         }
+    //     })
+    // }
 
-    pure def brd_get_bridge_diffuse_messages(messages: Set[BRD_Message]): Set[{cfg: MsgConfig, args: BRD_BR_Args, resp: BRD_BR_Resp,}] = {
-        messages.filterMap(m => {
-            match m {
-                | BridgeDiffuse(p) => Some(p)
-                | _ => None
-            }
-        })
-    }    
+    // pure def brd_get_bridge_diffuse_messages(messages: Set[BRD_Message]): Set[{cfg: MsgConfig, args: BRD_BR_Args, resp: BRD_BR_Resp,}] = {
+    //     messages.filterMap(m => {
+    //         match m {
+    //             | BridgeDiffuse(p) => Some(p)
+    //             | _ => None
+    //         }
+    //     })
+    // }    
 
     // pure def brd_get_bridge_l1_submit_wait_messages(messages: Set[BRD_Message]): Set[{cfg: MsgConfig, args: BRD_BR_Args, resp: BRD_BR_Resp,}] = {
     //     messages.filterMap(m => {
@@ -343,139 +343,139 @@ module p_bridge_types {
     //     })
     // }    
 
-    pure def brd_get_bridge_l2_submit_wait_messages(messages: Set[BRD_Message]): Set[{cfg: MsgConfig, args: BRD_BR_Args, resp: BRD_BR_Resp,}] = {
-        messages.filterMap(m => {
-            match m {
-                | BridgeL2SubmitWait(p) => Some(p)
-                | _ => None
-            }
-        })
-    }
+    // pure def brd_get_bridge_l2_submit_wait_messages(messages: Set[BRD_Message]): Set[{cfg: MsgConfig, args: BRD_BR_Args, resp: BRD_BR_Resp,}] = {
+    //     messages.filterMap(m => {
+    //         match m {
+    //             | BridgeL2SubmitWait(p) => Some(p)
+    //             | _ => None
+    //         }
+    //     })
+    // }
 
-    pure def brd_get_bridge_l2_submit_messages(messages: Set[BRD_Message]): Set[{cfg: MsgConfig, args: BRD_BR_Args, resp: BRD_BR_Resp,}] = {
-        messages.filterMap(m => {
-            match m {
-                | BridgeL2Submit(p) => Some(p)
-                | _ => None
-            }
-        })
-    }    
+    // pure def brd_get_bridge_l2_submit_messages(messages: Set[BRD_Message]): Set[{cfg: MsgConfig, args: BRD_BR_Args, resp: BRD_BR_Resp,}] = {
+    //     messages.filterMap(m => {
+    //         match m {
+    //             | BridgeL2Submit(p) => Some(p)
+    //             | _ => None
+    //         }
+    //     })
+    // }    
 
-    pure def brd_get_bridge_ok_wait_messages(messages: Set[BRD_Message]): Set[{cfg: MsgConfig, args: BRD_BR_Args, resp: BRD_BR_Resp,}] = {
-        messages.filterMap(m => {
-            match m {
-                | BridgeOKWait(p) => Some(p)
-                | _ => None
-            }
-        })
-    }
+    // pure def brd_get_bridge_ok_wait_messages(messages: Set[BRD_Message]): Set[{cfg: MsgConfig, args: BRD_BR_Args, resp: BRD_BR_Resp,}] = {
+    //     messages.filterMap(m => {
+    //         match m {
+    //             | BridgeOKWait(p) => Some(p)
+    //             | _ => None
+    //         }
+    //     })
+    // }
 
-    pure def brd_get_bridge_response_messages(messages: Set[BRD_Message]): Set[{cfg: MsgConfig, args: BRD_BR_Args, resp: BRD_BR_Resp,}] = {
-        messages.filterMap(m => {
-            match m {
-                | BridgeResponse(p) => Some(p)
-                | _ => None
-            }
-        })
-    }
-    pure def brd_get_bkgen_atm_gen_wait_messages(messages: Set[BRD_Message]): Set[{cfg: MsgConfig}] = {
-        messages.filterMap(m => {
-            match m {
-                | BKGenATMGenWait(p) => Some(p)
-                | _ => None
-            }
-        })
-    }
+    // pure def brd_get_bridge_response_messages(messages: Set[BRD_Message]): Set[{cfg: MsgConfig, args: BRD_BR_Args, resp: BRD_BR_Resp,}] = {
+    //     messages.filterMap(m => {
+    //         match m {
+    //             | BridgeResponse(p) => Some(p)
+    //             | _ => None
+    //         }
+    //     })
+    // }
+    // pure def brd_get_bkgen_atm_gen_wait_messages(messages: Set[BRD_Message]): Set[{cfg: MsgConfig}] = {
+    //     messages.filterMap(m => {
+    //         match m {
+    //             | BKGenATMGenWait(p) => Some(p)
+    //             | _ => None
+    //         }
+    //     })
+    // }
 
-    pure def brd_get_bkgen_pki_wait_messages(messages: Set[BRD_Message]): Set[{cfg: MsgConfig, bvk: int}] = {
-        messages.filterMap(m => {
-            match m {
-                | BKGenPKIWait(p) => Some(p)
-                | _ => None
-            }
-        })
-    }
+    // pure def brd_get_bkgen_pki_wait_messages(messages: Set[BRD_Message]): Set[{cfg: MsgConfig, bvk: int}] = {
+    //     messages.filterMap(m => {
+    //         match m {
+    //             | BKGenPKIWait(p) => Some(p)
+    //             | _ => None
+    //         }
+    //     })
+    // }
 
-    pure def brd_get_bkgen_ok_wait_messages(messages: Set[BRD_Message]): Set[{cfg: MsgConfig, bvk: int}] = {
-        messages.filterMap(m => {
-            match m {
-                | BKGenOKWait(p) => Some(p)
-                | _ => None
-            }
-        })
-    }
+    // pure def brd_get_bkgen_ok_wait_messages(messages: Set[BRD_Message]): Set[{cfg: MsgConfig, bvk: int}] = {
+    //     messages.filterMap(m => {
+    //         match m {
+    //             | BKGenOKWait(p) => Some(p)
+    //             | _ => None
+    //         }
+    //     })
+    // }
 
-    pure def brd_get_rot_pki_get_all_wait_messages(messages: Set[BRD_Message]): Set[{cfg: MsgConfig}] = {
-        messages.filterMap(m => {
-            match m {
-                | RoTPKIGetAllWait(p) => Some(p)
-                | _ => None
-            }
-        })
-    }
+    // pure def brd_get_rot_pki_get_all_wait_messages(messages: Set[BRD_Message]): Set[{cfg: MsgConfig}] = {
+    //     messages.filterMap(m => {
+    //         match m {
+    //             | RoTPKIGetAllWait(p) => Some(p)
+    //             | _ => None
+    //         }
+    //     })
+    // }
 
-    pure def brd_get_rot_com_sel_wait_messages(messages: Set[BRD_Message]): Set[{cfg: MsgConfig, bvks: Party -> BRD_BVK}] = {
-        messages.filterMap(m => {
-            match m {
-                | RoTComSelWait(p) => Some(p)
-                | _ => None
-            }
-        })
-    }
+    // pure def brd_get_rot_com_sel_wait_messages(messages: Set[BRD_Message]): Set[{cfg: MsgConfig, bvks: Party -> BRD_BVK}] = {
+    //     messages.filterMap(m => {
+    //         match m {
+    //             | RoTComSelWait(p) => Some(p)
+    //             | _ => None
+    //         }
+    //     })
+    // }
 
-    pure def brd_get_rot_akey_wait_messages(messages: Set[BRD_Message]): Set[{cfg: MsgConfig, bvks: Party -> BRD_BVK, com: Committee}] = {
-        messages.filterMap(m => {
-            match m {
-                | RoTAKeyWait(p) => Some(p)
-                | _ => None
-            }
-        })
-    }
+    // pure def brd_get_rot_akey_wait_messages(messages: Set[BRD_Message]): Set[{cfg: MsgConfig, bvks: Party -> BRD_BVK, com: Committee}] = {
+    //     messages.filterMap(m => {
+    //         match m {
+    //             | RoTAKeyWait(p) => Some(p)
+    //             | _ => None
+    //         }
+    //     })
+    // }
 
-    pure def brd_get_rot_ok_wait_messages(messages: Set[BRD_Message]): Set[{cfg: MsgConfig, bvks: Party -> BRD_BVK, com: Committee, avk: BRD_ROT}] = {
-        messages.filterMap(m => {
-            match m {
-                | RoTOKWait(p) => Some(p)
-                | _ => None
-            }
-        })
-    }
+    // pure def brd_get_rot_ok_wait_messages(messages: Set[BRD_Message]): Set[{cfg: MsgConfig, bvks: Party -> BRD_BVK, com: Committee, avk: BRD_ROT}] = {
+    //     messages.filterMap(m => {
+    //         match m {
+    //             | RoTOKWait(p) => Some(p)
+    //             | _ => None
+    //         }
+    //     })
+    // }
 
-    pure def brd_get_certify_read_wait_messages(messages: Set[BRD_Message]): Set[{cfg: MsgConfig, rot: BRD_ROT, x: LED_Tx}] = {
-        messages.filterMap(m => {
-            match m {
-                | CertifyReadWait(p) => Some(p)
-                | _ => None
-            }
-        })
-    }
+    // pure def brd_get_certify_read_wait_messages(messages: Set[BRD_Message]): Set[{cfg: MsgConfig, rot: BRD_ROT, x: LED_Tx}] = {
+    //     messages.filterMap(m => {
+    //         match m {
+    //             | CertifyReadWait(p) => Some(p)
+    //             | _ => None
+    //         }
+    //     })
+    // }
 
-    pure def brd_get_certify_apl_wait_messages(messages: Set[BRD_Message]): Set[{cfg: MsgConfig, rot: BRD_ROT, x: LED_Tx, L1: List[LED_Tx]}] = {
-        messages.filterMap(m => {
-            match m {
-                | CertifyAPLWait(p) => Some(p)
-                | _ => None
-            }
-        })
-    }
+    // pure def brd_get_certify_apl_wait_messages(messages: Set[BRD_Message]): Set[{cfg: MsgConfig, rot: BRD_ROT, x: LED_Tx, L1: List[LED_Tx]}] = {
+    //     messages.filterMap(m => {
+    //         match m {
+    //             | CertifyAPLWait(p) => Some(p)
+    //             | _ => None
+    //         }
+    //     })
+    // }
 
-    pure def brd_get_certify_hash_wait_messages(messages: Set[BRD_Message]): Set[{cfg: MsgConfig, rot: BRD_ROT, x: LED_Tx, L1: List[LED_Tx], apl: int}] = {
-        messages.filterMap(m => {
-            match m {
-                | CertifyHashWait(p) => Some(p)
-                | _ => None
-            }
-        })
-    }
+    // pure def brd_get_certify_hash_wait_messages(messages: Set[BRD_Message]): Set[{cfg: MsgConfig, rot: BRD_ROT, x: LED_Tx, L1: List[LED_Tx], apl: int}] = {
+    //     messages.filterMap(m => {
+    //         match m {
+    //             | CertifyHashWait(p) => Some(p)
+    //             | _ => None
+    //         }
+    //     })
+    // }
 
-    pure def brd_get_certify_prove_wait_messages(messages: Set[BRD_Message]): Set[{cfg: MsgConfig, rot: BRD_ROT, x: LED_Tx, L1: List[LED_Tx], apl: int, h: int}] = {
-        messages.filterMap(m => {
-            match m {
-                | CertifyProveWait(p) => Some(p)
-                | _ => None
-            }
-        })
-    }
+    // pure def brd_get_certify_prove_wait_messages(messages: Set[BRD_Message]): Set[{cfg: MsgConfig, rot: BRD_ROT, x: LED_Tx, L1: List[LED_Tx], apl: int, h: int}] = {
+    //     messages.filterMap(m => {
+    //         match m {
+    //             | CertifyProveWait(p) => Some(p)
+    //             | _ => None
+    //         }
+    //     })
+    // }
 
     pure def brd_get_verify_request_messages(messages: Set[BRD_Message]): Set[{cfg: MsgConfig, rot: BRD_ROT, x: LED_Tx, proof: {pi: int, h: int}}] = {
         messages.filterMap(m => {
@@ -486,14 +486,14 @@ module p_bridge_types {
         })
     }
 
-    pure def brd_get_verify_nizk_verify_wait_messages(messages: Set[BRD_Message]): Set[{cfg: MsgConfig, rot: BRD_ROT, x: LED_Tx, proof: {pi: int, h: int}, mem: {hs: List[Hash_Output], avk: Option[ATMS_AVK]}}] = {
-        messages.filterMap(m => {
-            match m {
-                | BRD_VerifyNIZKVerifyWait(p) => Some(p)
-                | _ => None
-            }
-        })
-    }
+    // pure def brd_get_verify_nizk_verify_wait_messages(messages: Set[BRD_Message]): Set[{cfg: MsgConfig, rot: BRD_ROT, x: LED_Tx, proof: {pi: int, h: int}, mem: {hs: List[Hash_Output], avk: Option[ATMS_AVK]}}] = {
+    //     messages.filterMap(m => {
+    //         match m {
+    //             | BRD_VerifyNIZKVerifyWait(p) => Some(p)
+    //             | _ => None
+    //         }
+    //     })
+    // }
 
     pure def brd_get_verify_response_messages(messages: Set[BRD_Message]): Set[{cfg: MsgConfig, rot: BRD_ROT, x: LED_Tx, proof: {pi: int, h: int}, mem: {hs: List[Hash_Output], avk: Option[ATMS_AVK]}, res: bool, r: Time}] = {
         messages.filterMap(m => {
@@ -508,22 +508,22 @@ module p_bridge_types {
             cfg.party.in(params.P) and cfg.sid.in(params.SIDs)
     }         
 
-    pure def brd_get_bkgen_request_messages(messages: Set[BRD_Message]): Set[{cfg: MsgConfig}] = {
-        messages.filterMap(m => {
-            match m {
-                | BKGenRequest(p) => Some(p)
-                | _ => None
-            }
-        })
-    }
-    pure def brd_get_rot_request_messages(messages: Set[BRD_Message]): Set[{cfg: MsgConfig}] = {
-        messages.filterMap(m => {
-            match m {
-                | RoTRequest(p) => Some(p)
-                | _ => None
-            }
-        })
-    }
+    // pure def brd_get_bkgen_request_messages(messages: Set[BRD_Message]): Set[{cfg: MsgConfig}] = {
+    //     messages.filterMap(m => {
+    //         match m {
+    //             | BKGenRequest(p) => Some(p)
+    //             | _ => None
+    //         }
+    //     })
+    // }
+    // pure def brd_get_rot_request_messages(messages: Set[BRD_Message]): Set[{cfg: MsgConfig}] = {
+    //     messages.filterMap(m => {
+    //         match m {
+    //             | RoTRequest(p) => Some(p)
+    //             | _ => None
+    //         }
+    //     })
+    // }
 
     pure def brd_get_certify_request_messages(messages: Set[BRD_Message]): Set[{cfg: MsgConfig, rot: BRD_ROT, x: LED_Tx}] = {
         messages.filterMap(m => {
@@ -534,23 +534,23 @@ module p_bridge_types {
         })
     }
 
-    pure def brd_get_bkgen_response_messages(messages: Set[BRD_Message]): Set[{cfg: MsgConfig, bvk: int}] = {
-        messages.filterMap(m => {
-            match m {
-                | BKGenResponse(p) => Some(p)
-                | _ => None
-            }
-        })
-    }
+    // pure def brd_get_bkgen_response_messages(messages: Set[BRD_Message]): Set[{cfg: MsgConfig, bvk: int}] = {
+    //     messages.filterMap(m => {
+    //         match m {
+    //             | BKGenResponse(p) => Some(p)
+    //             | _ => None
+    //         }
+    //     })
+    // }
 
-    pure def brd_get_rot_response_messages(messages: Set[BRD_Message]): Set[{cfg: MsgConfig, bvks: Party -> BRD_BVK, com: Committee, avk: BRD_ROT}] = {
-        messages.filterMap(m => {
-            match m {
-                | RoTResponse(p) => Some(p)
-                | _ => None
-            }
-        })
-    }
+    // pure def brd_get_rot_response_messages(messages: Set[BRD_Message]): Set[{cfg: MsgConfig, bvks: Party -> BRD_BVK, com: Committee, avk: BRD_ROT}] = {
+    //     messages.filterMap(m => {
+    //         match m {
+    //             | RoTResponse(p) => Some(p)
+    //             | _ => None
+    //         }
+    //     })
+    // }
 
     pure def brd_get_certify_response_messages(messages: Set[BRD_Message]): Set[{cfg: MsgConfig, rot: BRD_ROT, x: LED_Tx, L1: List[LED_Tx], apl: int, h: int, res: Option[({pi: int, h: int})], r: Time} ] = {
         messages.filterMap(m => {

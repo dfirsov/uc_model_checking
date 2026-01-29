@@ -10,7 +10,7 @@ module g_ledger_tests {
     import g_ledger_env.* from "./g_ledger_env" 
 
 
-    run submit_cycle(party : Party, sid: SID, tx: TX) : bool = {
+    run submit_cycle(party : Party, sid: SID, tx: LED_Tx) : bool = {
         (env_led_submit_reqs(party, sid, tx))
         .then(led_step)
         .then(gc_step_led_wait)
@@ -22,7 +22,7 @@ module g_ledger_tests {
 
     run read_cycle(party : Party, sid: SID) : bool = {
         env_led_read_reqs(party, sid)
-        .then(step)
+        .then(led_step)
         .then(led_read_2_act)
         .then(led_step)
         .then(gc_step_led_wait)
