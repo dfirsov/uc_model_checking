@@ -120,62 +120,62 @@ module f_dif{
     }
 
 
-    pure def dif_diffuse_3(dif: DIF_System, clock: GC_System) : Set[(DIF_Transition, GC_Transition)] = {
-        dif.input.filterMap(m => match m {
-            | DIF_SIMDiffuseRelease(msg) => Some(msg)
-            | _ => None
-        }).map(msg => {
-            val dif_transition = {
-                post_state: dif.state,
-                effects: Set(
-                    DIF_UpdateInput(Set()),
-                    DIF_AppendHandle(DIF_ClockRequestWait(msg))
-                )
-            }
+    // pure def dif_diffuse_3(dif: DIF_System, clock: GC_System) : Set[(DIF_Transition, GC_Transition)] = {
+    //     dif.input.filterMap(m => match m {
+    //         | DIF_SIMDiffuseRelease(msg) => Some(msg)
+    //         | _ => None
+    //     }).map(msg => {
+    //         val dif_transition = {
+    //             post_state: dif.state,
+    //             effects: Set(
+    //                 DIF_UpdateInput(Set()),
+    //                 DIF_AppendHandle(DIF_ClockRequestWait(msg))
+    //             )
+    //         }
 
-            val clock_transition = {
-                post_state: clock.state,
-                effects: Set(
-                    GC_UpdateInput(Set(OkayRequest({cfg: msg.cfg})))
-                )
-            }
+    //         val clock_transition = {
+    //             post_state: clock.state,
+    //             effects: Set(
+    //                 GC_UpdateInput(Set(OkayRequest({cfg: msg.cfg})))
+    //             )
+    //         }
 
-            (dif_transition, clock_transition)
-        })
-    }
+    //         (dif_transition, clock_transition)
+    //     })
+    // }
  
-    pure def dif_diffuse_4(dif: DIF_System, clock: GC_System) : Set[(DIF_Transition, GC_Transition)] = {
-        clock.input.filterMap(z => match z {
-            | OkayResponse(q) => Some(q)
-            | _ => None
-        }).map(msg1 => 
-            dif.handles.filterMap(h => match h {
-                | DIF_ClockRequestWait(msg2) => Some(msg2)
-                | _ => None
-            }).map(msg2 => {
-                if (msg1.cfg.nonce == msg2.cfg.nonce){
-                    val dif_transition = {
-                        post_state: dif.state,
-                        effects: Set(
-                            DIF_UpdateInput(Set(DIF_DiffuseResponse(msg2))),
-                            DIF_RemoveHandle(DIF_ClockRequestWait(msg2))
-                        )
-                    }
+    // pure def dif_diffuse_4(dif: DIF_System, clock: GC_System) : Set[(DIF_Transition, GC_Transition)] = {
+    //     clock.input.filterMap(z => match z {
+    //         | OkayResponse(q) => Some(q)
+    //         | _ => None
+    //     }).map(msg1 => 
+    //         dif.handles.filterMap(h => match h {
+    //             | DIF_ClockRequestWait(msg2) => Some(msg2)
+    //             | _ => None
+    //         }).map(msg2 => {
+    //             if (msg1.cfg.nonce == msg2.cfg.nonce){
+    //                 val dif_transition = {
+    //                     post_state: dif.state,
+    //                     effects: Set(
+    //                         DIF_UpdateInput(Set(DIF_DiffuseResponse(msg2))),
+    //                         DIF_RemoveHandle(DIF_ClockRequestWait(msg2))
+    //                     )
+    //                 }
 
-                    val clock_transition = {
-                        post_state: clock.state,
-                        effects: Set(
-                            GC_UpdateInput(Set())
-                        )
-                    }
+    //                 val clock_transition = {
+    //                     post_state: clock.state,
+    //                     effects: Set(
+    //                         GC_UpdateInput(Set())
+    //                     )
+    //                 }
 
-                    Set((dif_transition, clock_transition))
-                }else{
-                    Set()
-                }
-            })
-        ).flatten().flatten()
-    }
+    //                 Set((dif_transition, clock_transition))
+    //             }else{
+    //                 Set()
+    //             }
+    //         })
+    //     ).flatten().flatten()
+    // }
 
     def dif_inject(dif:DIF_System) : Set[DIF_Transition] = {
         dif.input.filterMap(m => match m {

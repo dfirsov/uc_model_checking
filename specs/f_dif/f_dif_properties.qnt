@@ -12,16 +12,16 @@ module f_dif_properties {
 
 // ========== CO-PROPERTIES (should fail - used for model checking bounds) ==========
 
-// val P1 = f_dif_s.input.size() == 0
-// val P2 = f_dif_s.log.size() <= 7
-// val P3 = f_dif_s.log.map(x => x.msg).dif_get_ok_response_messages().size() <= 2
-// val P4 = f_dif_s.log.map(x => x.msg).dif_get_fetch_response_messages().size() <= 2
-// val P5 = f_dif_s.log.map(x => x.msg).dif_get_diffuse_response_messages().size() <= 4
-// val P6 = g_clock_s.input.size() == 0
-// val P7 = g_clock_s.input.map(x => x).gc_get_all_response_messages().size() == 0
-// val P8 = g_clock_s.state.TIME <= 5
-// val P9 = f_dif_s.log.map(x => x.msg).dif_get_fetch_response_messages().forall(m => m.data.size() == 0)
-// val P10 = f_dif_s.handles.dif_get_sim_diffuse_hold_messages().size() <= 2
+val P1 = f_dif_s.input.size() == 0
+val P2 = f_dif_s.log.size() <= 7
+val P3 = f_dif_s.log.map(x => x.msg).dif_get_ok_response_messages().size() <= 2
+val P4 = f_dif_s.log.map(x => x.msg).dif_get_fetch_response_messages().size() <= 2
+val P5 = f_dif_s.log.map(x => x.msg).dif_get_diffuse_response_messages().size() <= 4
+val P6 = g_clock_s.input.size() == 0
+val P7 = g_clock_s.input.map(x => x).gc_get_all_response_messages().size() == 0
+val P8 = g_clock_s.state.TIME <= 5
+val P9 = f_dif_s.log.map(x => x.msg).dif_get_fetch_response_messages().forall(m => m.data.size() == 0)
+val P10 = f_dif_s.handles.dif_get_sim_diffuse_hold_messages().size() <= 2
 
  
 
@@ -79,7 +79,7 @@ val DDL = {
                 val dif_fetch_response_exists = f_dif_s.log.exists(msg3 => {
                     match msg3.msg {
                         | DIF_FetchResponse(d) => {
-                            d.t_prim >= msg1.time + delta_param
+                            p.cfg.sid == d.cfg.sid and d.t_prim >= msg1.time + delta_param
                         }
                         | _ => false
                     }
@@ -89,7 +89,7 @@ val DDL = {
                     f_dif_s.log.exists(msg3 => {
                         match msg3.msg {
                             | DIF_FetchResponse(d) => {
-                                p.m.in(d.data)
+                                p.m.in(d.data) and p.cfg.sid == d.cfg.sid
                             }
                             | _ => false
                         }
@@ -175,8 +175,6 @@ val ValidCounters = sids.forall(sid => {
 
 
 
-
-
 // Liveness: system is never stuck
 temporal NeverStuck = {
   // WF is required because TLA+ semantics treat stuttering as a valid step even if not explicitly modeled
@@ -216,15 +214,11 @@ val AllSecurityProps = and {
     NoDuplication,
 }
 
-// val AllProps = and {
-//     AllBasicProps,
-//     AllAccessProps,
-//     AllDiffusionProps,
-//     AllSecurityProps,
-// }
 val AllProps = and {
-    DiffusionConsistency,
-    DDL
+    AllBasicProps,
+    AllAccessProps,
+    AllDiffusionProps,
+    AllSecurityProps,
 }
 
     

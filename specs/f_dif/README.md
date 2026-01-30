@@ -2,7 +2,7 @@
 
 ## Overview
 
-F-DIF  provides a formal specification of an idealized message diffusion protocol for distributed systems. This module models an UC ideal functionality that enables a sender to broadcast messages to multiple recipients with guaranteed delivery after a specified delay (delta), while supporting adversarial injection from corrupted parties. It ensures that messages diffused at time t are available to all parties by time t + Δ.
+F-DIF provides a formal specification of an idealized message diffusion protocol for distributed systems. This module models an UC ideal functionality that enables a sender to broadcast messages to multiple recipients with guaranteed delivery after a specified delay (delta), while supporting adversarial injection from corrupted parties. It ensures that messages diffused at time t are available to all parties by time t + Δ.
 
 ## Module Structure
 
@@ -13,7 +13,7 @@ F-DIF  provides a formal specification of an idealized message diffusion protoco
   - `Counter`: Message sequence counter for tracking diffused messages
   - `DIF_Message`: Union of all message types (DiffuseRequest, FetchRequest, InjectRequest, responses, SIM controls)
   - `DIF_System`: System state containing input buffer, handles, state per SID, parameters, nonce, and event log
-  - State per SID: Ledger L (message history), counter, flags (D_flag for diffusion, F_flag for fetch)
+  - State per SID: Ledger L (message history), counter, no-reentrance flags (D_flag for diffusion, F_flag for fetch)
 
 - **[f_dif.qnt](f_dif.qnt)**: Core protocol implementation
   - Initialization: `dif_init`
@@ -23,8 +23,8 @@ F-DIF  provides a formal specification of an idealized message diffusion protoco
   - OK: Time advancement synchronization with G-Clock
   - Simulator control: Manages adversarial behavior
 
-- **[f_dif_env.qnt](f_dif_env.qnt)**: Environment/test harness
-  - Test case generation
+- **[f_dif_env.qnt](f_dif_env.qnt)**: Execution environment
+  - init and step functions
   - Request creation and response consumption
 
 - **[f_dif_properties.qnt](f_dif_properties.qnt)**: Formal property specifications
@@ -38,9 +38,6 @@ F-DIF  provides a formal specification of an idealized message diffusion protoco
 
 ![f-dif](pic.png?raw=true)
 
-## Verified Properties [f_dif_properties.qnt](f_dif_properties.qnt)
-- **No duplication**: Message delivered at most once per party per time
-- **Delta-delayed liveness**: Message diffused at time t is fetchable by time t + δ
-- **Broadcast property**: If message diffused to multiple parties, eventually available to all
+
 
 
