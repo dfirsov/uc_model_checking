@@ -32,8 +32,3 @@ G-Clock (Global Clock) provides a formal specification of a global clock functio
 
 ![g-clock](pic.png?raw=true)
 
-## Verified Properties [g_clock_properties.qnt](g_clock_properties.qnt)
-- **Time monotonicity**: Clock time advances monotonically
-- **Registration tracking**: Parties must register before using clock
-- **Synchronization**: All registered parties see consistent time values
-- **Handle management**: Proper management of clock simulation holds

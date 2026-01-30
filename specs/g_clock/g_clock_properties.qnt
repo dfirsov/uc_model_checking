@@ -24,7 +24,7 @@ module g_clock_properties {
     }
 
     action init = {
-        gc_init({C: C, time: 0, Reg: Set(), responsive_simulator: true, enable_logging: true})
+        gc_init({C: C, time: 0, Reg: Set(), responsive_simulator: false, enable_logging: true})
     }
  
 
@@ -144,10 +144,10 @@ val TimeLiveness = g_clock_s.log.forall(r1 =>
               match r2.msg {
                 | OkayRequest(p) => {
                       // check if all registered parties were ready at r1
-                    val all_ready = r1.state.Reg.forall(rp => or {
+                    val all_ready = r1.state.Reg.filter(x => x.party.in(g_clock_s.params.C) == false).forall(rp => or {
                      r1.state.ok.contains(rp), 
                      rp == {party: p.cfg.party, sid: p.cfg.sid},
-                     p.cfg.party.in(g_clock_s.params.C)
+                     
                     })
 
                     if (r2.state.Reg.contains({party: p.cfg.party, sid: p.cfg.sid}) and all_ready) {
@@ -170,10 +170,10 @@ val TimeSoundness = g_clock_s.log.forall(r1 =>
               match r2.msg {
                 | OkayRequest(p) =>
                       // time advanced, check that all registered parties were ready
-                      val all_ready = r1.state.Reg.forall(rp => or {
+                      val all_ready = r1.state.Reg.filter(x => x.party.in(g_clock_s.params.C) == false).forall(rp => or {
                           r1.state.ok.contains(rp), 
                           rp == {party: p.cfg.party, sid: p.cfg.sid}, 
-                          p.cfg.party.in(g_clock_s.params.C)
+                          //p.cfg.party.in(g_clock_s.params.C)
                       })
 
                     and {

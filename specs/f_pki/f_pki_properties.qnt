@@ -9,11 +9,19 @@ module f_pki_properties {
     val Parties = 1.to(PARTY_SIZE)
     val sids = 1.to(SID_SIZE)
 
-    action step : bool = any {
-        pki_step,  
-        env_pki_send_all_reqs,
-        env_consume_responses,
-    }     
+    action step : bool =  {
+        if(f_pki_s.log.size() < MAX_LOG_SIZE){
+            any {
+                pki_step,  
+                env_pki_send_all_reqs,
+                env_consume_responses,
+            }   
+        }else{
+            f_pki_s' = f_pki_s
+        }
+    }
+        
+  
 
     action init = all {
         pki_init({P: Parties, SIDs: sids, enable_logging: true, responsive_simulator: true}),
