@@ -40,5 +40,6 @@ F-ATMS provides a formal specification of an advanced threshold multi-signature 
   - Handle management and input bounds
 
 ## Functionality
-![f-atms](pic.png?raw=true)
+![f-atms](pic1.png?raw=true)
+![f-atms](pic2.png?raw=true)
 
