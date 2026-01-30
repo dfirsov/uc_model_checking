@@ -9,13 +9,11 @@ module f_inizk_properties{
     import f_hash_types.* from "../f_hash/f_hash_types"
     import f_hash.* from "../f_hash/f_hash"    
 
-    // ========== CO-PROPERTIES (should fail - used for model checking bounds) ==========
+    // ========== CO-PROPERTIES (must fail) ==========
     
     val P1 = sids.forall(sid => 
         f_nizk_s.state.get(sid).Ver.size() <= 4
     )
-    // val P2 = f_nizk_s.log.map(x => x.msg).nizk_get_prove_response_messages().size() <= 5
-    // val P3 = f_nizk_s.log.map(x => x.msg).nizk_get_verify_response_messages().size() <= 5
     
     // ProofNonMalleability: The same proof shouldn't verify different statements
     // (unless relation allows it - but this would be suspicious)
@@ -56,6 +54,8 @@ module f_inizk_properties{
         }
     })
  
+
+    // ========== PROPERTIES (must hold) ==========
     
     // Handles are properly managed (no invalid handles)
     val NoOrphanedHolds = f_nizk_s.handles.forall(h => {

@@ -10,7 +10,6 @@ module f_inizk{
     var f_nizk_s : NIZK_System
 
     val ALL_PROOFS = 1.to(UNIVERSE_SIZE)
-    //val ALL_WITNESSES = Set(List()) // TODO: change that to get more adv behaviors
 
     pure def nizk_sim_loses_ctrl(nizk: NIZK_System) : Set[NIZK_Transition] = {
         nizk.input.filterMap(m => match m {

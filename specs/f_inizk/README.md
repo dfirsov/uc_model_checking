@@ -1,7 +1,7 @@
 # F-iNIZK: Non-Interactive Zero-Knowledge Proofs for (interactive) Relations
 
 ## Overview
-F-iNIZK provides a formal specification of non-interactive zero-knowledge proofs with support for interactive relations. This module models a UC ideal functionality that allows parties to prove knowledge of witnesses for statements without revealing the witnesses.
+F-iNIZK provides a formal specification of non-interactive zero-knowledge proofs with support for interactive relations. This module models an UC ideal functionality that allows parties to prove knowledge of witnesses for statements without revealing the witnesses.
 
 ## Module Structure
  
@@ -20,16 +20,6 @@ F-iNIZK provides a formal specification of non-interactive zero-knowledge proofs
   - Request creation and response consumption
 
 - **[f_inizk_properties.qnt](f_inizk_properties.qnt)**: Formal property specifications
-  - Soundness properties
-  - Completeness and consistency properties
-  - Handle management and bounds checking
-
-## Functionality
-
-![f-inizk](pic.png?raw=true)
-
-## Verified Properties
-
 - **Prove soundness**: If relation R(x,w) = 0 (witness doesn't satisfy statement), then Prove(x,w) returns ⊥
 - **Verify soundness**: If no witness exists for statement x, then Verify(x,π) returns false for any proof π
 - **Completeness**: If Prove(x,w) produces proof π when R(x,w) = 1, then Verify(x,π) returns true
@@ -39,5 +29,13 @@ F-iNIZK provides a formal specification of non-interactive zero-knowledge proofs
 - **Verify after prove**: Successful verification implies proof was generated before (temporal causality)
 - **Handle management**: Proper lifecycle management of prove/verify/relation simulation holds
 - **Input bounds**: At most one message in input buffer at any time
+
+ 
+
+## Functionality
+
+![f-inizk](pic.png?raw=true)
+
+
 
 
