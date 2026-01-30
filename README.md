@@ -18,7 +18,7 @@ quint run <spec_file> --invariant=<property> [--max-steps=n] [--max-samples=m] [
 
 For example, to check all specified properties of hash functions you can run the following code:
 ```bash
-quint run f_hash_properties.qnt --invariant=AllProps --max-steps=500 --max-samples=10000 --backend rust
+quint run specs/f_hash/f_hash_properties.qnt --invariant=AllProps --max-steps=500 --max-samples=10000 --backend rust
 ```
 ### Verification with TLC
 We can instruct Quint to compile its specification to TLA+ and use TLC to check the property. In this
