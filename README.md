@@ -15,6 +15,11 @@ In simulation mode the Quint will produce random traces and check the invariant 
 ```bash
 quint run <spec_file> --invariant=<property> [--max-steps=n] [--max-samples=m] [--backend rust]
 ```
+
+For example, to check all specified properties of hash functions you can run the following code:
+```bash
+quint run f_hash_properties.qnt --invariant=AllProps --max-steps=500 --max-samples=10000 --backend rust
+```
 ### Verification with TLC
 We can instruct Quint to compile its specification to TLA+ and use TLC to check the property. In this
 mode TLC will try to exhaustively cover the entire model to generate a counterexample.
