@@ -23,7 +23,7 @@ module g_ledger_env {
    val delta_latency = 1
    val delta_slack = 1
    val delta_apl = 1
-   val atms_t = 0
+   val atms_t = 1
 
     action step : bool =  {
         if(g_ledger_s.log.size() < MAX_LOG_SIZE){
@@ -89,7 +89,7 @@ module g_ledger_env {
         atms_init({P : Parties, 
         C : C, 
         SIDs: sids, 
-        t: atms_t,
+        t: (atms_t - 1),
         responsive_simulator: true,
         enable_logging: false,}),
     }

@@ -20,15 +20,15 @@ F-iNIZK provides a formal specification of non-interactive zero-knowledge proofs
   - Request creation and response consumption
 
 - **[f_inizk_properties.qnt](f_inizk_properties.qnt)**: Formal property specifications
-- **Prove soundness**: If relation R(x,w) = 0 (witness doesn't satisfy statement), then Prove(x,w) returns ⊥
-- **Verify soundness**: If no witness exists for statement x, then Verify(x,π) returns false for any proof π
-- **Completeness**: If Prove(x,w) produces proof π when R(x,w) = 1, then Verify(x,π) returns true
-- **Verify consistency**: If Ver[x,π] = true, then there exists witness w with R(x,w) = 1
-- **No result flip-flop**: Verification results for (x,π) are stable (no contradictory entries)
-- **Proof non-malleability**: Same proof π cannot verify different statements (π verifies unique x)
-- **Verify after prove**: Successful verification implies proof was generated before (temporal causality)
-- **Handle management**: Proper lifecycle management of prove/verify/relation simulation holds
-- **Input bounds**: At most one message in input buffer at any time
+  - **Prove soundness**: If relation R(x,w) = 0 (witness doesn't satisfy statement), then Prove(x,w) returns ⊥
+  - **Verify soundness**: If no witness exists for statement x, then Verify(x,π) returns false for any proof π
+  - **Completeness**: If Prove(x,w) produces proof π when R(x,w) = 1, then Verify(x,π) returns true
+  - **Verify consistency**: If Ver[x,π] = true, then there exists witness w with R(x,w) = 1
+  - **No result flip-flop**: Verification results for (x,π) are stable (no contradictory entries)
+  - **Proof non-malleability**: Same proof π cannot verify different statements (π verifies unique x)
+  - **Verify after prove**: Successful verification implies proof was generated before (temporal causality)
+  - **Handle management**: Proper lifecycle management of prove/verify/relation simulation holds
+  - **Input bounds**: At most one message in input buffer at any time
 
  
 
