@@ -13,7 +13,7 @@ For more info, go to https://quint-lang.org/
 In simulation mode the Quint will produce random traces and check the invariant after each "step".
 
 ```bash
-quint run <spec_file> --invariant=<property> [--max-steps=n] [--max-samples=m]
+quint run <spec_file> --invariant=<property> [--max-steps=n] [--max-samples=m] [--backend rust]
 ```
 ### Verification with TLC
 We can instruct Quint to compile its specification to TLA+ and use TLC to check the property. In this
