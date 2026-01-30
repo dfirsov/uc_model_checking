@@ -37,12 +37,12 @@ G-Ledger (Global Ledger) provides a formal specification of a distributed ledger
   - Request creation and response consumption
 
 - **[g_ledger_properties.qnt](g_ledger_properties.qnt)**: Formal property specifications (324 lines)
-- **Liveness**: Transaction submitted at time t appears in all party logs by time t + Δ_latency + Δ_slack
-- **Consistency**: For any two parties P and Q, log_P is prefix of log_Q or vice versa
-- **Validity**: All transactions in honest party's log satisfy validity predicate
-- **Committee selection**: Committee members selected according to protocol rules
-- **APL**: Agreed prefix length properties (same for everyone, only grows, etc.)
-- **Integrity**: Ledger state remains consistent across all operations
+  - **Liveness**: Transaction submitted at time t appears in all party logs by time t + Δ_latency + Δ_slack
+  - **Consistency**: For any two parties P and Q, log_P is prefix of log_Q or vice versa
+  - **Validity**: All transactions in honest party's log satisfy validity predicate
+  - **Committee selection**: Committee members selected according to protocol rules
+  - **APL**: Agreed prefix length properties (same for everyone, only grows, etc.)
+  - **Integrity**: Ledger state remains consistent across all operations
 
 ## Functionality
 ![g_ledger](pic.png?raw=true)

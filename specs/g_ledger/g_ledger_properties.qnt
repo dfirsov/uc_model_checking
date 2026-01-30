@@ -121,7 +121,7 @@ val LED_Persistance = g_ledger_s.log.forall(log_entry1 => {
     }
 })
 
-// Agreed Prefix: TODO
+// Agreed Prefi
 val LED_AgreedPrefix = g_ledger_s.log.forall(log_entry1 => {
     match log_entry1.msg {
         | ReadResponse(p) => {
@@ -268,6 +268,7 @@ val APL_Monotonicity = g_ledger_s.log.forall(log_entry1 => {
 })
 
 // delta-Growth: for any honest party P that requests APL in rounds r and r' ≥ r + delta with values p_r and p_{r'} we have that p_{r'} ≥ p_r + 1. 
+// FALSIFIED!
 val APL_DeltaGrowth = g_ledger_s.log.forall(log_entry1 => {
     match log_entry1.msg {
         | APLResponse(p) => {
@@ -277,7 +278,8 @@ val APL_DeltaGrowth = g_ledger_s.log.forall(log_entry1 => {
                         // For the same honest party in rounds r and r' where r' >= r + delta
                         and {
                             p.cfg.party == q.cfg.party,
-                            g_ledger_s.params.P.contains(p.cfg.party),  // honest party
+                            p.cfg.sid == q.cfg.sid,
+                            g_ledger_s.params.P.contains(p.cfg.party),  
                             not(g_ledger_s.params.C.contains(p.cfg.party)),  // not corrupt
                             q.r >= p.r + g_ledger_s.params.delta_apl
                         } implies {
@@ -295,7 +297,6 @@ val APL_DeltaGrowth = g_ledger_s.log.forall(log_entry1 => {
 
 val APL_AllProps = all {
     APL_Agreement,
-    //APL_DeltaGrowth,
     APL_Monotonicity,
 }
 
