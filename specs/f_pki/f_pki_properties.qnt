@@ -19,6 +19,7 @@ module f_pki_properties {
         pki_init({P: Parties, SIDs: sids, enable_logging: true, responsive_simulator: true}),
     }    
 
+    // environment sends any of the requests
     action env_pki_send_all_reqs : bool = all {
         nondet from = Parties.oneOf()
         nondet top = Parties.oneOf()
@@ -33,6 +34,7 @@ module f_pki_properties {
         }
     }
 
+    // give control to the simulator
     action env_pki_sim_reqs : bool = all {
         f_pki_s.input.size() == 0, 
         f_pki_s.handles.size() > 0,
@@ -42,6 +44,7 @@ module f_pki_properties {
         }
     }    
 
+    // send register request
     action env_pki_register_reqs(cfg: MsgConfig) : bool = all {
         f_pki_s.input.size() == 0,
         
@@ -53,6 +56,7 @@ module f_pki_properties {
         }
     }
 
+    // send retrieve request
     action env_pki_retrieve_reqs(cfg: MsgConfig) : bool = all {
         f_pki_s.input.size() == 0,
         
@@ -64,6 +68,7 @@ module f_pki_properties {
         }
     }    
 
+    // send verify request
     action env_pki_verify_reqs(cfg: MsgConfig) : bool = all {
         f_pki_s.input.size() == 0,
         
@@ -101,6 +106,8 @@ module f_pki_properties {
     }
 
 
+
+    // ================= PROPERTIES =================
 
     // one entry per party in Reg and Ver lists
     val OneEntryPerPartyInRegAndVerLists = Parties.forall(p => sids.forall({sid =>

@@ -22,11 +22,6 @@ F-PKI (Functional Public Key Infrastructure) provides a formal specification of 
   - CertVerify: Certificate verification (`pki_certverify`)
   - GetAll: Retrieve all registered keys for an SID (`pki_get_all_1`, `pki_get_all_2`)
 
-- **[f_pki_properties.qnt](f_pki_properties.qnt)**: Formal property specifications
-  - One-entry-per-party invariants
-  - Retrieve correctness properties
-  - Certificate verification properties
-  - Handle management and bounds checking
 
 ## Functionality
 
