@@ -16,7 +16,7 @@ In simulation mode the Quint will produce random traces and check the invariant 
 quint run <spec_file> --invariant=<property> [--max-steps=n] [--max-samples=m] [--backend rust]
 ```
 
-For example, to check all specified properties of hash functions you can run the following code:
+For example, to use simulator on all the specified properties of hash functions you can run the following code:
 ```bash
 quint run specs/f_hash/f_hash_properties.qnt --invariant=AllProps --max-steps=500 --max-samples=10000 --backend rust
 ```
@@ -27,7 +27,7 @@ mode TLC will try to exhaustively cover the entire model to generate a counterex
 ```bash
 ./check_with_tlc.sh <spec_file> [--invariant <property>] [--temporal <properties>]
 ```
-For example, to check all specified properties of F-PKI you can run the following code:
+For example, to check with TLC all specified properties of F-PKI you can run the following code:
 ```bash
 ./check_with_tlc.sh specs/f_pki/f_pki_properties.qnt --invariant AllProps 
 ```
@@ -41,7 +41,7 @@ In this mode the Quint spec will be compiled and checked with the Apalache SMT s
 quint verify <spec_file> [--invariant=<property>] 
 ```
 
-For example, to verify all specified properties of Global clock you can run the following code:
+For example, to verify all specified properties of Global clock with Apalache SMT solver you can run the following code:
 ```bash
 quint verify specs/g_clock/g_clock_properties.qnt --invariant AllProps 
 ```
