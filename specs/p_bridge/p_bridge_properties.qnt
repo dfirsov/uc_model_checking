@@ -78,12 +78,38 @@ module p_bridge_properties{
 
     }
 
+    // ====== Co-Properties (must fail) ======
+
     val Q1 = p_bridge_s.log.size() <= 1
     val Q2 = p_bridge_s.state.bst.get(1).rot == None
-    //val Q3 = g_clock_s.state.TIME <= 4
-    //val Q4 = f_hash_s.state.get(1).hash_map.keys().size() <= 1
-    //val Q5 = g_clock_s.state.TIME <= 8
     val Q6 = p_bridge_s.log.map(x => x.msg).brd_get_verify_response_messages().filter(x => x.res == true).size() == 0
+    // (VIOLATED) Bridge democracy: 
+    // For all rounds r and all parties P, we have 
+    // that bst[P].aux.Com @ r ≠ bst[P].aux.Com @ (r + R) (doesn’t hold – authoritarian regime possible)
+    val Bridge_Democracy = p_bridge_s.log.map(x => x.msg).filterMap(z => match z {
+        | BridgeBRAlgorithmResponse(p) => Some(p)
+        | _ => None
+    }).forall(p =>
+        p_bridge_s.log.map(x => x.msg).filterMap(z => match z {
+            | BridgeBRAlgorithmResponse(q) => Some(q)
+            | _ => None
+        }).forall(q =>
+            and {
+                p.cfg.party == q.cfg.party,
+                p.args.r + p_bridge_s.params.R == q.args.r,
+                p.resp.bst != None,
+                q.resp.bst != None
+            } implies {
+                val p_bst = p.resp.bst.unwrap()
+                val q_bst = q.resp.bst.unwrap()
+                (p_bst.aux != None and q_bst.aux != None) implies p_bst.aux.unwrap().com != q_bst.aux.unwrap().com
+            }
+        )
+    )
+
+
+
+    // ====== Properties (must hold )======
 
     val RoT_Agreement = p_bridge_s.log.map(x => x.msg).filterMap(z => match z {
         RoTResponse(p) => Some(p)
@@ -117,9 +143,6 @@ module p_bridge_properties{
                     p_bst.avk_prim == q_bst.avk_prim,
                     p_bst.aux == q_bst.aux,
                     p_bst.aux_prim == q_bst.aux_prim,
-
-                   // p_bst.bvk == q_bst.bvk, // falsified
-                   // p_bst.m == q_bst.m, // falsified
                 }
             }
         )
@@ -147,29 +170,6 @@ module p_bridge_properties{
         )
     )
 
-    // (VIOLATED) Bridge democracy: 
-    // For all rounds r and all parties P, we have 
-    // that bst[P].aux.Com @ r ≠ bst[P].aux.Com @ (r + R) (doesn’t hold – authoritarian regime possible)
-    val Bridge_Democracy = p_bridge_s.log.map(x => x.msg).filterMap(z => match z {
-        | BridgeBRAlgorithmResponse(p) => Some(p)
-        | _ => None
-    }).forall(p =>
-        p_bridge_s.log.map(x => x.msg).filterMap(z => match z {
-            | BridgeBRAlgorithmResponse(q) => Some(q)
-            | _ => None
-        }).forall(q =>
-            and {
-                p.cfg.party == q.cfg.party,
-                p.args.r + p_bridge_s.params.R == q.args.r,
-                p.resp.bst != None,
-                q.resp.bst != None
-            } implies {
-                val p_bst = p.resp.bst.unwrap()
-                val q_bst = q.resp.bst.unwrap()
-                (p_bst.aux != None and q_bst.aux != None) implies p_bst.aux.unwrap().com != q_bst.aux.unwrap().com
-            }
-        )
-    )
 
     // Bridge state persistence: For all rounds r and r’ and all parties P,  we have 
     // bst[P].(rot, cID, h, avk’, aux, aux’) @ r = bst[P].(rot, cID, h, avk’, aux, aux’) @ r’ as long as  1 ≤ (r % R),  (r’ % R) ≤ ∆ + 1; 
@@ -266,7 +266,6 @@ module p_bridge_properties{
         Bridge_State_Consistency,
         Bridge_Liveness,
         Bridge_Aux_Update,
-        //Bridge_Democracy,
         Bridge_State_Persistence,
         Bridge_Soundness,
     }

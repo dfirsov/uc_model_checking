@@ -1,4 +1,4 @@
-# UC and Model Checking in Quint
+# Model Checking UC Ideal Functionalities in Quint
 
 ## Overview
 This project implements formal verification of Universal Composability (UC) protocols using the Quint specification language. It provides a framework for modeling UC ideal functionalities and their properties.
