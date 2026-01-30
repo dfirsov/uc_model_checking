@@ -3,25 +3,23 @@ module common {
 
     import basicSpells.* from "../spells/basicSpells"    
 
+
+    // ==== MODEL SIZE PARAMETERS ====
+    val UNIVERSE_SIZE = 20  // how many different values can be used in the protocol (per entity)
+    val PARTY_SIZE = 3     // how many parties are there in the protocol
+    val CORRUPTED_PARTY_SIZE = 1 // how many parties can be corrupted
+    val SID_SIZE = 2 // how many different sessions can be run
+    val MAX_LOG_SIZE = 5000 // maximum size of the log (to prevent unbounded growth)
+
+
+    // ===== Definitions Common to All Functionalities =====
+
     type Time = int
     type Nonce = int
     type Party = int
     type SID = int
     type Counter = int    
 
-    // use for simulation
-    val UNIVERSE_SIZE = 20
-    val PARTY_SIZE = 3
-    val CORRUPTED_PARTY_SIZE = 1
-    val SID_SIZE = 2
-    val MAX_LOG_SIZE = 5000
-
-    // use for verification
-    // val UNIVERSE_SIZE = 2
-    // val PARTY_SIZE = 2
-    // val CORRUPTED_PARTY_SIZE = 1
-    // val SID_SIZE = 1
-    // val MAX_LOG_SIZE = 4
 
     type MsgConfig = {
         party: Party,

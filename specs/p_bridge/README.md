@@ -31,4 +31,3 @@ The P-Bridge protocol is implemented as follows:
 - **State persistence**: Bridge state remains stable during non-rotation phases (within Δ+1 rounds)
 - **Cross-chain message integrity**: Messages verified across chains maintain integrity
 - **Key generation correctness**: Bridge validator keys generated and aggregated correctly
-- **Rotation protocol safety**: Key rotation executes safely without disrupting ongoing operations

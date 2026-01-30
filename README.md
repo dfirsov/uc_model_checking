@@ -34,6 +34,8 @@ quint verify <spec_file> [--invariant=<property>]
 
 ### Specifications
 
+Model size can be set in [common.qnt](specs/common.qnt).
+
 #### Cryptographic Functionalities
 - [**F-iNIZK**](specs/f_inizk/) - non-interactive ZK proofs for (i - interactive) relations
 - [**F-ATMS**](specs/f_atms/) - Advanced threshold multi-signature scheme
