@@ -42,6 +42,7 @@ module f_atms{
     }    
  
 
+    // key generation
     pure def atms_gen_1(atms: ATMS_System) : Set[ATMS_Transition] = {
         atms.input.filterMap(m => match m {
             | GenRequest(p) => Some(p)

@@ -10,18 +10,22 @@ module f_atms_env{
     val sids = 1.to(SID_SIZE)
     val threshold = 1
 
-    val ALL_DOC = Set(
-         {h:1, avk:1},
-         {h:1, avk:2},
-         {h:3, avk:3},
-         {h:4, avk:4},
-         {h:5, avk:5},
-    )
+    val ALL_DOC = 1.to(UNIVERSE_SIZE).map(i => {h: i, avk: i})
+    val list_length = PARTY_SIZE
 
-    val list_length = 2
+    action init : bool = all {
+        atms_init({ 
+            P: Parties,
+            C: Corrupted,
+            SIDs: sids,
+            t: threshold,
+            responsive_simulator: true,
+            enable_logging: true,
+        })
+    }
 
    action step : bool =  {
-        if(f_atms_s.log.size() <= MAX_LOG_SIZE){
+        if(f_atms_s.log.size() < MAX_LOG_SIZE){
             any {
                 atms_step,  
                 env_send_all_reqs,
@@ -50,7 +54,6 @@ module f_atms_env{
         
         all {
         // Non-deterministically choose one response message to consume
-            response_msgs.size() > 0,
             nondet transition = response_msgs.oneOf()
 
         // Update the system state by consuming the message    
@@ -172,18 +175,5 @@ module f_atms_env{
         }
     }    
 
-    action init : bool = all {
-        atms_init({ 
-            P: Parties,
-            C: Corrupted,
-            SIDs: sids,
-            t: threshold,
-            responsive_simulator: true,
-            enable_logging: true,
-            // ALL_VKS: ALL_VK,
-            // ALL_SIGS: ALL_SIG,
-            // ALL_AVKS: ALL_AVK,
-            // ALL_ASIGS: ALL_SIG,
-        })
-    }
+
 }

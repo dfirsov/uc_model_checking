@@ -7,6 +7,7 @@ module f_atms_properties{
     import common.* from "../common"    
    
 
+    // ====== CO-Properties (must fail) ======
     val P1 = f_atms_s.log.size() <= 10
     val P2 = f_atms_s.log.map(x => x.msg).atms_get_gen_response_messages().size() <= 2
     val P3 = f_atms_s.log.map(x => x.msg).atms_get_akey_response_messages().size() <= 2
@@ -15,7 +16,12 @@ module f_atms_properties{
     val P6 = f_atms_s.log.map(x => x.msg).atms_get_verify_response_messages().size() <= 2
     val P7 = f_atms_s.log.map(x => x.msg).atms_get_asign_response_messages().size() <= 2
     val P8 = f_atms_s.log.map(x => x.msg).atms_get_averify_response_messages().size() <= 2
+    val AVK_ThresholdNecessary = f_atms_s.log.map(x => x.msg).atms_get_akey_response_messages().forall(akey =>
+    (akey.avk != None) implies (akey.vks.length() >= f_atms_s.params.t + 1))    
 
+
+
+    // ====== Properties (must hold) ======
 
     // Handles are properly managed (no orphaned holds)
     val NoOrphanedHolds = f_atms_s.handles.forall(h => {
@@ -112,7 +118,7 @@ val VK_Injective = sids.forall(sid => {
     })
 })
 
-// BUG: Not injective?
+
 val VKs_Injective = sids.forall(sid => {
     val sid_state = f_atms_s.state.get(sid)
     sid_state.VKs.forall(vks1 => {
@@ -553,29 +559,26 @@ val AllCorrectness = all {
 }
 
 val AllUnforgeability = all {
-    //Sign_Unforgeability,
+    Sign_Unforgeability,
     ASign_Unforgeability
 }
 
-// --seed=0x119d88c0b1b3ba
-val AllProps = all {
-    AllFunctional,
-    AllInjective,
-    AllDeterministic,
-    AllCorrectness,
-    AllUnforgeability
-}
 
 val ASign_ThresholdNecessary = f_atms_s.log.map(x => x.msg).atms_get_asign_response_messages().forall(asign =>
     (asign.tau != None) implies (asign.S.length() >= f_atms_s.params.t + 1)
 )
 
-val AVK_ThresholdNecessary = f_atms_s.log.map(x => x.msg).atms_get_akey_response_messages().forall(akey =>
-    (akey.avk != None) implies (akey.vks.length() >= f_atms_s.params.t + 1)
-)
 
-val NewProps = all {
-    AVK_ThresholdNecessary
+
+val AllProps = all {
+    AllFunctional,
+    AllInjective,
+    AllDeterministic,
+    AllCorrectness,
+    AllUnforgeability,
+    ASign_ThresholdNecessary
 }
+
+
 
 }
