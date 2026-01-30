@@ -25,14 +25,25 @@ We can instruct Quint to compile its specification to TLA+ and use TLC to check 
 mode TLC will try to exhaustively cover the entire model to generate a counterexample.
 
 ```bash
-./check_with_tlc.sh <spec_file> [--invariant=<property>] [--temporal=<properties>]
+./check_with_tlc.sh <spec_file> [--invariant <property>] [--temporal <properties>]
 ```
+For example, to check all specified properties of F-PKI you can run the following code:
+```bash
+./check_with_tlc.sh specs/f_pki/f_pki_properties.qnt --invariant AllProps 
+```
+
+However, you might want to reduce the model size in [common.qnt](specs/common.qnt).
 
 ### Verification with Apalache
 In this mode the Quint spec will be compiled and checked with the Apalache SMT solver.
 
 ```bash
 quint verify <spec_file> [--invariant=<property>] 
+```
+
+For example, to verify all specified properties of Global clock you can run the following code:
+```bash
+quint verify specs/g_clock/g_clock_properties.qnt --invariant AllProps 
 ```
 
 ## Project Structure
