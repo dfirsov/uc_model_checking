@@ -29,9 +29,8 @@ G-Ledger (Global Ledger) provides a formal specification of a distributed ledger
 - **[g_ledger_apl.qnt](g_ledger_apl.qnt)**: Agreed Prefix Length
   - APL: Computes the agreed prefix length of the ledger
 
-- **[g_ledger_ival.qnt](g_ledger_ival.qnt)**: Integrity and Validity Protocol
+- **[g_ledger_ival.qnt](g_ledger_ival.qnt)**: Interactive functional evaluation 
   - Eval: Validates transactions according to state machine semantics
-  - IRead: Integrity-checked reads
 
 - **[g_ledger_env.qnt](g_ledger_env.qnt)**: Environment
   - Request creation and response consumption
