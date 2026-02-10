@@ -50,14 +50,28 @@ module p_bridge_properties{
             C: C, 
             r0: 0, 
             delta: 1, 
-            t: 1, 
+            t: 2, 
             R: 4, 
-            delta_latency: 1, 
-            delta_slack: 1, 
-            delta_apl: 1, 
-            comsel_a: 1, 
-            comsel_b: 1, 
-            comsel_c: 1})
+            delta_latency: 2, 
+            delta_slack: 2, 
+            delta_apl: 2, 
+            comsel_a: 2, 
+            comsel_b: 2, 
+            comsel_c: 2})        
+        // p_bridge_env_init({
+        //     P: Parties, 
+        //     SIDs: SIDs, 
+        //     C: C, 
+        //     r0: 0, 
+        //     delta: 1, 
+        //     t: 1, 
+        //     R: 4, 
+        //     delta_latency: 1, 
+        //     delta_slack: 1, 
+        //     delta_apl: 1, 
+        //     comsel_a: 1, 
+        //     comsel_b: 1, 
+        //     comsel_c: 1})
     }
 
     action step = {

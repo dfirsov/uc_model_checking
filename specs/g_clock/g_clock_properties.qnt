@@ -162,15 +162,17 @@ val TimeLiveness = g_clock_s.log.forall(r1 =>
           )
   )  
  
-// Property 3 (Time Soundness): If time advanced then all currently registered parties were ready.
-// this is boring since we have a full control of when to advance time
+// Property 3 (Time Soundness): If time advanced then all currently registered parties were 
+// ready. 
 val TimeSoundness = g_clock_s.log.forall(r1 =>
    g_clock_s.log.forall(r2 =>
             (r2.idx == r1.idx + 1 and r2.state.TIME > r1.state.TIME) implies {
               match r2.msg {
                 | OkayRequest(p) =>
                       // time advanced, check that all registered parties were ready
-                      val all_ready = r1.state.Reg.filter(x => x.party.in(g_clock_s.params.C) == false).forall(rp => or {
+                      val all_ready = r1.state.Reg
+                         .filter(x => x.party.in(g_clock_s.params.C) == false)
+                         .forall(rp => or {
                           r1.state.ok.contains(rp), 
                           rp == {party: p.cfg.party, sid: p.cfg.sid}, 
                           //p.cfg.party.in(g_clock_s.params.C)
