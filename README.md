@@ -54,10 +54,14 @@ Model size can be set in [common.qnt](specs/common.qnt).
 
 #### Cryptographic Functionalities
 - [**F-iNIZK**](specs/f_inizk/) - non-interactive ZK proofs for (i - interactive) relations
+- [**F-NIZK**](specs/f_nizk/) - non-interactive ZK proofs for (pure) relations
 - [**F-ATMS**](specs/f_atms/) - Advanced threshold multi-signature scheme
 - [**F-Hash**](specs/f_hash/) - Hash functionality with collision resistance
 - [**F-PKI**](specs/f_pki/) - Public Key Infrastructure (registration, retrieval, verification)
 - [**F-Diffuse**](specs/f_dif/) - Message diffuse protocol
+- [**F-Sig**](specs/f_sig/) - digital signature primitive
+- [**F-AC**](specs/f_ac/) - authenticated channel
+- [**F-CRS**](specs/f_crs/) - common reference string
 
 #### Global Functionalities
 - [**G-Clock**](specs/g_clock/) - Global clock for time synchronization
