@@ -67,7 +67,7 @@ Model size can be set in [common.qnt](specs/common.qnt).
 - [**G-Ledger**](specs/g_ledger/) - Global ledger with committee selection, APL, reads, and submits
 
 #### Protocol
-- [**Bridge**](specs/p_bridge/) - Cross-chain bridge protocol built from the above functionalities
+- [**P-Bridge**](specs/p_bridge/) - Cross-chain bridge protocol built from the above functionalities
 
 
 ## Key Features
