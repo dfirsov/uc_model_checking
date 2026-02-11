@@ -31,7 +31,7 @@ module f_ac_env{
 
         all {
             fac_init(Parties, Corrupted, delta_param, sids),
-            gc_init(Corrupted,0,clock_regs)
+            gc_init({C: Corrupted, time: 0, Reg: clock_regs, responsive_simulator: false, enable_logging: false})
         }
     }
 

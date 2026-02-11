@@ -94,96 +94,96 @@ module g_clock_types {
         })
     }    
 
-    // pure def get_register_request_messages(messages: Set[GC_Message]): Set[{cfg: MsgConfig}] = {
-    //     messages.filterMap(m => {
-    //     match m {
-    //         | RegisterRequest(p) => Some(p)
-    //         | _ => None
-    //     }
-    //     })
-    // }
+    pure def get_register_request_messages(messages: Set[GC_Message]): Set[{cfg: MsgConfig}] = {
+        messages.filterMap(m => {
+        match m {
+            | RegisterRequest(p) => Some(p)
+            | _ => None
+        }
+        })
+    }
 
-    // pure def get_time_request_messages(messages: Set[GC_Message]): Set[{cfg: MsgConfig}] = {
-    //     messages.filterMap(m => {
-    //     match m {
-    //         | TimeRequest(p) => Some(p)
-    //         | _ => None
-    //     }
-    //     })
-    // }
+    pure def get_time_request_messages(messages: Set[GC_Message]): Set[{cfg: MsgConfig}] = {
+        messages.filterMap(m => {
+        match m {
+            | TimeRequest(p) => Some(p)
+            | _ => None
+        }
+        })
+    }
 
-    // pure def gc_get_sim_control_messages(messages: Set[GC_Message]): Set[GC_Message] = {
-    //     messages.filter(m => {
-    //     match m {
-    //         | GC_SIMControl => true
-    //         | _ => false
-    //     }
-    //     })
-    // }
+    pure def gc_get_sim_control_messages(messages: Set[GC_Message]): Set[GC_Message] = {
+        messages.filter(m => {
+        match m {
+            | GC_SIMControl => true
+            | _ => false
+        }
+        })
+    }
 
-    // pure def get_okay_request_messages(messages: Set[GC_Message]): Set[{cfg: MsgConfig}] = {
-    //     messages.filterMap(m => {
-    //     match m {
-    //         | OkayRequest(p) => Some(p)
-    //         | _ => None
-    //     }
-    //     })
-    // }
+    pure def get_okay_request_messages(messages: Set[GC_Message]): Set[{cfg: MsgConfig}] = {
+        messages.filterMap(m => {
+        match m {
+            | OkayRequest(p) => Some(p)
+            | _ => None
+        }
+        })
+    }
 
-    // pure def get_okay_response_messages(messages: Set[GC_Message]): Set[{cfg: MsgConfig}] = {
-    //     messages.filterMap(m => {
-    //     match m {
-    //         | OkayResponse(p) => Some(p)
-    //         | _ => None
-    //     }
-    //     })
-    // }
+    pure def get_okay_response_messages(messages: Set[GC_Message]): Set[{cfg: MsgConfig}] = {
+        messages.filterMap(m => {
+        match m {
+            | OkayResponse(p) => Some(p)
+            | _ => None
+        }
+        })
+    }
 
-    // pure def get_register_response_messages(messages: Set[GC_Message]): Set[{cfg: MsgConfig}] = {
-    //     messages.filterMap(m => {
-    //     match m {
-    //         | RegisterResponse(p) => Some(p)
-    //         | _ => None
-    //     }
-    //     })
-    // }
+    pure def get_register_response_messages(messages: Set[GC_Message]): Set[{cfg: MsgConfig}] = {
+        messages.filterMap(m => {
+        match m {
+            | RegisterResponse(p) => Some(p)
+            | _ => None
+        }
+        })
+    }
 
-    // pure def get_time_response_messages(messages: Set[GC_Message]): Set[{cfg: MsgConfig, time: Time}] = {
-    //     messages.filterMap(m => {
-    //     match m {
-    //         | TimeResponse(p) => Some(p)
-    //         | _ => None
-    //     }
-    //     })
-    // }         
+    pure def get_time_response_messages(messages: Set[GC_Message]): Set[{cfg: MsgConfig, time: Time}] = {
+        messages.filterMap(m => {
+        match m {
+            | TimeResponse(p) => Some(p)
+            | _ => None
+        }
+        })
+    }         
 
 
 
-    // pure def get_sim_okay_release_messages(messages: Set[GC_Message]): Set[{cfg: MsgConfig}] = {
-    //     messages.filterMap(m => {
-    //     match m {
-    //         | SIMOkayRelease(p) => Some(p)
-    //         | _ => None
-    //     }
-    //     })
-    // }
+    pure def get_sim_okay_release_messages(messages: Set[GC_Message]): Set[{cfg: MsgConfig}] = {
+        messages.filterMap(m => {
+        match m {
+            | SIMOkayRelease(p) => Some(p)
+            | _ => None
+        }
+        })
+    }
 
-    // pure def get_sim_okay_hold_messages(messages: Set[GC_Message]): Set[{cfg: MsgConfig}] = {
-    //     messages.filterMap(m => {
-    //     match m {
-    //         | SIMOkayHold(p) => Some(p)
-    //         | _ => None
-    //     }
-    //     })
-    // }
+    pure def get_sim_okay_hold_messages(messages: Set[GC_Message]): Set[{cfg: MsgConfig}] = {
+        messages.filterMap(m => {
+        match m {
+            | SIMOkayHold(p) => Some(p)
+            | _ => None
+        }
+        })
+    }
 
-    // pure def contains_sim_control(messages: Set[GC_Message]): bool = {
-    //     messages.exists(m => {
-    //         match m {
-    //             | GC_SIMControl => true
-    //             | _ => false
-    //         }
-    //     })
-    // }    
+    pure def contains_sim_control(messages: Set[GC_Message]): bool = {
+        messages.exists(m => {
+            match m {
+                | GC_SIMControl => true
+                | _ => false
+            }
+        })
+    }    
     
 }
